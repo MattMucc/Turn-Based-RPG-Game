@@ -7,6 +7,9 @@ public class BattleManager : MonoBehaviour
     
     public bool InBattle { get; private set; }
 
+    [Header("References")]
+    [SerializeField] private BattleMenuUI battleMenu;
+
     private void Awake()
     {
         if (Instance == null)
@@ -48,6 +51,7 @@ public class BattleManager : MonoBehaviour
         Camera.main.transform.SetPositionAndRotation(cameraBattlePosition.position, cameraBattlePosition.rotation);
         Camera.main.transform.LookAt(cameraTarget);
 
-        Debug.Log($"[BattleManager] Battle started with {enemies.Count} enemies!");
+        GameManager.Instance.Input.SwitchToBattle();
+        battleMenu.Show();
     }
 }

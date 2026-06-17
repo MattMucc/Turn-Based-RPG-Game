@@ -8,6 +8,7 @@ public class PlayerInputReader : MonoBehaviour
     [SerializeField] private string outOfCombatMapName = "World";
     [SerializeField] private string battleMapName = "Battle";
 
+    // Overworld Actions
     private InputActionMap inputMap;
     private InputAction moveAction;
     private InputAction lookAction;
@@ -17,12 +18,20 @@ public class PlayerInputReader : MonoBehaviour
     private InputAction worldAttackAction;
     private InputAction interactAction;
 
+    // Battle Menu Actions
+    private InputActionMap battleInputMap;
+    private InputAction attackAction;
+    private InputAction skillsAction;
+    private InputAction itemsAction;
+    private InputAction runAction;
+    private bool inBattle = false;
+
     // Control Scheme
     public enum ControlScheme { Keyboard, Gamepad }
     public ControlScheme CurrentScheme { get; private set; } = ControlScheme.Keyboard;
     public event Action<ControlScheme> OnControlSchemeChanged;
 
-    // Input Actions
+    // Overworld Inputs
     public Vector2 Move { get; private set; }
     public Vector2 Look { get; private set; }
     public bool SprintPressed { get; private set; }
@@ -36,6 +45,12 @@ public class PlayerInputReader : MonoBehaviour
     public bool InteractPressed { get; private set; }
     public bool InteractHeld { get; private set; }
 
+    // Battle Menu Inputs
+    public bool AttackPressed { get; private set; }
+    public bool SkillsPressed { get; private set; }
+    public bool ItemsPressed { get; private set; }
+    public bool RunPressed { get; private set; }
+
     private void Awake()
     {
         if (!input)
@@ -46,18 +61,34 @@ public class PlayerInputReader : MonoBehaviour
         }
 
         inputMap = input.FindActionMap(outOfCombatMapName, true);
-        moveAction = inputMap.FindAction("Move", true);
-        lookAction = inputMap.FindAction("Look", true);
-        sprintAction = inputMap.FindAction("Sprint", true);
-        jumpAction = inputMap.FindAction("Jump", true);
-        crouchAction = inputMap.FindAction("Crouch", true);
-        worldAttackAction = inputMap.FindAction("Attack", true);
-        interactAction = inputMap.FindAction("Interact", true);
+        if (inputMap != null)
+        {
+            moveAction = inputMap.FindAction("Move", true);
+            lookAction = inputMap.FindAction("Look", true);
+            sprintAction = inputMap.FindAction("Sprint", true);
+            jumpAction = inputMap.FindAction("Jump", true);
+            crouchAction = inputMap.FindAction("Crouch", true);
+            worldAttackAction = inputMap.FindAction("Attack", true);
+            interactAction = inputMap.FindAction("Interact", true);
+        }
+
+        battleInputMap = input.FindActionMap(battleMapName, false);
+        if (battleInputMap != null)
+        {
+            attackAction = battleInputMap.FindAction("Attack", true);
+            skillsAction = battleInputMap.FindAction("Skills", true);
+            itemsAction = battleInputMap.FindAction("Items", true);
+            runAction = battleInputMap.FindAction("Run", true);
+        }
     }
 
     private void OnEnable()
     {
-        inputMap?.Enable();
+        if (inBattle)
+            battleInputMap?.Enable();
+        else
+            inputMap?.Enable();
+
         InputSystem.onActionChange += OnActionChange;
     }
 
@@ -65,27 +96,59 @@ public class PlayerInputReader : MonoBehaviour
     {
         InputSystem.onActionChange -= OnActionChange;
         inputMap?.Disable();
+        battleInputMap?.Disable();
     }
 
     private void Update()
     {
-        // Values
-        Move = moveAction.ReadValue<Vector2>();
-        Look = lookAction.ReadValue<Vector2>();
+        // Overworld Controls
+        if (!inBattle)
+        {
+            // Values
+            Move = moveAction.ReadValue<Vector2>();
+            Look = lookAction.ReadValue<Vector2>();
 
-        // Pressed
-        SprintPressed = sprintAction.WasPressedThisFrame();
-        JumpPressed = jumpAction.WasPressedThisFrame();
-        CrouchPressed = crouchAction.WasPressedThisFrame();
-        WorldAttackPressed = worldAttackAction.WasPressedThisFrame();
-        InteractPressed = interactAction.WasPressedThisFrame();
+            // Pressed
+            SprintPressed = sprintAction.WasPressedThisFrame();
+            JumpPressed = jumpAction.WasPressedThisFrame();
+            CrouchPressed = crouchAction.WasPressedThisFrame();
+            WorldAttackPressed = worldAttackAction.WasPressedThisFrame();
+            InteractPressed = interactAction.WasPressedThisFrame();
 
-        // Held
-        SprintHeld = sprintAction.IsPressed();
-        JumpHeld = jumpAction.IsPressed();
-        CrouchHeld = crouchAction.IsPressed();
-        WorldAttackHeld = worldAttackAction.IsPressed();
-        InteractHeld = interactAction.IsPressed();
+            // Held
+            SprintHeld = sprintAction.IsPressed();
+            JumpHeld = jumpAction.IsPressed();
+            CrouchHeld = crouchAction.IsPressed();
+            WorldAttackHeld = worldAttackAction.IsPressed();
+            InteractHeld = interactAction.IsPressed();
+        }
+        else
+        {
+            AttackPressed = attackAction.WasPressedThisFrame();
+            SkillsPressed = skillsAction.WasPressedThisFrame();
+            ItemsPressed = itemsAction.WasPressedThisFrame();
+            RunPressed = runAction.WasPressedThisFrame();
+        }
+    }
+
+    public void SwitchToBattle()
+    {
+        if (battleInputMap == null)
+        {
+            Debug.LogWarning($"[PlayerInputReader] Battle Action Map not found! Set it up in the Input Actions asset first.");
+            return;
+        }
+
+        inputMap?.Disable();
+        battleInputMap?.Enable();
+        inBattle = true;
+    }
+
+    public void SwitchToWorld()
+    {
+        battleInputMap?.Disable();
+        inputMap?.Enable();
+        inBattle = false;
     }
 
     private void OnActionChange(object obj, InputActionChange change)
@@ -95,8 +158,8 @@ public class PlayerInputReader : MonoBehaviour
         InputAction action = obj as InputAction;
         if (action == null) return;
 
-        // Only responds to GAMEPLAY actions, not UI actions
-        if (action.actionMap != inputMap) return;
+        // Only responds to specific input maps
+        if (action.actionMap != inputMap && action.actionMap != battleInputMap) return;
 
         InputDevice device = action.activeControl?.device;
         if (device == null) return;

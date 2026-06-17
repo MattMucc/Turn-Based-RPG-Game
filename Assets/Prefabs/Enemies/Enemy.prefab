@@ -125,6 +125,8 @@ GameObject:
   - component: {fileID: 4946256473697447137}
   - component: {fileID: 3016673933280510670}
   - component: {fileID: 8469290237143047597}
+  - component: {fileID: -1083373368044996749}
+  - component: {fileID: 8972257642219513300}
   - component: {fileID: 8592491984726968532}
   m_Layer: 7
   m_Name: Enemy
@@ -250,6 +252,61 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.5, y: 2, z: 1.5}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!143 &-1083373368044996749
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7468749988293964581}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 2
+  m_Radius: 0.5
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.02
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &8972257642219513300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7468749988293964581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 07f9ba187d3145c409986342fca3304a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyMovement
+  walkSpeed: 2
+  chaseSpeed: 4
+  minIdleTime: 1
+  maxIdleTime: 3
+  stoppingDistance: 1
+  waypointReachedDistance: 0.5
+  stuckCheckInterval: 1
+  stuckMoveThreshold: 0.4
+  gravity: -30
+  fieldOfView: 45
+  detectionRadius: 8
+  lostSightTimeout: 1
+  detectionLayer:
+    serializedVersion: 2
+    m_Bits: 73
+  displayDetectionDebug: 0
+  battleGroup: {fileID: 0}
+  controller: {fileID: -1083373368044996749}
 --- !u!114 &8592491984726968532
 MonoBehaviour:
   m_ObjectHideFlags: 0

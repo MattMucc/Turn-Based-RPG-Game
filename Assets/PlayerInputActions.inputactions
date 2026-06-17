@@ -316,6 +316,12 @@
             ]
         },
         {
+            "name": "Battle",
+            "id": "44265fbb-0f0e-4c9c-a938-717f97b0d4b2",
+            "actions": [],
+            "bindings": []
+        },
+        {
             "name": "UI",
             "id": "272f6d14-89ba-496f-b7ff-215263d3219f",
             "actions": [
