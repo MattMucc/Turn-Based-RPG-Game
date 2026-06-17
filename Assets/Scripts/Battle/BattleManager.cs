@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class BattleManager : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class BattleManager : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private BattleMenuUI battleMenu;
+    private PlayerInputReader input;
 
     private void Awake()
     {
@@ -19,6 +21,36 @@ public class BattleManager : MonoBehaviour
         }
         else
             Destroy(gameObject);
+
+        if (!input) input = GameManager.Instance.Input;
+    }
+
+    private void Update()
+    {
+        if (!InBattle) return;
+
+        if (Mouse.current != null && Mouse.current.delta.ReadValue().sqrMagnitude > 0.5f)
+            SetCursorVisible(true);
+
+        if (input.NavUpPressed || input.NavDownPressed || input.NavLeftPressed || input.NavRightPressed)
+            SetCursorVisible(false);
+    }
+
+    private void SetUpCursor()
+    {
+        UpdateCursor(input.CurrentScheme);
+        input.OnControlSchemeChanged += UpdateCursor;
+    }
+
+    private void UpdateCursor(PlayerInputReader.ControlScheme scheme)
+    {
+        SetCursorVisible(scheme == PlayerInputReader.ControlScheme.Keyboard);
+    }
+
+    private void SetCursorVisible(bool visible)
+    {
+        Cursor.visible = visible;
+        Cursor.lockState = visible ? CursorLockMode.Confined : CursorLockMode.Locked;
     }
 
     public void StartBattle(List<GameObject> enemies, Transform[] enemyBattlePositions, Transform playerBattlePosition, Transform cameraBattlePosition, Transform cameraTarget)
@@ -53,5 +85,13 @@ public class BattleManager : MonoBehaviour
 
         GameManager.Instance.Input.SwitchToBattle();
         battleMenu.Show();
+        SetUpCursor();
+    }
+
+    public void EndBattle()
+    {
+        input.OnControlSchemeChanged -= UpdateCursor;
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 }

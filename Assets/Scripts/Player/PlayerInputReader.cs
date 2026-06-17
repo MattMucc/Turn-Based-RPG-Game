@@ -24,6 +24,12 @@ public class PlayerInputReader : MonoBehaviour
     private InputAction skillsAction;
     private InputAction itemsAction;
     private InputAction runAction;
+    private InputAction navUpAction;
+    private InputAction navDownAction;
+    private InputAction navLeftAction;
+    private InputAction navRightAction;
+    private InputAction navSelectAction;
+    private InputAction navCancelAction;
     private bool inBattle = false;
 
     // Control Scheme
@@ -50,6 +56,13 @@ public class PlayerInputReader : MonoBehaviour
     public bool SkillsPressed { get; private set; }
     public bool ItemsPressed { get; private set; }
     public bool RunPressed { get; private set; }
+
+    public bool NavUpPressed { get; private set; }
+    public bool NavDownPressed { get; private set; }
+    public bool NavLeftPressed { get; private set; }
+    public bool NavRightPressed { get; private set; }
+    public bool NavSelectPressed { get; private set; }
+    public bool NavCancelPressed { get; private set; }
 
     private void Awake()
     {
@@ -79,6 +92,13 @@ public class PlayerInputReader : MonoBehaviour
             skillsAction = battleInputMap.FindAction("Skills", true);
             itemsAction = battleInputMap.FindAction("Items", true);
             runAction = battleInputMap.FindAction("Run", true);
+
+            navUpAction = battleInputMap.FindAction("NavigateUp", true);
+            navDownAction = battleInputMap.FindAction("NavigateDown", true);
+            navLeftAction = battleInputMap.FindAction("NavigateLeft", true);
+            navRightAction = battleInputMap.FindAction("NavigateRight", true);
+            navSelectAction = battleInputMap.FindAction("NavigateSelect", true);
+            navCancelAction = battleInputMap.FindAction("NavigateCancel", true);
         }
     }
 
@@ -124,11 +144,22 @@ public class PlayerInputReader : MonoBehaviour
         }
         else
         {
+            // Shortcuts
             AttackPressed = attackAction.WasPressedThisFrame();
             SkillsPressed = skillsAction.WasPressedThisFrame();
             ItemsPressed = itemsAction.WasPressedThisFrame();
             RunPressed = runAction.WasPressedThisFrame();
+
+            // Navigation
+            NavUpPressed = navUpAction.WasPressedThisFrame();
+            NavDownPressed = navDownAction.WasPressedThisFrame();
+            NavLeftPressed = navLeftAction.WasPressedThisFrame();
+            NavRightPressed = navRightAction.WasPressedThisFrame();
+            NavSelectPressed = navSelectAction.WasPressedThisFrame();
+            NavCancelPressed = navCancelAction.WasPressedThisFrame();
         }
+
+        DetectSchemeSwitch();
     }
 
     public void SwitchToBattle()
@@ -149,6 +180,35 @@ public class PlayerInputReader : MonoBehaviour
         battleInputMap?.Disable();
         inputMap?.Enable();
         inBattle = false;
+    }
+
+    private void DetectSchemeSwitch()
+    {
+        // Mouse moved, switch to keyboard
+        if (Mouse.current != null && Mouse.current.delta.ReadValue().sqrMagnitude > 0.5f)
+        {
+            TrySwitchScheme(ControlScheme.Keyboard);
+            return;
+        }
+
+        // Any keyboard activity, switch to keyboard
+        if (Keyboard.current != null && Keyboard.current.wasUpdatedThisFrame)
+        {
+            TrySwitchScheme(ControlScheme.Keyboard);
+            return;
+        }
+
+        // Any gamepad activity, switch to gamepad
+        if (Gamepad.current != null && Gamepad.current.wasUpdatedThisFrame)
+            TrySwitchScheme(ControlScheme.Gamepad);
+    }
+
+    private void TrySwitchScheme(ControlScheme newScheme)
+    {
+        if (CurrentScheme == newScheme) return;
+
+        CurrentScheme = newScheme;
+        OnControlSchemeChanged?.Invoke(CurrentScheme);
     }
 
     private void OnActionChange(object obj, InputActionChange change)
