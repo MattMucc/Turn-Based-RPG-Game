@@ -11,7 +11,18 @@ public class EnemyTrigger : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        PlayerMovement player = other.GetComponent<PlayerMovement>();
+        TryEncounter(other);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        TryEncounter(other);
+    }
+
+    private void TryEncounter(Collider other)
+    {
+        if (!BattleGroup) return;
+        PlayerMovement player = other.GetComponentInParent<PlayerMovement>();
         if (!player || !player.IsPossessed) return;
 
         BattleGroup.TriggerBattle();

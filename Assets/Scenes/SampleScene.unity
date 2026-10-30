@@ -1098,6 +1098,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleManager
   battleMenu: {fileID: 557454126}
+  gridWidth: 14
+  gridDepth: 12
+  cellSize: 2
+  gridOverlayShader: {fileID: 4800000, guid: 55b063adde9d20d4299c829d1b5d79fc, type: 3}
 --- !u!4 &1018846185 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8191903454379516405, guid: 039b8ce9a3e94044a88acb13947ac823, type: 3}

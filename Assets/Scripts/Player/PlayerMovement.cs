@@ -205,6 +205,13 @@ public class PlayerMovement : MonoBehaviour
         IsPossessed = true;
     }
 
+    public void ResetMotion()
+    {
+        horizontalVelocity = Vector3.zero; verticalVelocity = 0;
+        coyoteTimer = 0; jumpBufferTimer = 0; IsJumping = false;
+        sprintToggled = false;
+    }
+
     public void Unpossess()
     {
         IsPossessed = false;

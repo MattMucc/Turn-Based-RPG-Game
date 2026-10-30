@@ -1,0 +1,6 @@
+{
+  "name": "Tenebrasia.Grid.Tests",
+  "references": ["Tenebrasia.Grid"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

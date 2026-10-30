@@ -178,8 +178,15 @@ public class PlayerInputReader : MonoBehaviour
     public void SwitchToWorld()
     {
         battleInputMap?.Disable();
-        inputMap?.Enable();
+        if (isActiveAndEnabled) inputMap?.Enable();
+        else inputMap?.Disable();
         inBattle = false;
+        Move = Vector2.zero;
+        Look = Vector2.zero;
+        JumpPressed = false;
+        JumpHeld = false;
+        SprintPressed = false;
+        SprintHeld = false;
     }
 
     private void DetectSchemeSwitch()

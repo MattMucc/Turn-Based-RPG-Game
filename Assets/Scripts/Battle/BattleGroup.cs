@@ -19,6 +19,11 @@ public class BattleGroup : MonoBehaviour
     [SerializeField] private Transform playerBattlePosition;
     [SerializeField] private Transform cameraBattlePosition;
     [SerializeField] private Transform cameraTarget;
+    [Header("Same-scene Grid")]
+    [Tooltip("Optional: center the grid on a suitable authored patch of terrain instead of the player.")]
+    [SerializeField] private Transform gridCenter;
+    public Transform GridCenter => gridCenter;
+    public int GroundLayers => groundLayer.value;
 
     [Header("References")]
     [SerializeField] private BoxCollider spawnArea;
@@ -30,6 +35,7 @@ public class BattleGroup : MonoBehaviour
     private List<GameObject> spawnedEnemies = new();
     private List<EnemyMovement> enemyMovements = new();
     private bool battleTriggered = false;
+    private float retryAfter;
 
     private void Awake()
     {
@@ -111,13 +117,21 @@ public class BattleGroup : MonoBehaviour
 
     public void TriggerBattle()
     {
-        if (battleTriggered) return;
+        if (battleTriggered || Time.time < retryAfter || !BattleManager.Instance || BattleManager.Instance.InBattle) return;
+        battleTriggered = BattleManager.Instance.TryStartBattle(this, spawnedEnemies);
+        if (!battleTriggered) retryAfter = Time.time + 3;
+    }
 
-        battleTriggered = true;
-        foreach (EnemyMovement movement in enemyMovements)
-            movement.enabled = false;
-
-        BattleManager.Instance.StartBattle(spawnedEnemies, enemyBattlePositions, playerBattlePosition, cameraBattlePosition, cameraTarget);
+    public void CompleteEncounter(bool victory)
+    {
+        retryAfter = Time.time + 5;
+        battleTriggered = victory;
+        if (victory)
+        {
+            foreach (var enemy in spawnedEnemies) if (enemy) Destroy(enemy);
+            spawnedEnemies.Clear(); enemyMovements.Clear();
+        }
+        else foreach (var movement in enemyMovements) if (movement) movement.StartRoaming();
     }
 
     private void OnTriggerExit(Collider other)
