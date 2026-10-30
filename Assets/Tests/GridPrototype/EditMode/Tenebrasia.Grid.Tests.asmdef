@@ -1,6 +1,6 @@
 {
   "name": "Tenebrasia.Grid.Tests",
-  "references": ["Tenebrasia.Grid"],
+  "references": ["Tenebrasia.Grid", "UnityEngine.UI", "Unity.TextMeshPro"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }

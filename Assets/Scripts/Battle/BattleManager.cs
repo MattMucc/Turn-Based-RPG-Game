@@ -120,7 +120,7 @@ public class BattleManager : MonoBehaviour
             foreach (var actor in actors) actor.Suspend();
             player.ResetMotion();
             if (battleMenu) battleMenu.Hide();
-            input.SwitchToBattle(); input.enabled = false;
+            input.SwitchToBattle(); input.enabled = true;
             worldCamera.enabled = false;
             Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
             encounterRoot = new GameObject("Runtime same-scene battle");
@@ -128,6 +128,7 @@ public class BattleManager : MonoBehaviour
             var figures = new List<Transform>(); var offsets = new List<float>();
             foreach (var actor in actors) { figures.Add(actor.Transform); offsets.Add(actor.FootOffset); }
             encounter.Initialize(grid, figures, offsets, positions, worldCamera, shader, CompleteBattle);
+            if (battleMenu) battleMenu.Bind(encounter);
             return true;
         }
         catch (Exception exception)
@@ -145,6 +146,7 @@ public class BattleManager : MonoBehaviour
     private void CompleteBattle(bool victory)
     {
         if (!InBattle) return;
+        if (battleMenu) battleMenu.Unbind();
         if (encounterRoot) { encounterRoot.SetActive(false); Destroy(encounterRoot); encounterRoot = null; }
         // Keep the encounter guard raised until all collider/behaviour state is restored.
         foreach (var actor in actors) actor.Restore();

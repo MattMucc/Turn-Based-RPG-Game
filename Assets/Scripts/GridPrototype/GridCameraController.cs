@@ -27,6 +27,7 @@ namespace Tenebrasia.GridPrototype
         public float ZoomSpeed = 2f;
         public float FocusDistance = 12f;
         public Transform FocusTarget;
+        public System.Func<Vector2, bool> PointerOverUI;
         public Vector3 OrbitPivot { get; private set; }
         public bool CharacterFocused { get; private set; }
         private Camera view;
@@ -108,7 +109,7 @@ namespace Tenebrasia.GridPrototype
             if (keyboard != null && keyboard.fKey.wasPressedThisFrame) FocusActive();
             if (mouse == null) return;
             Vector2 position = mouse.position.ReadValue(), delta = mouse.delta.ReadValue();
-            bool overWorld = view.pixelRect.Contains(position);
+            bool overWorld = view.pixelRect.Contains(position) && !(PointerOverUI?.Invoke(position) ?? false);
             if (mouse.rightButton.wasPressedThisFrame && overWorld)
             { rotating = true; pan.Cancel(); }
             if (mouse.middleButton.wasPressedThisFrame && overWorld)
