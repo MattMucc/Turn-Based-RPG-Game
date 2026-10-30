@@ -166,7 +166,7 @@ namespace Tenebrasia.GridPrototype
                 selected = new Vector2Int(Mathf.Clamp(selected.x + step.x, 0, Grid.Board.Width - 1),
                     Mathf.Clamp(selected.y + step.y, 0, Grid.Board.Depth - 1)); Refresh();
             }
-            if (KeyboardGridInputEnabled && ((k != null && k.enterKey.wasPressedThisFrame) || (pad != null && pad.buttonSouth.wasPressedThisFrame))) Confirm();
+            if (KeyboardGridInputEnabled && ((k != null && k.enterKey.wasPressedThisFrame) || (pad != null && !pad.leftTrigger.isPressed && pad.buttonSouth.wasPressedThisFrame))) Confirm();
             if (Mouse.current != null && !(PointerOverUI?.Invoke(Mouse.current.position.ReadValue()) ?? false)
                 && TryPick(Mouse.current.position.ReadValue(), out var hovered))
             {

@@ -16,13 +16,14 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     [SerializeField] private TMP_Text label;
     [SerializeField] private Image icon;
     private PlayerInputReader source;
-    private bool selected, highlighted;
+    private bool selected, highlighted, triggerShortcut;
+    private string caption;
     public Action<bool> HoverChanged;
     public Sprite KeyboardIcon => keyboardIcon;
     public Sprite ControllerIcon => controllerIcon;
-    public void SetIcons(Sprite keyboard, Sprite controller)
+    public void SetIcons(Sprite keyboard, Sprite controller, bool requiresTrigger = false)
     {
-        Ensure(); keyboardIcon = keyboard; controllerIcon = controller;
+        Ensure(); keyboardIcon = keyboard; controllerIcon = controller; triggerShortcut = requiresTrigger;
         UpdateIcon(source ? source.CurrentScheme : PlayerInputReader.ControlScheme.Keyboard);
     }
     public bool Available => button && button.interactable;
@@ -46,10 +47,13 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     }
     private void OnDestroy() { if (source) source.OnControlSchemeChanged -= UpdateIcon; }
     private void UpdateIcon(PlayerInputReader.ControlScheme scheme)
-    { if (icon) icon.sprite = scheme == PlayerInputReader.ControlScheme.Gamepad ? controllerIcon : keyboardIcon; }
+    {
+        if (icon) icon.sprite = scheme == PlayerInputReader.ControlScheme.Gamepad ? controllerIcon : keyboardIcon;
+        if (label && caption != null) label.text = (triggerShortcut && scheme == PlayerInputReader.ControlScheme.Gamepad ? "LT + " : "") + caption;
+    }
     public void Configure(string text, UnityAction action, bool showIcon = false)
     {
-        Ensure(); label.outlineWidth = 0; label.fontSize = 14; label.enableAutoSizing = false; label.text = text; button.onClick.RemoveAllListeners(); button.onClick.AddListener(action);
+        Ensure(); triggerShortcut = false; caption = text; label.outlineWidth = 0; label.fontSize = 14; label.enableAutoSizing = false; label.textWrappingMode = TextWrappingModes.NoWrap; label.overflowMode = TextOverflowModes.Ellipsis; label.text = text; button.onClick.RemoveAllListeners(); button.onClick.AddListener(action);
         // Let the label shrink inside the row instead of retaining its previous RectTransform width.
         var row = GetComponent<HorizontalLayoutGroup>();
         if (row)

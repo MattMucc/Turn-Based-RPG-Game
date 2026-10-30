@@ -171,7 +171,16 @@ public class BattleActionTests
         battle.TargetFocus.Dismiss(); hudType.GetMethod("Render").Invoke(hud, null);
         Assert.IsFalse(targetPanel.gameObject.activeSelf);
         Find("Skills").onClick.Invoke();
-        Assert.AreEqual(3, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(4, container.GetComponentsInChildren<Button>().Length);
+        Find("Favorites").onClick.Invoke();
+        Find("Multi-target Skill").onClick.Invoke();
+        menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
+        Assert.AreEqual(2, battle.Loadout.Options.Find(o => o.Pattern == BattleTargetPattern.Multiple).FavoriteSlot);
+        Find("Back").onClick.Invoke();
+        menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
+        Assert.AreEqual(BattleTargetPattern.Multiple, battle.ChosenAction.Pattern);
+        Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
+        menuType.GetMethod("CancelSelection", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         var area = Find("Area Skill");
         var hover = (Action<bool>)buttonType.GetField("HoverChanged").GetValue(area.GetComponent(buttonType));
         hover(true); Assert.AreEqual(BattleTargetPattern.Area, battle.HoveredAction.Pattern); Assert.IsNull(battle.ChosenAction);

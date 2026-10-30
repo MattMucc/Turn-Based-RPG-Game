@@ -11,6 +11,7 @@ namespace Tenebrasia.GridPrototype
     public sealed class BattleActionOption
     {
         public string Name;
+        [Range(-1, 3)] public int FavoriteSlot = -1;
         [TextArea] public string Description;
         public BattleActionCategory Category;
         public BattleTargetPattern Pattern;
@@ -33,6 +34,33 @@ namespace Tenebrasia.GridPrototype
     // These are demonstration options, not approved character kits or balance.
     public sealed class BattleActionLoadout : MonoBehaviour
     {
+        [SerializeField] private bool favoritesInitialized;
+        public void InitializeFavorites()
+        {
+            if (favoritesInitialized) return;
+            favoritesInitialized = true;
+            foreach (BattleActionCategory category in Enum.GetValues(typeof(BattleActionCategory)))
+            {
+                var used = new HashSet<int>();
+                foreach (var option in Options) if (option != null && option.Category == category && option.FavoriteSlot >= 0)
+                    if (!used.Add(option.FavoriteSlot)) option.FavoriteSlot = -1;
+                foreach (var option in Options)
+                {
+                    if (option == null || option.Category != category || option.FavoriteSlot >= 0) continue;
+                    for (int slot = 0; slot < 4; slot++) if (used.Add(slot)) { option.FavoriteSlot = slot; break; }
+                }
+            }
+        }
+        public BattleActionOption Favorite(BattleActionCategory category, int slot)
+        { InitializeFavorites(); return slot < 0 || slot >= 4 ? null : Options.Find(o => o != null && o.Category == category && o.FavoriteSlot == slot); }
+        public bool AssignFavorite(BattleActionOption option, int slot)
+        {
+            InitializeFavorites();
+            if (option == null || !Options.Contains(option) || slot < -1 || slot >= 4) return false;
+            if (slot >= 0) foreach (var other in Options)
+                if (other != null && other.Category == option.Category && other.FavoriteSlot == slot) other.FavoriteSlot = -1;
+            option.FavoriteSlot = slot; return true;
+        }
         public List<BattleActionOption> Options = new List<BattleActionOption>
         {
             new BattleActionOption { Name = "Strike", Description = "Prototype adjacent attack." },

@@ -16,6 +16,12 @@ public class BattleMenuUI : MonoBehaviour
     [SerializeField] private BattleMenuButton runButton;
     [SerializeField] private Sprite blockKeyboardIcon, blockControllerIcon, runKeyboardIcon;
     private Sprite runControllerIcon;
+    private readonly Sprite[] rootKeyboardIcons = new Sprite[3], rootControllerIcons = new Sprite[3];
+    [SerializeField] private Sprite[] favoriteKeyboardIcons = new Sprite[4];
+    [SerializeField] private Sprite[] favoriteControllerIcons = new Sprite[4];
+    [SerializeField] private Sprite backKeyboardIcon;
+    private bool editingFavorites;
+    private BattleActionOption assigningFavorite;
     private readonly List<BattleMenuButton> pool = new();
     private readonly List<Func<bool>> availability = new();
     private readonly List<string> descriptions = new();
@@ -41,6 +47,7 @@ public class BattleMenuUI : MonoBehaviour
         runControllerIcon = runButton.ControllerIcon;
         if (!blockKeyboardIcon) blockKeyboardIcon = runButton.KeyboardIcon;
         pool.AddRange(new[] { attackButton, skillsButton, itemsButton, runButton });
+        for (int i = 0; i < 3; i++) { rootKeyboardIcons[i] = pool[i].KeyboardIcon; rootControllerIcons[i] = pool[i].ControllerIcon; }
         content = (RectTransform)attackButton.transform.parent;
         // A compact, scrollable list at the bottom left; use the original buttons and their layout.
         var holder = new GameObject("Battle command viewport", typeof(RectTransform), typeof(Image), typeof(RectMask2D), typeof(ScrollRect));
@@ -135,11 +142,12 @@ public class BattleMenuUI : MonoBehaviour
     private void Root()
     {
         if (!battle) return;
-        browsing = moving = false; battle.GridInputEnabled = true; battle.KeyboardGridInputEnabled = false;
+        browsing = moving = editingFavorites = false; assigningFavorite = null; battle.GridInputEnabled = true; battle.KeyboardGridInputEnabled = false;
         BeginList();
         Row("Attack", () => Open(BattleActionCategory.Attack), "Choose an attack available to this character. Movement is free on green tiles. Tab / controller LB switches grid navigation on or off.", () => battle.ActionReady, true);
         Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a skill available to this character.", () => battle.ActionReady, true);
         Row("Items", () => Open(BattleActionCategory.Item), "Use a carried item. Costs one action and one item.", () => battle.ActionReady, true);
+        for (int i = 0; i < 3; i++) pool[i].SetIcons(rootKeyboardIcons[i], rootControllerIcons[i]);
         Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Keyboard 4 / controller RB.", () => battle.ActionReady, true);
         pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon);
         Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller B.", () => battle.PlayerReady, true);
@@ -150,14 +158,17 @@ public class BattleMenuUI : MonoBehaviour
     private void Open(BattleActionCategory selectedCategory)
     {
         if (!battle.ActionReady) return;
+        editingFavorites = false; assigningFavorite = null;
+        battle.Loadout.InitializeFavorites();
         category = selectedCategory; browsing = true; moving = false; battle.GridInputEnabled = false; battle.KeyboardGridInputEnabled = false;
         BeginList();
         foreach (var option in battle.Loadout.Options)
         {
-            if (option == null || option.Category != category || !option.Available) continue;
+            if (option == null || option.Category != category) continue;
             var captured = option;
             Row(option.Name + (category == BattleActionCategory.Item ? $" ×{option.Quantity}" : ""), () => Select(captured), option.Tooltip,
-                () => battle.ActionReady && captured.Available && (battle.ChosenAction == null || battle.ChosenAction == captured), preview: captured);
+                () => battle.ActionReady && captured.Available && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
+            if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
         if (rows == 0) Row("None available", () => { }, "This character has no available options in this category.", () => false);
         if (battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple)
@@ -167,8 +178,74 @@ public class BattleMenuUI : MonoBehaviour
             Row("Clear Targets", () => battle.ClearTargets(), "Remove all assigned hits without spending your action.",
                 () => battle.ActionReady && battle.TargetCount > 0);
         }
-        Row("Back", Back, "Cancel the selection and return to the command menu. Backspace / controller B. Escape cancels the action while keeping this list open.", () => battle.PlayerReady);
+        if (battle.ChosenAction == null) Row("Favorites", EditFavorites, "Choose an ability or item, then assign shortcut 1-4 / LT + A, B, X, Y. All options remain available.", () => battle.PlayerReady);
+        Row("Back", Back, "Cancel the selection and return to the command menu. Backspace / controller B. Escape cancels the action while keeping this list open.", () => battle.PlayerReady, true);
+        pool[rows - 1].SetIcons(backKeyboardIcon, runControllerIcon);
         FinishList();
+    }
+    private void FavoriteIcons(BattleMenuButton button, int slot)
+    {
+        button.SetIcons(slot < favoriteKeyboardIcons.Length ? favoriteKeyboardIcons[slot] : null,
+            slot < favoriteControllerIcons.Length ? favoriteControllerIcons[slot] : null, true);
+    }
+    private void EditFavorites()
+    {
+        battle.CancelAction(); editingFavorites = true; assigningFavorite = null;
+        battle.GridInputEnabled = battle.KeyboardGridInputEnabled = false; BeginList();
+        foreach (var option in battle.Loadout.Options)
+        {
+            if (option == null || option.Category != category) continue;
+            var captured = option;
+            Row(option.Name, () => AssignPage(captured), "Choose a favorite slot for " + option.Name + ". This does not spend an action.", () => true, option.FavoriteSlot >= 0);
+            if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
+        }
+        FavoriteBack(); FinishList();
+    }
+    private void AssignPage(BattleActionOption option)
+    {
+        assigningFavorite = option; BeginList();
+        for (int i = 0; i < 4; i++)
+        {
+            int slot = i; var current = battle.Loadout.Favorite(category, slot);
+            Row("Slot " + (slot + 1) + ": " + (current?.Name ?? "Empty"), () => AssignSlot(slot),
+                "Assign " + option.Name + " here. Replaces this slot's previous shortcut; all abilities remain usable.", () => true, true);
+            FavoriteIcons(pool[rows - 1], slot);
+        }
+        Row("Remove shortcut", () => AssignSlot(-1), "Keep this ability available without a shortcut.", () => true);
+        FavoriteBack(); FinishList();
+    }
+    private void AssignSlot(int slot)
+    { if (assigningFavorite == null) return; battle.Loadout.AssignFavorite(assigningFavorite, slot); EditFavorites(); }
+    private void FavoriteBack()
+    {
+        Row("Back", Back, "Backspace / controller B: return to the previous menu.", () => true, true);
+        pool[rows - 1].SetIcons(backKeyboardIcon, runControllerIcon);
+    }
+    public void UseFavorite(int slot)
+    {
+        if (!browsing || !battle.PlayerReady) return;
+        if (editingFavorites) { AssignSlot(slot); return; }
+        if (battle.ChosenAction != null) return;
+        var option = battle.Loadout.Favorite(category, slot);
+        if (option != null && option.Available && battle.ActionReady) Select(option);
+    }
+    private static int PressedFavorite(Keyboard k, Gamepad pad)
+    {
+        if (k != null)
+        {
+            if (k.digit1Key.wasPressedThisFrame) return 0;
+            if (k.digit2Key.wasPressedThisFrame) return 1;
+            if (k.digit3Key.wasPressedThisFrame) return 2;
+            if (k.digit4Key.wasPressedThisFrame) return 3;
+        }
+        if (pad != null && pad.leftTrigger.isPressed)
+        {
+            if (pad.buttonSouth.wasPressedThisFrame) return 0;
+            if (pad.buttonEast.wasPressedThisFrame) return 1;
+            if (pad.buttonWest.wasPressedThisFrame) return 2;
+            if (pad.buttonNorth.wasPressedThisFrame) return 3;
+        }
+        return -1;
     }
     private void Select(BattleActionOption option)
     {
@@ -188,6 +265,7 @@ public class BattleMenuUI : MonoBehaviour
     private void Back()
     {
         if (!battle.PlayerReady) return;
+        if (editingFavorites) { if (assigningFavorite != null) EditFavorites(); else Open(category); return; }
         battle.CancelAction(); Root();
     }
     private void ShowTooltip(int index)
@@ -222,19 +300,23 @@ public class BattleMenuUI : MonoBehaviour
         if (battle.InspectionOpen || (hud && hud.InspectionDismissedFrame == Time.frameCount)) return;
         if (!battle.PlayerReady) return;
         var k = Keyboard.current; var pad = Gamepad.current;
-        bool cancel = input && input.NavCancelPressed;
+        bool trigger = pad != null && pad.leftTrigger.isPressed;
+        bool cancel = (k != null && k.backspaceKey.wasPressedThisFrame) || (!trigger && pad != null && pad.buttonEast.wasPressedThisFrame);
+        int favorite = PressedFavorite(k, pad);
+        if (browsing && favorite >= 0) { UseFavorite(favorite); return; }
         if (k != null && k.escapeKey.wasPressedThisFrame)
-        { CancelSelection(); return; }
+        { if (editingFavorites) Back(); else CancelSelection(); return; }
         if (!browsing && !targeting && ((k != null && k.tabKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame)))
         { moving = !moving; battle.KeyboardGridInputEnabled = moving; highlighted = -1; return; }
         if (targeting || moving)
         {
             if (cancel) { Back(); return; }
-            if (targeting && ((k != null && k.deleteKey.wasPressedThisFrame) || (pad != null && pad.buttonWest.wasPressedThisFrame))) battle.UndoTarget();
+            if (targeting && ((k != null && k.deleteKey.wasPressedThisFrame) || (pad != null && !trigger && pad.buttonWest.wasPressedThisFrame))) battle.UndoTarget();
             return;
         }
-        if (!input) return;
         if (cancel && browsing) { Back(); return; }
+        if (trigger) return;
+        if (!input) return;
         if (!browsing && highlighted < 0)
         {
             if (input.AttackPressed) { Open(BattleActionCategory.Attack); return; }
