@@ -28,12 +28,18 @@ namespace Tenebrasia.GridPrototype
         public float FocusDistance = 12f;
         public Transform FocusTarget;
         public System.Func<Vector2, bool> PointerOverUI;
+        public System.Action<Vector2> ContextClick;
+        public bool Transitioning { get; private set; }
+        private Vector3 focusStart;
+        private float focusElapsed;
+        private readonly GridPointerGesture rightGesture = new GridPointerGesture();
         public Vector3 OrbitPivot { get; private set; }
         public bool CharacterFocused { get; private set; }
         private Camera view;
         private bool rotating, orbiting, clickPending;
         private Vector2 clickPosition;
         private float pivotDistance = 15f;
+        private Vector3 followedPosition;
         private readonly GridPointerGesture pan = new GridPointerGesture();
 
         private void Awake()
@@ -52,13 +58,55 @@ namespace Tenebrasia.GridPrototype
             OrbitPivot = FocusTarget.position;
             pivotDistance = FocusDistance;
             transform.position = OrbitPivot - transform.forward * pivotDistance;
-            CharacterFocused = true;
+            followedPosition = FocusTarget.position;
+            CharacterFocused = true; Transitioning = false;
+        }
+
+        public void SmoothFocus(Transform target)
+        {
+            if (!target) return;
+            FocusTarget = target; focusStart = transform.position; focusElapsed = 0;
+            CharacterFocused = true; Transitioning = true; followedPosition = target.position;
+        }
+        public void ReleaseFocus() { CharacterFocused = false; Transitioning = false; }
+        public void AdvanceFocus(float deltaTime)
+        {
+            if (!CharacterFocused || !FocusTarget) return;
+            if (!Transitioning) { FollowFocusedTarget(); return; }
+            focusElapsed += Mathf.Max(0, deltaTime);
+            float t = Mathf.Clamp01(focusElapsed / 0.55f); t = t * t * (3 - 2 * t);
+            OrbitPivot = FocusTarget.position; pivotDistance = FocusDistance;
+            transform.position = Vector3.Lerp(focusStart, OrbitPivot - transform.forward * FocusDistance, t);
+            followedPosition = FocusTarget.position;
+            if (focusElapsed >= 0.55f) Transitioning = false;
+        }
+
+        public void FollowFocusedTarget()
+        {
+            if (!CharacterFocused || !FocusTarget || Transitioning) return;
+            Vector3 delta = FocusTarget.position - followedPosition;
+            transform.position += delta; OrbitPivot += delta; followedPosition = FocusTarget.position;
+        }
+        private void LateUpdate() => AdvanceFocus(Time.unscaledDeltaTime);
+
+        public void FrameAction(System.Collections.Generic.IReadOnlyList<Vector3> points)
+        {
+            if (points == null || points.Count == 0) return;
+            if (!view) view = GetComponent<Camera>();
+            if (!view) return;
+            var bounds = new Bounds(points[0], Vector3.zero);
+            foreach (var point in points) bounds.Encapsulate(point);
+            float halfFov = Mathf.Atan(Mathf.Tan(view.fieldOfView * Mathf.Deg2Rad * 0.5f) * Mathf.Min(1, view.aspect));
+            pivotDistance = Mathf.Max(FocusDistance, (bounds.extents.magnitude + 2) / Mathf.Sin(halfFov) * 1.25f);
+            OrbitPivot = bounds.center;
+            transform.position = OrbitPivot - transform.forward * pivotDistance;
+            ReleaseFocus();
         }
 
         public void Fly(Vector3 localDisplacement)
         {
             transform.position += transform.rotation * localDisplacement;
-            CharacterFocused = false;
+            ReleaseFocus();
         }
 
         public void Pan(Vector2 pixels)
@@ -66,14 +114,15 @@ namespace Tenebrasia.GridPrototype
             float scale = 2 * Mathf.Max(2, pivotDistance) * Mathf.Tan(view.fieldOfView * Mathf.Deg2Rad * 0.5f)
                 / Mathf.Max(1, view.pixelHeight);
             transform.position -= (transform.right * pixels.x + transform.up * pixels.y) * scale;
-            CharacterFocused = false;
+            ReleaseFocus();
         }
 
         public void Dolly(float distance)
-        { transform.position += transform.forward * distance; CharacterFocused = false; }
+        { transform.position += transform.forward * distance; ReleaseFocus(); }
 
         public void BeginOrbit()
         {
+            Transitioning = false; if (FocusTarget) followedPosition = FocusTarget.position;
             if (CharacterFocused && FocusTarget) OrbitPivot = FocusTarget.position;
             else
             {
@@ -85,13 +134,14 @@ namespace Tenebrasia.GridPrototype
 
         public void Orbit(Vector2 pixels)
         {
+            FollowFocusedTarget();
             if (CharacterFocused && FocusTarget) OrbitPivot = FocusTarget.position;
             Quaternion rotation = Rotated(pixels);
             transform.SetPositionAndRotation(OrbitPivot - rotation * Vector3.forward * pivotDistance, rotation);
         }
 
         public void Look(Vector2 pixels)
-        { transform.rotation = Rotated(pixels); CharacterFocused = false; }
+        { transform.rotation = Rotated(pixels); ReleaseFocus(); }
 
         private Quaternion Rotated(Vector2 pixels)
         {
@@ -111,7 +161,7 @@ namespace Tenebrasia.GridPrototype
             Vector2 position = mouse.position.ReadValue(), delta = mouse.delta.ReadValue();
             bool overWorld = view.pixelRect.Contains(position) && !(PointerOverUI?.Invoke(position) ?? false);
             if (mouse.rightButton.wasPressedThisFrame && overWorld)
-            { rotating = true; pan.Cancel(); }
+            { rotating = true; pan.Cancel(); rightGesture.Begin(position); }
             if (mouse.middleButton.wasPressedThisFrame && overWorld)
             { orbiting = true; rotating = false; pan.Cancel(); BeginOrbit(); }
             if (mouse.leftButton.wasPressedThisFrame && overWorld && !rotating && !orbiting) pan.Begin(position);
@@ -126,7 +176,10 @@ namespace Tenebrasia.GridPrototype
                 }
             }
             if (orbiting && mouse.middleButton.isPressed) Orbit(delta);
-            else if (rotating && mouse.rightButton.isPressed) Look(delta);
+            else if (rotating && mouse.rightButton.isPressed)
+            { rightGesture.Update(position); if (rightGesture.Dragged) Look(delta); }
+            if (mouse.rightButton.wasReleasedThisFrame && rightGesture.Held)
+            { if (rightGesture.End(position) && overWorld) ContextClick?.Invoke(position); }
             if (!mouse.middleButton.isPressed) orbiting = false;
             if (!mouse.rightButton.isPressed) rotating = false;
             if (overWorld)
@@ -146,6 +199,6 @@ namespace Tenebrasia.GridPrototype
 
         private void OnApplicationFocus(bool focused) { if (!focused) ResetGestures(); }
         private void OnDisable() { ResetGestures(); }
-        private void ResetGestures() { pan.Cancel(); rotating = orbiting = clickPending = false; }
+        private void ResetGestures() { pan.Cancel(); rightGesture.Cancel(); rotating = orbiting = clickPending = false; }
     }
 }

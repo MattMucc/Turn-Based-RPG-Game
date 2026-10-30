@@ -18,6 +18,13 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private PlayerInputReader source;
     private bool selected, highlighted;
     public Action<bool> HoverChanged;
+    public Sprite KeyboardIcon => keyboardIcon;
+    public Sprite ControllerIcon => controllerIcon;
+    public void SetIcons(Sprite keyboard, Sprite controller)
+    {
+        Ensure(); keyboardIcon = keyboard; controllerIcon = controller;
+        UpdateIcon(source ? source.CurrentScheme : PlayerInputReader.ControlScheme.Keyboard);
+    }
     public bool Available => button && button.interactable;
     public TMP_Text Label { get { Ensure(); return label; } }
 
@@ -42,15 +49,31 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     { if (icon) icon.sprite = scheme == PlayerInputReader.ControlScheme.Gamepad ? controllerIcon : keyboardIcon; }
     public void Configure(string text, UnityAction action, bool showIcon = false)
     {
-        Ensure(); label.text = text; button.onClick.RemoveAllListeners(); button.onClick.AddListener(action);
-        if (icon) icon.gameObject.SetActive(showIcon);
+        Ensure(); label.outlineWidth = 0; label.fontSize = 14; label.enableAutoSizing = false; label.text = text; button.onClick.RemoveAllListeners(); button.onClick.AddListener(action);
+        // Let the label shrink inside the row instead of retaining its previous RectTransform width.
+        var row = GetComponent<HorizontalLayoutGroup>();
+        if (row)
+        {
+            row.childControlWidth = true; row.childForceExpandWidth = false;
+            var labelLayout = label.GetComponent<LayoutElement>();
+            if (!labelLayout) labelLayout = label.gameObject.AddComponent<LayoutElement>();
+            labelLayout.minWidth = 0; labelLayout.preferredWidth = 0; labelLayout.flexibleWidth = 1;
+        }
+        if (icon)
+        {
+            icon.rectTransform.sizeDelta = new Vector2(22, 22);
+            var iconLayout = icon.GetComponent<LayoutElement>();
+            if (!iconLayout) iconLayout = icon.gameObject.AddComponent<LayoutElement>();
+            iconLayout.minWidth = iconLayout.preferredWidth = 22; iconLayout.flexibleWidth = 0;
+            icon.gameObject.SetActive(showIcon);
+        }
         selected = highlighted = false; SetAvailable(true);
     }
     public void SetAvailable(bool available)
     {
         Ensure(); button.interactable = available;
         button.image.color = !available ? new Color(0.3f, 0.3f, 0.3f, 0.8f) : highlighted || selected ? highlightedColor : normalColor;
-        label.color = available ? Color.white : new Color(0.55f, 0.55f, 0.55f);
+        label.color = available ? new Color(0.05f, 0.06f, 0.08f) : new Color(0.12f, 0.12f, 0.12f);
         if (outline) outline.enabled = selected || (highlighted && available);
     }
     public void SetSelected(bool value) { selected = value; SetAvailable(Available); }

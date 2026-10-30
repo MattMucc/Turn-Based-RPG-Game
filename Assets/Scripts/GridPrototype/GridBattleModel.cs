@@ -23,6 +23,7 @@ namespace Tenebrasia.GridPrototype
         public int Movement { get; private set; }
         public bool ActionAvailable { get; private set; }
         public bool TurnOpen { get; private set; }
+        public int MaxHealth = 100;
         public int JumpRange = 2;
         public int JumpHeight = 1;
         public int Health = 100;

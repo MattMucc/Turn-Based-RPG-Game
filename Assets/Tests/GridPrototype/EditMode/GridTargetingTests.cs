@@ -10,11 +10,13 @@ public class GridTargetingTests
         var direction = Quaternion.Euler(0, original, 0) * Vector3.forward;
         Assert.That(Quaternion.Angle(GridTargeting.Facing(direction), Quaternion.Euler(0, expected, 0)), Is.LessThan(0.01f));
     }
-    [Test] public void RangeUsesEightWayDistanceAndRejectsSelfAndOutOfBounds()
+    [Test] public void RangeAllowsSelfButRejectsOutOfBoundsAndZeroLengthPiercing()
     {
         var board = new GridBoard(8, 8); var action = new BattleActionOption { Reach = 2 };
         Assert.IsTrue(GridTargeting.CanTarget(board, Vector2Int.zero, new Vector2Int(2, 2), action));
         Assert.IsFalse(GridTargeting.CanTarget(board, Vector2Int.zero, new Vector2Int(3, 0), action));
+        Assert.IsTrue(GridTargeting.CanTarget(board, Vector2Int.zero, Vector2Int.zero, action));
+        action.Pattern = BattleTargetPattern.Piercing;
         Assert.IsFalse(GridTargeting.CanTarget(board, Vector2Int.zero, Vector2Int.zero, action));
         Assert.IsFalse(GridTargeting.CanTarget(board, Vector2Int.zero, new Vector2Int(-1, 0), action));
     }

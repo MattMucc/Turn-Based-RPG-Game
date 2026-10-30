@@ -20,12 +20,13 @@ namespace Tenebrasia.GridPrototype
         [Min(0)] public int Damage = 25;
         [Min(0)] public int Quantity;
         public bool Available => Category != BattleActionCategory.Item || Quantity > 0;
-        public string Tooltip => $"{Name}\n{Description}\n\n{Reach} tile(s) of reach · 1 action · {Damage} damage per enemy\n"
-            + (Pattern == BattleTargetPattern.Area ? $"Area: {Radius}-tile radius around the target. Enemies only." :
-               Pattern == BattleTargetPattern.Piercing ? "Pierces a straight or diagonal line, stopping at terrain obstruction." :
-               Pattern == BattleTargetPattern.Multiple ? $"Choose up to {MaxTargets} different enemies." : "One enemy.")
-            + (Category == BattleActionCategory.Item ? $"\nCarried: {Quantity}. Consumes one on confirmation." : "")
-            + "\nBlue: reach. Red: affected tiles. No accuracy/status roll in this prototype.";
+        public string Tooltip => $"<b>{Name}</b>\n{Description}\n\n<b>Reach</b>   {Reach} tiles from the user\n<b>Damage</b>   {Damage} per hit\n<b>Cost</b>   1 action\n\n<b>Targets</b>\n"
+            + (Pattern == BattleTargetPattern.Area ? $"Everyone within {Radius} tile(s) of the chosen cell. Allies and destructible objects are also hit." :
+               Pattern == BattleTargetPattern.Piercing ? "Hits characters and destructible objects in a straight or diagonal line, including allies. Stops at terrain." :
+               Pattern == BattleTargetPattern.Multiple ? $"Assign {MaxTargets} hits to start. Repeated cells and allies are allowed. Hits resolve in selection order." : "One cell. One hit. Can hit allies or destructible objects.")
+            + (Category == BattleActionCategory.Item ? $"\n\n<b>Carried</b>   {Quantity}\nUses one item when the action starts." : "")
+            + "\nEmpty cells still spend the action.\n\n<color=#80BEFF>Blue tiles</color>: within reach\n<color=#FF9090>Red tiles</color>: affected by this action";
+
     }
 
     // Carried quantities belong to the character, not a newly created encounter.
@@ -53,14 +54,15 @@ namespace Tenebrasia.GridPrototype
         public static int Distance(Vector2Int a, Vector2Int b) => Mathf.Max(Mathf.Abs(a.x - b.x), Mathf.Abs(a.y - b.y));
 
         // Supercover line: diagonals cannot shoot through two touching wall corners.
-        public static bool Clear(GridBoard board, Vector2Int from, Vector2Int to)
+        public static bool Clear(GridBoard board, Vector2Int from, Vector2Int to, bool allowBlockedDestination = false)
         {
+            if (!board.Contains(from) || !board.Contains(to)) return false;
             int steps = Distance(from, to);
             Vector2Int last = from;
             for (int i = 1; i <= steps; i++)
             {
                 var p = Vector2Int.RoundToInt(Vector2.Lerp(from, to, i / (float)steps));
-                if (!board.Contains(p) || board.At(p).Ground == Ground.Obstacle) return false;
+                if (!board.Contains(p) || (board.At(p).Ground == Ground.Obstacle && !(p == to && allowBlockedDestination))) return false;
                 if (p.x != last.x && p.y != last.y &&
                     (board.At(new Vector2Int(last.x, p.y)).Ground == Ground.Obstacle ||
                      board.At(new Vector2Int(p.x, last.y)).Ground == Ground.Obstacle)) return false;
@@ -70,20 +72,20 @@ namespace Tenebrasia.GridPrototype
         }
 
         public static bool CanTarget(GridBoard board, Vector2Int from, Vector2Int to, BattleActionOption action,
-            Func<Vector2Int, Vector2Int, bool> sight = null)
+            Func<Vector2Int, Vector2Int, bool> sight = null, Func<Vector2Int, bool> targetableObstacle = null)
         {
             int distance = Distance(from, to);
-            if (distance < 1 || distance > action.Reach || !board.Contains(to)) return false;
+            if ((distance == 0 && action.Pattern == BattleTargetPattern.Piercing) || distance > action.Reach || !board.Contains(to)) return false;
             var d = to - from;
             if (action.Pattern == BattleTargetPattern.Piercing && d.x != 0 && d.y != 0 && Mathf.Abs(d.x) != Mathf.Abs(d.y)) return false;
-            return Clear(board, from, to) && (sight == null || sight(from, to));
+            return Clear(board, from, to, targetableObstacle?.Invoke(to) ?? false) && (sight == null || sight(from, to));
         }
 
         public static HashSet<Vector2Int> Footprint(GridBoard board, Vector2Int from, Vector2Int target,
-            BattleActionOption action, Func<Vector2Int, Vector2Int, bool> sight = null)
+            BattleActionOption action, Func<Vector2Int, Vector2Int, bool> sight = null, Func<Vector2Int, bool> targetableObstacle = null)
         {
             var result = new HashSet<Vector2Int>();
-            if (!CanTarget(board, from, target, action, sight)) return result;
+            if (!CanTarget(board, from, target, action, sight, targetableObstacle)) return result;
             if (action.Pattern == BattleTargetPattern.Piercing)
             {
                 var delta = target - from;
@@ -91,8 +93,9 @@ namespace Tenebrasia.GridPrototype
                 for (int i = 1; i <= action.Reach; i++)
                 {
                     var p = from + step * i;
-                    if (!CanTarget(board, from, p, action, sight)) break;
+                    if (!CanTarget(board, from, p, action, sight, targetableObstacle)) break;
                     result.Add(p);
+                    if (board.At(p).Ground == Ground.Obstacle) break;
                 }
             }
             else if (action.Pattern == BattleTargetPattern.Area)
@@ -100,7 +103,7 @@ namespace Tenebrasia.GridPrototype
                 for (int x = -action.Radius; x <= action.Radius; x++) for (int y = -action.Radius; y <= action.Radius; y++)
                 {
                     var p = target + new Vector2Int(x, y);
-                    if (board.Contains(p) && Clear(board, target, p) && (sight == null || sight(target, p))) result.Add(p);
+                    if (board.Contains(p) && Clear(board, target, p, targetableObstacle?.Invoke(p) ?? false) && (sight == null || sight(target, p))) result.Add(p);
                 }
             }
             else result.Add(target);

@@ -24,6 +24,7 @@ public class PlayerInputReader : MonoBehaviour
     private InputAction skillsAction;
     private InputAction itemsAction;
     private InputAction runAction;
+    private InputAction blockAction;
     private InputAction navUpAction;
     private InputAction navDownAction;
     private InputAction navLeftAction;
@@ -56,6 +57,7 @@ public class PlayerInputReader : MonoBehaviour
     public bool SkillsPressed { get; private set; }
     public bool ItemsPressed { get; private set; }
     public bool RunPressed { get; private set; }
+    public bool BlockPressed { get; private set; }
 
     public bool NavUpPressed { get; private set; }
     public bool NavDownPressed { get; private set; }
@@ -92,6 +94,7 @@ public class PlayerInputReader : MonoBehaviour
             skillsAction = battleInputMap.FindAction("Skills", true);
             itemsAction = battleInputMap.FindAction("Items", true);
             runAction = battleInputMap.FindAction("Run", true);
+            blockAction = battleInputMap.FindAction("Block", true);
 
             navUpAction = battleInputMap.FindAction("NavigateUp", true);
             navDownAction = battleInputMap.FindAction("NavigateDown", true);
@@ -149,6 +152,7 @@ public class PlayerInputReader : MonoBehaviour
             SkillsPressed = skillsAction.WasPressedThisFrame();
             ItemsPressed = itemsAction.WasPressedThisFrame();
             RunPressed = runAction.WasPressedThisFrame();
+            BlockPressed = blockAction.WasPressedThisFrame();
 
             // Navigation
             NavUpPressed = navUpAction.WasPressedThisFrame();

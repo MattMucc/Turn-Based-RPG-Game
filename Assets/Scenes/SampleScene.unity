@@ -814,6 +814,9 @@ MonoBehaviour:
   skillsButton: {fileID: 1663630666}
   itemsButton: {fileID: 892792672}
   runButton: {fileID: 1899791995}
+  blockKeyboardIcon: {fileID: 21300000, guid: b0409c7d7f0dce44a80dbbf354691d67, type: 3}
+  blockControllerIcon: {fileID: 21300000, guid: f26be72dc8be4764ca51a54b57d312d0, type: 3}
+  runKeyboardIcon: {fileID: 21300000, guid: 841345cae8499494580f8320fa548a04, type: 3}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0

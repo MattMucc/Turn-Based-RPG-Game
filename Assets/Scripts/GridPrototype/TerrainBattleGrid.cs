@@ -42,9 +42,11 @@ namespace Tenebrasia.GridPrototype
             var hits = Physics.RaycastAll(new Vector3(point.x, rayTop, point.z), Vector3.down, 30,
                 groundMask, QueryTriggerInteraction.Ignore);
             Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-            foreach (var hit in hits) if (!ignored.Contains(hit.collider)) { result = hit; return true; }
+            foreach (var hit in hits) if (!ignored.Contains(hit.collider) && !hit.collider.GetComponentInParent<BattleDestructible>()) { result = hit; return true; }
             result = default; return false;
         }
+
+        public void RefreshSurfaces() { edgeCache.Clear(); Sample(); }
 
         private void Sample()
         {
@@ -54,6 +56,7 @@ namespace Tenebrasia.GridPrototype
             for (int x = 0; x < Board.Width; x++) for (int z = 0; z < Board.Depth; z++)
             {
                 var cell = Board.Cells[x, z]; cell.Ground = Ground.Obstacle;
+                HasSurface[x, z] = false; Corners[x, z] = null;
                 Vector3 point = Origin + new Vector3(x * CellSize, 0, z * CellSize);
                 if (!GroundAt(point, out var center)) continue;
                 Centers[x, z] = center.point; HasSurface[x, z] = true;
