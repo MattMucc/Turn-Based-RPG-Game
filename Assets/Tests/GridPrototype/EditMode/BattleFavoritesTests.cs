@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
 using Tenebrasia.GridPrototype;
-public class BattleFavoritesTests
+public class BattleFavoritesTests : InputTestFixture
 {
     [Test] public void StableSlotsSurviveReorderingDepletionAndReassignment()
     {
