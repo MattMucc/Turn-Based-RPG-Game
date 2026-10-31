@@ -26,6 +26,7 @@ public class BattleActionTests
         var camera = Create("Source camera").AddComponent<Camera>();
         battle = Create("Test encounter").AddComponent<InSceneGridBattle>();
         battle.Initialize(grid, figures, new float[cells.Length], cells, camera, Shader.Find("Tenebrasia/GridOverlay"), victory => { });
+        battle.AdvanceFacing(1);
     }
     [TearDown] public void Cleanup()
     {
@@ -295,9 +296,131 @@ public class BattleActionTests
         focus.Hover(null); focus.Hover(b); Assert.AreSame(b, focus.Displayed);
         focus.Pin(b); b.Unit.Health = 0; Assert.IsNull(focus.Displayed);
     }
-    [Test] public void EntryFacesActorsAlongGridDirections()
+    private System.Collections.IEnumerator BeginEnemySequence(bool combo)
+    {
+        var sequence = (System.Collections.IEnumerator)typeof(InSceneGridBattle)
+            .GetMethod("EnemyAttack", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(battle, new object[] { 1, combo });
+        Assert.IsTrue(sequence.MoveNext());
+        battle.BattleCamera.GetComponent<GridCameraController>().AdvanceFocus(1);
+        if (!(bool)typeof(InSceneGridBattle).GetField("playerTurning", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(battle)
+            && battle.CurrentImpact == null) Assert.IsTrue(sequence.MoveNext());
+        return sequence;
+    }
+    [Test] public void ParryUsesDisplayedGoldWindowBeforeAdvancingPastImpact()
+    {
+        battle.DefenseSettings.InputLatencyCompensation = 0;
+        var sequence = BeginEnemySequence(false);
+        battle.AdvanceDefense(battle.CurrentImpact.Duration - 0.01f);
+        Assert.Less(battle.CurrentImpact.BarPosition(battle.CurrentImpact.Elapsed), DefenseImpact.ImpactBarPosition);
+        battle.AdvanceDefense(0.04f, false, true);
+        Assert.IsTrue(battle.CurrentImpact.Resolved);
+        Assert.AreEqual(DefenseResult.Parried, battle.CurrentImpact.Result);
+        Assert.AreEqual(100, battle.Combatants[0].Health);
+    }
+    [Test] public void DelayedParryPreventsDamageBeforeCompensatedDeadline()
+    {
+        var sequence = BeginEnemySequence(false);
+        battle.AdvanceDefense(battle.CurrentImpact.Duration + 0.016f);
+        Assert.IsFalse(battle.CurrentImpact.Resolved);
+        Assert.AreEqual(100, battle.Combatants[0].Health);
+        battle.AdvanceDefense(0.03f, false, true);
+        Assert.IsTrue(battle.CurrentImpact.Resolved);
+        Assert.AreEqual(DefenseResult.Parried, battle.CurrentImpact.Result);
+        Assert.AreEqual(100, battle.Combatants[0].Health);
+    }
+    private void DefendCurrentHit(bool parry, bool dodge = false)
+    {
+        battle.AdvanceDefense(battle.CurrentImpact.Duration - 0.05f);
+        battle.AdvanceDefense(0, dodge, parry);
+        battle.AdvanceDefense(0.1f); battle.AdvanceDefense(0.5f);
+    }
+    [Test] public void PerfectComboCountersOnceWithoutSpendingMovementOrNextAction()
+    {
+        var player = battle.Combatants[0]; var position = battle.Actor(0).position;
+        int movement = player.Movement; var sequence = BeginEnemySequence(true);
+        Assert.IsFalse(battle.PlayerReady); Assert.IsFalse(battle.ChooseAction(battle.Loadout.Options[0]));
+        for (int i = 0; i < 3; i++) { DefendCurrentHit(true); Assert.IsTrue(sequence.MoveNext()); }
+        Assert.AreEqual(100, player.Health); Assert.AreEqual(75, battle.Combatants[1].Health);
+        Assert.IsFalse(sequence.MoveNext()); Assert.IsFalse(battle.DefenseActive);
+        Assert.AreEqual(movement, player.Movement); Assert.IsTrue(player.ActionAvailable);
+        Assert.AreEqual(cells[0], player.Position); Assert.AreEqual(position, battle.Actor(0).position);
+    }
+    [Test] public void FailedFirstHitKeepsBlockAndAllowsLaterParriesWithoutCounter()
+    {
+        battle.Block(); var sequence = BeginEnemySequence(true);
+        DefendCurrentHit(false); Assert.IsTrue(sequence.MoveNext());
+        DefendCurrentHit(true); Assert.IsTrue(sequence.MoveNext());
+        DefendCurrentHit(true); Assert.IsFalse(sequence.MoveNext());
+        Assert.AreEqual(95, battle.Combatants[0].Health); Assert.IsTrue(battle.Combatants[0].Blocking);
+        Assert.AreEqual(100, battle.Combatants[1].Health);
+    }
+    [Test] public void PerfectDefenseDoesNotCounterAnOutOfReachAttacker()
+    {
+        var sequence = BeginEnemySequence(false); DefendCurrentHit(true);
+        battle.Combatants[1].Position = new Vector2Int(6, 6);
+        Assert.IsTrue(sequence.MoveNext()); StringAssert.Contains("out of reach", battle.DefenseFeedback);
+        Assert.AreEqual(100, battle.Combatants[1].Health); Assert.IsFalse(sequence.MoveNext());
+    }
+    [Test] public void ReactionDisabledTargetTakesDamageDespiteSuccessfulTiming()
+    {
+        battle.Combatants[0].ReactionsDisabled = true; var sequence = BeginEnemySequence(false);
+        DefendCurrentHit(true); Assert.IsFalse(sequence.MoveNext());
+        Assert.AreEqual(75, battle.Combatants[0].Health); Assert.AreEqual(100, battle.Combatants[1].Health);
+    }
+    [Test] public void SuccessfulDodgeSlowsRecoveryButLeavesNextHitTimingUnchanged()
+    {
+        var sequence = BeginEnemySequence(true);
+        battle.AdvanceDefense(battle.CurrentImpact.Duration - 0.05f);
+        battle.AdvanceDefense(0, true, false);
+        battle.AdvanceDefense(0.06f + battle.CurrentImpact.InputLatencyCompensation);
+        Assert.IsTrue(battle.CurrentImpact.Resolved); Assert.AreEqual(100, battle.Combatants[0].Health);
+        float elapsed = battle.CurrentImpact.Elapsed;
+        battle.AdvanceDefense(0.1f);
+        Assert.AreEqual(0.015f, battle.CurrentImpact.Elapsed - elapsed, 0.0001f);
+        battle.AdvanceDefense(0.8f); Assert.IsTrue(sequence.MoveNext());
+        Assert.AreEqual(battle.DefenseSettings.ComboSecondWindup, battle.CurrentImpact.Duration);
+        Assert.AreEqual(battle.DefenseSettings.ParryWindow, battle.CurrentImpact.ParryWindow);
+        DefendCurrentHit(true); Assert.IsTrue(sequence.MoveNext());
+        DefendCurrentHit(true); Assert.IsFalse(sequence.MoveNext());
+    }
+    [Test] public void FailedDefenseDoesNotTriggerDodgeSlowMotion()
+    {
+        var sequence = BeginEnemySequence(false);
+        battle.AdvanceDefense(battle.CurrentImpact.Duration + 0.01f);
+        float elapsed = battle.CurrentImpact.Elapsed; battle.AdvanceDefense(0.1f);
+        Assert.AreEqual(0.1f, battle.CurrentImpact.Elapsed - elapsed, 0.0001f);
+        battle.AdvanceDefense(0.5f); Assert.IsFalse(sequence.MoveNext());
+    }
+    [Test] public void AttackWaitsForDefenseCameraBeforeOpeningDefenseWindow()
+    {
+        var camera = battle.BattleCamera.GetComponent<GridCameraController>();
+        var sequence = (System.Collections.IEnumerator)typeof(InSceneGridBattle)
+            .GetMethod("EnemyAttack", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(battle, new object[] { 1, false });
+        Assert.IsTrue(sequence.MoveNext()); Assert.IsTrue(camera.Transitioning); Assert.IsNull(battle.CurrentImpact);
+        camera.AdvanceFocus(0.25f); Assert.IsTrue(sequence.MoveNext()); Assert.IsNull(battle.CurrentImpact);
+        camera.AdvanceFocus(0.3f); Assert.IsTrue(sequence.MoveNext()); Assert.AreEqual(0, battle.CurrentImpact.Elapsed);
+        DefendCurrentHit(false); Assert.IsFalse(sequence.MoveNext());
+    }
+    [Test] public void DefenderTurnsSmoothlyBeforeAttackTimerStarts()
+    {
+        battle.Actor(0).rotation = Quaternion.LookRotation(Vector3.back);
+        var start = battle.Actor(0).rotation; var position = battle.Actor(0).position;
+        var end = Quaternion.LookRotation(battle.Actor(1).position - position);
+        var sequence = BeginEnemySequence(false);
+        Assert.IsNull(battle.CurrentImpact); Assert.IsFalse(battle.DefenseActive);
+        Assert.Less(Quaternion.Angle(start, battle.Actor(0).rotation), 0.001f);
+        battle.AdvanceFacing(0.15f); Assert.IsTrue(sequence.MoveNext());
+        Assert.Greater(Quaternion.Angle(start, battle.Actor(0).rotation), 1);
+        Assert.Greater(Quaternion.Angle(end, battle.Actor(0).rotation), 1);
+        Assert.IsNull(battle.CurrentImpact);
+        battle.AdvanceFacing(0.15f); Assert.IsTrue(sequence.MoveNext());
+        Assert.Less(Quaternion.Angle(end, battle.Actor(0).rotation), 0.001f);
+        Assert.AreEqual(0, battle.CurrentImpact.Elapsed); Assert.AreEqual(position, battle.Actor(0).position);
+        DefendCurrentHit(false); Assert.IsFalse(sequence.MoveNext());
+    }
+    [Test] public void EntryFacesEnemiesAlongGridDirections()
     {
         foreach (var obj in objects)
-            if (obj.name.StartsWith("Test unit")) Assert.That(Mathf.Abs(Mathf.DeltaAngle(0, obj.transform.eulerAngles.y) % 45), Is.LessThan(0.01f));
+            if (obj.name.StartsWith("Test unit") && obj.transform != battle.Actor(0)) Assert.That(Mathf.Abs(Mathf.DeltaAngle(0, obj.transform.eulerAngles.y) % 45), Is.LessThan(0.01f));
     }
 }

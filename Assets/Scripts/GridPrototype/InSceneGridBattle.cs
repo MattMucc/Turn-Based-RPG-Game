@@ -26,7 +26,10 @@ namespace Tenebrasia.GridPrototype
         private Dictionary<Vector2Int, GridRoute> reachable;
         private Vector2Int selected;
         private int actorIndex, round = 1;
-        private bool busy, closing;
+        private bool busy, closing, playerTurning;
+        private Quaternion playerTurnStart, playerTurnEnd;
+        private float playerTurnElapsed;
+        private const float PlayerTurnDuration = 0.3f;
         private string message;
         public BattleActionLoadout Loadout { get; private set; }
         public IReadOnlyList<GridUnit> Combatants => turnOrder;
@@ -34,6 +37,17 @@ namespace Tenebrasia.GridPrototype
         public int CurrentActorIndex => actorIndex;
         public int Round => round;
         public bool AutoCamera { get; private set; } = true;
+        public DefensePrototypeSettings DefenseSettings { get; private set; }
+        public DefenseImpact CurrentImpact { get; private set; }
+        public bool DefenseActive { get; private set; }
+        public string DefenseCaption { get; private set; }
+        public string DefenseFeedback { get; private set; }
+        private int defenseDamage;
+        private readonly DefenseSlowMotion defenseSlowMotion = new DefenseSlowMotion();
+        private bool perfectParries, cuePlayed;
+        private DefenseVisual attackerVisual, defenderVisual;
+        private AudioSource defenseAudio;
+        private AudioClip windupCue, readyCue, successCue, failedCue;
         public BattleActionOption HoveredAction { get; private set; }
         private readonly Dictionary<int, int> hitDamage = new();
         private readonly Dictionary<int, float> hitTime = new();
@@ -67,7 +81,7 @@ namespace Tenebrasia.GridPrototype
         public bool GridInputEnabled = true;
         public bool KeyboardGridInputEnabled = true;
         public Func<Vector2, bool> PointerOverUI;
-        public bool PlayerReady => !busy && !closing && actorIndex == 0;
+        public bool PlayerReady => !busy && !closing && !playerTurning && actorIndex == 0;
         public bool ActionReady => PlayerReady && Active.ActionAvailable;
         public int Movement => turnOrder[0].Movement;
         public int TargetCount => targets.Count;
@@ -81,6 +95,14 @@ namespace Tenebrasia.GridPrototype
             IReadOnlyList<Vector2Int> positions, Camera sourceCamera, Shader shader, Action<bool> onFinished)
         {
             Grid = grid; finished = onFinished; overlayShader = shader;
+            // Pick the closest encounter enemy before grid placement moves either actor.
+            int nearestEnemy = -1; float nearestDistance = float.PositiveInfinity;
+            for (int i = 1; i < figures.Count; i++)
+            {
+                Vector3 separation = figures[i].position - figures[0].position; separation.y = 0;
+                if (separation.sqrMagnitude < nearestDistance)
+                { nearestDistance = separation.sqrMagnitude; nearestEnemy = i; }
+            }
             for (int i = 0; i < figures.Count; i++)
             {
                 actors.Add(figures[i]); offsets.Add(footOffsets[i]);
@@ -89,8 +111,14 @@ namespace Tenebrasia.GridPrototype
                 battleTargets.Add(new BattleTarget(figures[i], unit, i));
                 figures[i].position = Grid.Point(positions[i]) + Vector3.up * footOffsets[i];
             }
-            for (int i = 0; i < actors.Count; i++)
-                actors[i].rotation = GridTargeting.Facing(Grid.Point(positions[i == 0 ? 1 : 0]) - Grid.Point(positions[i]));
+            for (int i = 1; i < actors.Count; i++)
+                actors[i].rotation = GridTargeting.Facing(Grid.Point(positions[0]) - Grid.Point(positions[i]));
+            if (nearestEnemy >= 0)
+            {
+                BeginPlayerFacing(actors[nearestEnemy].position);
+            }
+            DefenseSettings = figures[0].GetComponent<DefensePrototypeSettings>();
+            if (!DefenseSettings) DefenseSettings = figures[0].gameObject.AddComponent<DefensePrototypeSettings>();
             Loadout = figures[0].GetComponent<BattleActionLoadout>();
             if (!Loadout) Loadout = figures[0].gameObject.AddComponent<BattleActionLoadout>();
             var cameraObject = new GameObject("Encounter camera", typeof(Camera)); cameraObject.transform.SetParent(transform);
@@ -137,9 +165,36 @@ namespace Tenebrasia.GridPrototype
             overlay.Show(actorIndex == 0 ? reachable : new Dictionary<Vector2Int, GridRoute>(), selected);
         }
 
+        private void BeginPlayerFacing(Vector3 target)
+        {
+            Vector3 direction = target - actors[0].position; direction.y = 0;
+            if (direction.sqrMagnitude <= 0.0001f) return;
+            playerTurnStart = actors[0].rotation; playerTurnEnd = Quaternion.LookRotation(direction, Vector3.up);
+            playerTurnElapsed = 0;
+            playerTurning = Quaternion.Angle(playerTurnStart, playerTurnEnd) > 0.1f;
+        }
+        public void AdvanceFacing(float deltaTime)
+        {
+            if (!playerTurning || closing) return;
+            playerTurnElapsed += Mathf.Max(0, deltaTime);
+            float t = Mathf.Clamp01(playerTurnElapsed / PlayerTurnDuration);
+            actors[0].rotation = Quaternion.Slerp(playerTurnStart, playerTurnEnd, t * t * (3 - 2 * t));
+            if (t >= 1) playerTurning = false;
+        }
+
         private void Update()
         {
             if (Grid == null || closing) return;
+            if (Application.isFocused) AdvanceFacing(Time.deltaTime);
+            if (DefenseActive && Application.isFocused && !InspectionOpen)
+            {
+                var keyboard = Keyboard.current; var gamepad = Gamepad.current;
+                bool dodge = (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
+                    || (gamepad != null && gamepad.buttonEast.wasPressedThisFrame);
+                bool parry = (keyboard != null && keyboard.rKey.wasPressedThisFrame)
+                    || (gamepad != null && gamepad.rightShoulder.wasPressedThisFrame);
+                AdvanceDefense(Time.deltaTime, dodge, parry);
+            }
             bool click = cameraControls.ConsumeClick(out var pointer);
             UpdateTargetFocus(click);
             if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid);
@@ -377,7 +432,7 @@ namespace Tenebrasia.GridPrototype
 
         private void Confirm()
         {
-            if (busy || closing || actorIndex != 0) return;
+            if (!PlayerReady) return;
             if (ChosenAction != null)
             {
                 if (ToggleTarget(selected) && ReadyToResolve) CommitAction(); return;
@@ -402,28 +457,141 @@ namespace Tenebrasia.GridPrototype
             busy = false; Refresh();
         }
 
-        private void Strike(int targetIndex)
+        // Called once per rendered frame; tests supply time/input explicitly without Play Mode.
+        public void AdvanceDefense(float deltaTime, bool dodge = false, bool parry = false)
         {
-            actors[actorIndex].rotation = GridTargeting.Facing(Grid.Point(turnOrder[targetIndex].Position) - Grid.Point(Active.Position));
-            var target = turnOrder[targetIndex]; int damage = target.Blocking ? 12 : 25;
-            target.Health = Mathf.Max(0, target.Health - damage); RecordHit(targetIndex, damage);
-            message = $"{DisplayName(actorIndex)} attacks {DisplayName(targetIndex)} for {damage} damage.";
-            if (target.Health > 0) return;
-            Grid.Board.Units.Remove(target);
-            if (targetIndex == 0) { Finish(false); return; }
-            actors[targetIndex].gameObject.SetActive(false);
+            var impact = CurrentImpact;
+            if (!DefenseActive || impact == null || closing) return;
+            // Input responds to the cursor shown last frame, before this frame advances it.
+            if (dodge || parry) impact.Attempt(dodge && parry ? DefenseChoice.Both : dodge ? DefenseChoice.Dodge : DefenseChoice.Parry);
+            impact.Advance(defenseSlowMotion.Advance(deltaTime));
+            if (!cuePlayed && impact.Elapsed >= impact.Duration - impact.ParryWindow)
+            { cuePlayed = true; PlayDefenseCue(readyCue); }
+            if (impact.Resolve())
+            {
+                var defender = turnOrder[0]; bool eligible = !defender.ReactionsDisabled && defender.Health > 0;
+                int damage = impact.Damage(defenseDamage, defender.Blocking, eligible);
+                var result = impact.ForTarget(eligible);
+                perfectParries &= result == DefenseResult.Parried;
+                defender.Health = Mathf.Max(0, defender.Health - damage);
+                if (damage > 0) RecordHit(0, damage);
+                DefenseFeedback = ResultLabel(result) + (damage > 0 ? $"  -{damage} HP" + (defender.Blocking ? " (Block)" : "") : "");
+                PlayDefenseCue(damage == 0 ? successCue : failedCue);
+                if (result == DefenseResult.Dodged && DefenseSettings.DodgeSlowMotion)
+                    defenseSlowMotion.Begin(DefenseSettings.DodgeSlowMotionDuration, DefenseSettings.DodgeSlowMotionSpeed);
+                if (result == DefenseResult.Parried && DefenseSettings.ParrySparks && Application.isPlaying)
+                {
+                    Vector3 contact = battleTargets[0].Bounds.center + actors[0].forward * 0.65f;
+                    Vector3 towardCamera = (BattleCamera.transform.position - contact).normalized;
+                    contact += towardCamera * 0.3f;
+                    var burst = new GameObject("Successful parry sparks").AddComponent<ParryBurst>();
+                    burst.transform.SetParent(transform, false); burst.Initialize(contact, towardCamera, Resources.Load<Shader>("ParryFlash") ?? overlayShader);
+                }
+            }
+            if (!impact.Resolved)
+            {
+                attackerVisual?.Windup(impact.Elapsed / impact.Duration);
+                if (impact.Attempted)
+                {
+                    var result = impact.ForTarget(!turnOrder[0].ReactionsDisabled);
+                    DefenseFeedback = result == DefenseResult.Dodged ? "Dodge committed" : result == DefenseResult.Parried ? "Parry committed" : ResultLabel(result);
+                }
+            }
+            else attackerVisual?.Impact(impact.Elapsed - impact.ResolutionTime);
+            if (impact.Attempted && !turnOrder[0].ReactionsDisabled && impact.Choice != DefenseChoice.Both)
+                defenderVisual?.React(impact.Choice, impact.Elapsed - impact.AttemptTime);
+        }
+        private static string ResultLabel(DefenseResult result)
+        {
+            switch (result)
+            {
+                case DefenseResult.Dodged: return "Dodged";
+                case DefenseResult.Parried: return "Parried";
+                case DefenseResult.TooEarly: return "Too early";
+                case DefenseResult.TooLate: return "Too late";
+                case DefenseResult.Unparryable: return "Cannot parry - dodge this hit";
+                case DefenseResult.ConflictingInput: return "Choose one defense";
+                case DefenseResult.Unable: return "Cannot dodge or parry";
+                default: return "Watch the wind-up";
+            }
+        }
+        private IEnumerator EnemyAttack(int index, bool combo)
+        {
+            busy = true; perfectParries = true; InspectionOpen = false;
+            actors[index].rotation = GridTargeting.Facing(Grid.Point(turnOrder[0].Position) - Grid.Point(turnOrder[index].Position));
+            BeginPlayerFacing(actors[index].position);
+            if (AutoCamera) cameraControls.SmoothDefenseFrame(actors[0], actors[index]);
+            // No defense clock runs while either character facing or camera framing is settling.
+            while (playerTurning || (AutoCamera && cameraControls.Transitioning)) yield return null;
+            DefenseActive = true; InspectionOpen = false;
+            attackerVisual = new DefenseVisual(actors[index]); defenderVisual = new DefenseVisual(actors[0]);
+            EnsureDefenseAudio();
+            float[] windups = combo ? new[] { DefenseSettings.ComboFirstWindup, DefenseSettings.ComboSecondWindup, DefenseSettings.ComboThirdWindup }
+                : new[] { DefenseSettings.SingleWindup };
+            int hitDamage = combo ? DefenseSettings.ComboHitDamage : DefenseSettings.SingleDamage;
+            for (int hit = 0; hit < windups.Length; hit++)
+            {
+                attackerVisual.Reset(); defenderVisual.Reset();
+                CurrentImpact = DefenseSettings.CreateImpact(windups[hit]); defenseDamage = hitDamage; cuePlayed = false;
+                DefenseCaption = $"{DisplayName(index)} > {DisplayName(0)}  |  Hit {hit + 1}/{windups.Length}";
+                DefenseFeedback = turnOrder[0].ReactionsDisabled ? "Cannot dodge or parry" : "Watch the wind-up";
+                PlayDefenseCue(windupCue);
+                while (!CurrentImpact.Resolved) yield return null;
+                while (CurrentImpact.Elapsed < CurrentImpact.ResolutionTime + 0.4f) yield return null;
+                if (turnOrder[0].Health <= 0) { ResetDefense(); Finish(false); yield break; }
+            }
+            attackerVisual.Reset(); defenderVisual.Reset(); CurrentImpact = null;
+            if (perfectParries && CanStrike(turnOrder[0], turnOrder[index]) && turnOrder[index].Health > 0)
+            {
+                int damage = Mathf.Max(0, DefenseSettings.CounterDamage);
+                actors[0].rotation = GridTargeting.Facing(Grid.Point(turnOrder[index].Position) - Grid.Point(turnOrder[0].Position));
+                turnOrder[index].Health = Mathf.Max(0, turnOrder[index].Health - damage); RecordHit(index, damage);
+                DefenseFeedback = $"Counterattack!  {damage} damage"; PlayDefenseCue(successCue);
+                if (turnOrder[index].Health == 0) { Grid.Board.Units.Remove(turnOrder[index]); actors[index].gameObject.SetActive(false); }
+                yield return new WaitForSeconds(0.5f);
+            }
+            else if (perfectParries)
+            { DefenseFeedback = "Perfect parry - counter out of reach"; yield return new WaitForSeconds(0.5f); }
+            ResetDefense();
             if (!turnOrder.Exists(u => u != turnOrder[0] && u.Health > 0)) Finish(true);
+        }
+        private void ResetDefense()
+        {
+            attackerVisual?.Reset(); defenderVisual?.Reset(); attackerVisual = defenderVisual = null;
+            defenseSlowMotion.Clear();
+            DefenseActive = false; CurrentImpact = null;
+        }
+        private void EnsureDefenseAudio()
+        {
+            if (defenseAudio || !Application.isPlaying) return;
+            defenseAudio = gameObject.AddComponent<AudioSource>(); defenseAudio.playOnAwake = false; defenseAudio.spatialBlend = 0;
+            windupCue = CreateCue(330); readyCue = CreateCue(660); successCue = CreateCue(880); failedCue = CreateCue(160);
+        }
+        private static AudioClip CreateCue(float frequency)
+        {
+            const int rate = 22050, count = 1764;
+            var samples = new float[count];
+            for (int i = 0; i < count; i++) samples[i] = Mathf.Sin(2 * Mathf.PI * frequency * i / rate) * Mathf.Sin(Mathf.PI * i / count) * 0.4f;
+            var clip = AudioClip.Create("Prototype defense cue", count, 1, rate, false); clip.SetData(samples, 0); return clip;
+        }
+        private void PlayDefenseCue(AudioClip clip) { if (defenseAudio && clip) defenseAudio.PlayOneShot(clip, DefenseSettings.CueVolume); }
+        private void OnDisable() { playerTurning = false; ResetDefense(); }
+        private void OnDestroy()
+        {
+            ResetDefense();
+            foreach (var clip in new[] { windupCue, readyCue, successCue, failedCue })
+                if (clip) { if (Application.isPlaying) Destroy(clip); else DestroyImmediate(clip); }
         }
 
         public void Block()
         {
-            if (!busy && actorIndex == 0 && Active.SpendAction())
+            if (PlayerReady && Active.SpendAction())
             { CancelAction(); Active.Blocking = true; ActionResolved?.Invoke(); message = "Blocking until your next turn. Movement remains available."; }
         }
 
         public void EndTurn()
         {
-            if (busy || closing || actorIndex != 0) return;
+            if (!PlayerReady) return;
             CancelAction(); Active.EndTurn(); StartCoroutine(EnemyRound()); ActionResolved?.Invoke();
         }
 
@@ -454,7 +622,8 @@ namespace Tenebrasia.GridPrototype
                         yield return Move(path, actorIndex);
                 }
                 busy = true;
-                if (CanStrike(Active, turnOrder[0]) && Active.SpendAction()) Strike(0);
+                if (CanStrike(Active, turnOrder[0]) && Active.SpendAction())
+                    yield return EnemyAttack(i, (i + round) % 2 != 0);
                 if (closing) yield break;
                 Active.EndTurn(); yield return new WaitForSeconds(0.9f);
             }
@@ -465,7 +634,7 @@ namespace Tenebrasia.GridPrototype
         public void Finish(bool victory)
         {
             if (closing) return;
-            closing = true; StopAllCoroutines(); finished?.Invoke(victory);
+            closing = true; playerTurning = false; ResetDefense(); StopAllCoroutines(); finished?.Invoke(victory);
         }
 
     }

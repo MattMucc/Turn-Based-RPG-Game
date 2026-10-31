@@ -28,6 +28,8 @@ namespace Tenebrasia.GridPrototype
         public int JumpHeight = 1;
         public int Health = 100;
         public bool Blocking;
+        // Hook for Paralyzed and other future effects; does not skip the turn.
+        public bool ReactionsDisabled;
 
         public GridUnit(string name, Vector2Int position) { Name = name; Position = position; }
 

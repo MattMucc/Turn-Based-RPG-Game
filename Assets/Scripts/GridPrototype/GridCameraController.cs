@@ -32,6 +32,9 @@ namespace Tenebrasia.GridPrototype
         public bool Transitioning { get; private set; }
         private Vector3 focusStart;
         private float focusElapsed;
+        private bool poseTransition, shoulderView;
+        private Quaternion poseStartRotation, poseEndRotation, tacticalRotation;
+        private Vector3 poseEndPosition;
         private readonly GridPointerGesture rightGesture = new GridPointerGesture();
         public Vector3 OrbitPivot { get; private set; }
         public bool CharacterFocused { get; private set; }
@@ -55,6 +58,7 @@ namespace Tenebrasia.GridPrototype
         public void FocusActive()
         {
             if (!FocusTarget) return;
+            poseTransition = shoulderView = false;
             OrbitPivot = FocusTarget.position;
             pivotDistance = FocusDistance;
             transform.position = OrbitPivot - transform.forward * pivotDistance;
@@ -65,25 +69,108 @@ namespace Tenebrasia.GridPrototype
         public void SmoothFocus(Transform target)
         {
             if (!target) return;
+            if (shoulderView)
+            {
+                poseTransition = true; poseStartRotation = transform.rotation; poseEndRotation = tacticalRotation;
+                poseEndPosition = target.position - tacticalRotation * Vector3.forward * FocusDistance;
+                shoulderView = false;
+            }
+            else poseTransition = false;
             FocusTarget = target; focusStart = transform.position; focusElapsed = 0;
             CharacterFocused = true; Transitioning = true; followedPosition = target.position;
         }
-        public void ReleaseFocus() { CharacterFocused = false; Transitioning = false; }
+        public void SmoothDefenseFrame(Transform defender, Transform attacker)
+        {
+            if (!defender || !attacker) return;
+            if (!view) view = GetComponent<Camera>();
+            if (!view) return;
+            Vector3 forward = attacker.position - defender.position; forward.y = 0;
+            if (forward.sqrMagnitude < 0.001f) return;
+            forward.Normalize(); Vector3 right = Vector3.Cross(Vector3.up, forward);
+            if (!shoulderView) tacticalRotation = transform.rotation;
+            // Frame both full bodies from a raised three-quarter angle, then hold the shot.
+            Bounds defenderBounds = ActorBounds(defender), attackerBounds = ActorBounds(attacker);
+            Vector3 center = (defenderBounds.center + attackerBounds.center) * 0.5f;
+            Vector3 outward = (right * 0.8f - forward * 0.6f + Vector3.up * 0.5f).normalized;
+            Quaternion rotation = Quaternion.LookRotation(-outward, Vector3.up);
+            float distance = FramingDistance(center, rotation, defenderBounds, attackerBounds);
+            Vector3 desired = center + outward * distance;
+            // Prefer the opposite three-quarter side if scenery blocks the usual side.
+            if (Physics.SphereCast(center, 0.2f, outward, out var hit, distance, ~0, QueryTriggerInteraction.Ignore))
+            {
+                Vector3 alternate = (-right * 0.8f - forward * 0.6f + Vector3.up * 0.5f).normalized;
+                Quaternion alternateRotation = Quaternion.LookRotation(-alternate, Vector3.up);
+                float alternateDistance = FramingDistance(center, alternateRotation, defenderBounds, attackerBounds);
+                if (!Physics.SphereCast(center, 0.2f, alternate, out var otherHit, alternateDistance, ~0, QueryTriggerInteraction.Ignore))
+                    desired = center + alternate * alternateDistance;
+                else
+                    desired = center + outward * Mathf.Max(0.3f, hit.distance - 0.1f);
+            }
+            Vector3 look = center - desired;
+            poseStartRotation = transform.rotation; poseEndRotation = Quaternion.LookRotation(look, Vector3.up);
+            poseEndPosition = desired; focusStart = transform.position; focusElapsed = 0;
+            FocusTarget = defender; followedPosition = defender.position;
+            CharacterFocused = Transitioning = poseTransition = shoulderView = true;
+        }
+        private static Bounds ActorBounds(Transform actor)
+        {
+            var bounds = new Bounds(actor.position + Vector3.up * 0.9f, new Vector3(1, 1.8f, 1));
+            bool found = false;
+            foreach (var renderer in actor.GetComponentsInChildren<Renderer>())
+            {
+                if (!renderer.enabled || renderer is ParticleSystemRenderer || renderer is LineRenderer) continue;
+                if (!found) { bounds = renderer.bounds; found = true; }
+                else bounds.Encapsulate(renderer.bounds);
+            }
+            bounds.Expand(0.4f); // Room for wind-up and in-place defensive motions.
+            return bounds;
+        }
+
+        private float FramingDistance(Vector3 center, Quaternion rotation, params Bounds[] actors)
+        {
+            float vertical = Mathf.Tan(view.fieldOfView * Mathf.Deg2Rad * 0.5f) * 0.7f;
+            float horizontal = vertical * Mathf.Max(0.1f, view.aspect);
+            Quaternion inverse = Quaternion.Inverse(rotation);
+            float distance = 4.5f;
+            foreach (var bounds in actors)
+                for (int x = -1; x <= 1; x += 2)
+                    for (int y = -1; y <= 1; y += 2)
+                        for (int z = -1; z <= 1; z += 2)
+                        {
+                            Vector3 corner = bounds.center + Vector3.Scale(bounds.extents, new Vector3(x, y, z));
+                            Vector3 local = inverse * (corner - center);
+                            distance = Mathf.Max(distance, Mathf.Abs(local.x) / horizontal - local.z,
+                                Mathf.Abs(local.y) / vertical - local.z);
+                        }
+            return distance;
+        }
+
+        public void ReleaseFocus() { CharacterFocused = false; Transitioning = poseTransition = shoulderView = false; }
         public void AdvanceFocus(float deltaTime)
         {
             if (!CharacterFocused || !FocusTarget) return;
             if (!Transitioning) { FollowFocusedTarget(); return; }
             focusElapsed += Mathf.Max(0, deltaTime);
             float t = Mathf.Clamp01(focusElapsed / 0.55f); t = t * t * (3 - 2 * t);
-            OrbitPivot = FocusTarget.position; pivotDistance = FocusDistance;
-            transform.position = Vector3.Lerp(focusStart, OrbitPivot - transform.forward * FocusDistance, t);
+            OrbitPivot = FocusTarget.position;
+            if (poseTransition)
+            {
+                if (!shoulderView) poseEndPosition = OrbitPivot - poseEndRotation * Vector3.forward * FocusDistance;
+                transform.SetPositionAndRotation(Vector3.Lerp(focusStart, poseEndPosition, t), Quaternion.Slerp(poseStartRotation, poseEndRotation, t));
+                pivotDistance = Vector3.Distance(transform.position, OrbitPivot);
+            }
+            else
+            {
+                pivotDistance = FocusDistance;
+                transform.position = Vector3.Lerp(focusStart, OrbitPivot - transform.forward * FocusDistance, t);
+            }
             followedPosition = FocusTarget.position;
-            if (focusElapsed >= 0.55f) Transitioning = false;
+            if (focusElapsed >= 0.55f) Transitioning = poseTransition = false;
         }
 
         public void FollowFocusedTarget()
         {
-            if (!CharacterFocused || !FocusTarget || Transitioning) return;
+            if (!CharacterFocused || !FocusTarget || Transitioning || shoulderView) return;
             Vector3 delta = FocusTarget.position - followedPosition;
             transform.position += delta; OrbitPivot += delta; followedPosition = FocusTarget.position;
         }
@@ -122,7 +209,7 @@ namespace Tenebrasia.GridPrototype
 
         public void BeginOrbit()
         {
-            Transitioning = false; if (FocusTarget) followedPosition = FocusTarget.position;
+            Transitioning = poseTransition = shoulderView = false; if (FocusTarget) followedPosition = FocusTarget.position;
             if (CharacterFocused && FocusTarget) OrbitPivot = FocusTarget.position;
             else
             {

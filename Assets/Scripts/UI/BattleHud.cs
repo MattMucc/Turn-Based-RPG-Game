@@ -20,7 +20,8 @@ public sealed class BattleHud : MonoBehaviour
     private TMP_FontAsset font;
     private RectTransform root, orderPanel, orderContent, inspectionLayer, contextPanel, examinePanel, examineContent;
     private TMP_Text examineText, layoutLabel, cameraLabel, targetName, targetHealth;
-    private RectTransform targetPanel, targetFill;
+    private RectTransform targetPanel, targetFill, defensePanel, defenseMarker, dodgeWindow, parryWindow;
+    private TMP_Text defenseCaption, defensePrompt, defenseResult, assistanceLabel;
     private readonly List<Card> cards = new();
     private readonly List<Texture> portraits = new();
     private ScrollRect orderScroll;
@@ -50,7 +51,9 @@ public sealed class BattleHud : MonoBehaviour
         cameraLabel = Setting("Automatic camera", new Vector2(-12, 12), () =>
         { autoCamera = !autoCamera; battle.SetAutoCamera(autoCamera); cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off"); });
         cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off");
-        BuildTargetDetails(); BuildInspection(); battle.ContextRequested += ShowContext;
+        assistanceLabel = Setting("Defense timing", new Vector2(-12, 72), () =>
+        { if (!battle.DefenseActive) battle.DefenseSettings.Assisted = !battle.DefenseSettings.Assisted; });
+        BuildDefense(); BuildTargetDetails(); BuildInspection(); battle.ContextRequested += ShowContext;
         battle.SetAutoCamera(autoCamera); ApplyLayout(); Render();
     }
     private static void Remove(GameObject obj)
@@ -143,6 +146,64 @@ public sealed class BattleHud : MonoBehaviour
         targetName.text = target.Name; targetHealth.text = $"{target.Health}/{target.MaxHealth}";
         targetFill.anchorMax = new Vector2(Mathf.Clamp01(target.Health / (float)Mathf.Max(1, target.MaxHealth)), 1);
     }
+    private void BuildDefense()
+    {
+        defensePanel = Rect("Reactive defense", root); defensePanel.anchorMin = defensePanel.anchorMax = new Vector2(0.5f, 0);
+        defensePanel.pivot = new Vector2(0.5f, 0); defensePanel.anchoredPosition = new Vector2(0, 12); defensePanel.sizeDelta = new Vector2(340, 94);
+        var back = defensePanel.gameObject.AddComponent<Image>(); back.color = new Color(0.02f, 0.03f, 0.04f, 0.82f); back.raycastTarget = false;
+        var title = Rect("Attack", defensePanel); title.anchorMin = new Vector2(0, 1); title.anchorMax = Vector2.one;
+        title.pivot = new Vector2(0.5f, 1); title.sizeDelta = new Vector2(0, 22);
+        defenseCaption = Text(title, 13); defenseCaption.overflowMode = TextOverflowModes.Ellipsis;
+        var track = Rect("Impact timing", defensePanel); track.anchorMin = new Vector2(0, 1); track.anchorMax = Vector2.one;
+        track.pivot = new Vector2(0.5f, 1); track.sizeDelta = new Vector2(-20, 12); track.anchoredPosition = new Vector2(0, -25);
+        track.gameObject.AddComponent<Image>().color = new Color(0.2f, 0.2f, 0.2f); track.GetComponent<Image>().raycastTarget = false;
+        dodgeWindow = Rect("Dodge window", track); Stretch(dodgeWindow);
+        dodgeWindow.gameObject.AddComponent<Image>().color = new Color(0.1f, 0.45f, 0.8f); dodgeWindow.GetComponent<Image>().raycastTarget = false;
+        parryWindow = Rect("Parry window", track); Stretch(parryWindow);
+        parryWindow.gameObject.AddComponent<Image>().color = new Color(1, 0.72f, 0.15f); parryWindow.GetComponent<Image>().raycastTarget = false;
+        var impactLine = Rect("Impact at 75 percent", track);
+        impactLine.anchorMin = new Vector2(DefenseImpact.ImpactBarPosition, 0);
+        impactLine.anchorMax = new Vector2(DefenseImpact.ImpactBarPosition, 1);
+        impactLine.sizeDelta = new Vector2(2, 6);
+        impactLine.gameObject.AddComponent<Image>().color = new Color(1, 0.45f, 0.15f);
+        impactLine.GetComponent<Image>().raycastTarget = false;
+        defenseMarker = Rect("Current time", track); defenseMarker.anchorMin = Vector2.zero; defenseMarker.anchorMax = new Vector2(0, 1);
+        defenseMarker.sizeDelta = new Vector2(3, 4); defenseMarker.gameObject.AddComponent<Image>().raycastTarget = false;
+        var prompt = Rect("Defense controls", defensePanel); prompt.anchorMin = Vector2.zero; prompt.anchorMax = new Vector2(1, 0);
+        prompt.pivot = new Vector2(0.5f, 0); prompt.anchoredPosition = new Vector2(0, 27); prompt.sizeDelta = new Vector2(0, 22);
+        defensePrompt = Text(prompt, 13);
+        var result = Rect("Defense result", defensePanel); result.anchorMin = Vector2.zero; result.anchorMax = new Vector2(1, 0);
+        result.pivot = new Vector2(0.5f, 0); result.sizeDelta = new Vector2(0, 26); defenseResult = Text(result, 14);
+        defensePanel.gameObject.SetActive(false);
+    }
+    private void DrawDefense()
+    {
+        assistanceLabel.text = "Timing: " + (battle.DefenseSettings.Assisted ? "Assisted" : "Standard");
+        assistanceLabel.GetComponentInParent<Button>().interactable = !battle.DefenseActive;
+        defensePanel.gameObject.SetActive(battle.DefenseActive);
+        if (!battle.DefenseActive) return;
+        if (inspectionLayer.gameObject.activeSelf) CloseInspection();
+        defenseCaption.text = battle.DefenseCaption;
+        bool controller = GameManager.Instance && GameManager.Instance.Input && GameManager.Instance.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad;
+        defensePrompt.text = controller ? "B: Dodge   |   RB: Parry" : "Space: Dodge   |   R: Parry";
+        defenseResult.text = battle.DefenseFeedback;
+        var hit = battle.CurrentImpact;
+        if (hit == null) return;
+        dodgeWindow.anchorMin = new Vector2(hit.BarPosition(hit.Duration - hit.DodgeWindow), 0);
+        dodgeWindow.anchorMax = new Vector2(DefenseImpact.ImpactBarPosition, 1);
+        parryWindow.gameObject.SetActive(hit.Parryable);
+        parryWindow.anchorMin = new Vector2(hit.BarPosition(hit.Duration - hit.ParryWindow), 0);
+        parryWindow.anchorMax = new Vector2(DefenseImpact.ImpactBarPosition, 1);
+        dodgeWindow.GetComponent<Image>().color = hit.Resolved ? new Color(0.2f, 0.25f, 0.3f) : new Color(0.1f, 0.45f, 0.8f);
+        parryWindow.GetComponent<Image>().color = hit.Resolved ? new Color(0.35f, 0.3f, 0.2f) : new Color(1, 0.72f, 0.15f);
+        // Keep the registered press visible instead of letting the cursor run past it.
+        float progress = hit.BarPosition(hit.DisplayTime);
+        if (!string.IsNullOrEmpty(hit.AttemptFeedback)) defenseResult.text = hit.AttemptFeedback;
+        bool accepted = hit.Result == DefenseResult.Parried || hit.Result == DefenseResult.Dodged;
+        defenseMarker.GetComponent<Image>().color = !hit.Attempted ? Color.white
+            : accepted ? new Color(0.3f, 1, 0.55f) : new Color(1, 0.25f, 0.2f);
+        defenseMarker.anchorMin = new Vector2(progress, 0); defenseMarker.anchorMax = new Vector2(progress, 1);
+    }
     private void BuildInspection()
     {
         inspectionLayer = Rect("Inspection modal", root); Stretch(inspectionLayer);
@@ -167,7 +228,7 @@ public sealed class BattleHud : MonoBehaviour
     }
     public void ShowContext(int index, Vector2 screenPosition)
     {
-        if (!battle || index < 0 || index >= battle.Combatants.Count) return;
+        if (!battle || battle.DefenseActive || index < 0 || index >= battle.Combatants.Count) return;
         inspected = index; battle.InspectionOpen = true; inspectionLayer.gameObject.SetActive(true);
         contextPanel.gameObject.SetActive(true); examinePanel.gameObject.SetActive(false);
         var canvas = GetComponentInParent<Canvas>();
@@ -194,7 +255,7 @@ public sealed class BattleHud : MonoBehaviour
         if (!battle) return;
         if (battle.InspectionOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) CloseInspection();
         if (battle.InspectionOpen && examinePanel.gameObject.activeSelf) UpdateExamine();
-        DrawTargetDetails();
+        DrawDefense(); DrawTargetDetails();
         var order = battle.UpcomingTurns();
         if (lastActor != battle.CurrentActorIndex || lastCount != order.Count)
         { ApplyLayout(); lastActor = battle.CurrentActorIndex; lastCount = order.Count; }
