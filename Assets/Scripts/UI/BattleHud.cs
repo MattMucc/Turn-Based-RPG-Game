@@ -10,7 +10,8 @@ public sealed class BattleHud : MonoBehaviour
     private sealed class Card
     {
         public RectTransform Rect;
-        public TMP_Text Health, Hits;
+        public TMP_Text Health, Hits, ShieldText;
+        public RectTransform HealthFill, Shield, ShieldFill;
         public RawImage Portrait;
         public Image Border;
         public int Index;
@@ -19,7 +20,8 @@ public sealed class BattleHud : MonoBehaviour
     public int InspectionDismissedFrame { get; private set; } = -1;
     private TMP_FontAsset font;
     private RectTransform root, orderPanel, orderContent, inspectionLayer, contextPanel, examinePanel, examineContent;
-    private TMP_Text examineText, layoutLabel, cameraLabel, targetName, targetHealth;
+    private TMP_Text examineText, layoutLabel, cameraLabel, targetName, targetHealth, targetShieldText;
+    private RectTransform targetShield, targetShieldFill;
     private RectTransform targetPanel, targetFill, defensePanel, defenseMarker, impactLine, dodgeWindow, parryWindow;
     private TMP_Text defenseCaption, defensePrompt, defenseResult, assistanceLabel;
     private RectTransform qteLayer, qtePrompt, qteFill;
@@ -91,7 +93,10 @@ public sealed class BattleHud : MonoBehaviour
         var hp = Rect("HP overlay", card.Rect); hp.anchorMin = Vector2.zero; hp.anchorMax = new Vector2(1, 0);
         hp.pivot = new Vector2(0.5f, 0); hp.offsetMin = new Vector2(3, 3); hp.offsetMax = new Vector2(-3, 21);
         var back = hp.gameObject.AddComponent<Image>(); back.color = new Color(0, 0, 0, 0.8f); back.raycastTarget = false;
+        card.HealthFill = Rect("Portrait health fill", hp); Stretch(card.HealthFill);
+        var healthImage = card.HealthFill.gameObject.AddComponent<Image>(); healthImage.color = new Color(.75f, .12f, .1f); healthImage.raycastTarget = false;
         card.Health = Text(hp, 11);
+        card.Shield = MakeShield(card.Rect, 23, 10, out card.ShieldFill, out card.ShieldText);
         card.Hits = Text(card.Rect, 14); card.Hits.alignment = TextAlignmentOptions.TopRight; card.Hits.color = new Color(1, 0.8f, 0.25f);
         var click = card.Rect.gameObject.AddComponent<BattlePortrait>();
         click.LeftClick = () => { battle.FocusCharacter(card.Index); battle.TargetFocus.Pin(battle.Targetables[card.Index]); };
@@ -137,9 +142,26 @@ public sealed class BattleHud : MonoBehaviour
         }
         layoutLabel.text = "Turn order: " + (top ? "Top" : "Right");
     }
+    private RectTransform MakeShield(RectTransform parent, float bottom, float height, out RectTransform fill, out TMP_Text label)
+    {
+        var track = Rect("Barrier shield", parent); track.anchorMin = Vector2.zero; track.anchorMax = new Vector2(1, 0);
+        track.offsetMin = new Vector2(3, bottom); track.offsetMax = new Vector2(-3, bottom + height);
+        var back = track.gameObject.AddComponent<Image>(); back.color = new Color(.04f, .1f, .2f); back.raycastTarget = false;
+        fill = Rect("Barrier remaining", track); Stretch(fill);
+        var image = fill.gameObject.AddComponent<Image>(); image.color = new Color(.12f, .5f, 1f); image.raycastTarget = false;
+        label = Text(track, 9); label.outlineWidth = .2f; label.outlineColor = Color.black;
+        track.gameObject.SetActive(false); return track;
+    }
+    private void UpdateShield(RectTransform track, RectTransform fill, TMP_Text label, GridUnit unit)
+    {
+        track.gameObject.SetActive(unit != null && unit.Barrier > 0);
+        if (unit == null || unit.Barrier <= 0) return;
+        fill.anchorMax = new Vector2(unit.Barrier / (float)Mathf.Max(1, unit.BarrierMaximum), 1);
+        label.text = unit.Barrier.ToString();
+    }
     private void BuildTargetDetails()
     {
-        targetPanel = Rect("Hovered or pinned target", root); targetPanel.sizeDelta = new Vector2(280, 48);
+        targetPanel = Rect("Hovered or pinned target", root); targetPanel.sizeDelta = new Vector2(280, 60);
         var nameRect = Rect("Target name", targetPanel); nameRect.anchorMin = new Vector2(0, 1); nameRect.anchorMax = Vector2.one;
         nameRect.pivot = new Vector2(0.5f, 1); nameRect.sizeDelta = new Vector2(0, 24); nameRect.anchoredPosition = new Vector2(0, -4);
         targetName = Text(nameRect, 16); targetName.overflowMode = TextOverflowModes.Ellipsis;
@@ -149,13 +171,17 @@ public sealed class BattleHud : MonoBehaviour
         var bar = track.gameObject.AddComponent<Image>(); bar.color = new Color(0.18f, 0.18f, 0.18f); bar.raycastTarget = false;
         targetFill = Rect("Target current health", track); Stretch(targetFill);
         var fill = targetFill.gameObject.AddComponent<Image>(); fill.color = new Color(0.75f, 0.12f, 0.1f); fill.raycastTarget = false;
-        targetHealth = Text(track, 12); targetPanel.gameObject.SetActive(false);
+        targetHealth = Text(track, 12);
+        targetShield = MakeShield(targetPanel, 22, 10, out targetShieldFill, out targetShieldText);
+        targetPanel.gameObject.SetActive(false);
     }
     private void DrawTargetDetails()
     {
         var target = battle.TargetFocus.Displayed;
         targetPanel.gameObject.SetActive(target != null && !battle.InspectionOpen);
         if (target == null) return;
+        UpdateShield(targetShield, targetShieldFill, targetShieldText, target.Unit);
+        targetFill.parent.gameObject.SetActive(target.HasHealth);
         targetName.text = target.Name; targetHealth.text = $"{target.Health}/{target.MaxHealth}";
         targetFill.anchorMax = new Vector2(Mathf.Clamp01(target.Health / (float)Mathf.Max(1, target.MaxHealth)), 1);
     }
@@ -406,6 +432,7 @@ public sealed class BattleHud : MonoBehaviour
             var info = battle.Info(inspected);
             examineText.text = info.Details(battle.Combatants[inspected], battle.DisplayName(inspected));
         }
+        else if (!inspectedTarget.HasHealth) examineText.text = $"<b>{inspectedTarget.Name}</b>\n\nInteractable object";
         else examineText.text = $"<b>{inspectedTarget.Name}</b>\nHealth  {inspectedTarget.Health} / {inspectedTarget.MaxHealth}\n\nDestructible object";
         examineContent.sizeDelta = new Vector2(0, examineText.GetPreferredValues(examineText.text, Mathf.Max(100, examinePanel.rect.width - 50), 0).y + 16);
     }
@@ -452,7 +479,10 @@ public sealed class BattleHud : MonoBehaviour
             var card = cards[slot]; card.Rect.gameObject.SetActive(slot < order.Count); if (slot >= order.Count) continue;
             int i = order[slot]; card.Index = i; card.Portrait.texture = portraits[i];
             card.Portrait.color = portraits[i] ? Color.white : new Color(0.3f, 0.35f, 0.43f);
-            var unit = battle.Combatants[i]; card.Health.text = $"{unit.Health}/{unit.MaxHealth}";
+            var unit = battle.Combatants[i];
+            card.HealthFill.anchorMax = new Vector2(Mathf.Clamp01(unit.Health / (float)Mathf.Max(1, unit.MaxHealth)), 1);
+            UpdateShield(card.Shield, card.ShieldFill, card.ShieldText, unit);
+            card.Health.text = $"{unit.Health}/{unit.MaxHealth}";
             int hits = battle.AssignedHits(i); card.Hits.text = hits > 0 ? $"x{hits}" : "";
             card.Border.color = slot == controllerPortrait ? new Color(0.1f, 0.85f, 1) : slot == 0 ? new Color(1, 0.75f, 0.25f) : Dark;
         }

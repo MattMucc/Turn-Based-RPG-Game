@@ -21,7 +21,7 @@ public class EnemyTrigger : MonoBehaviour
 
     private void TryEncounter(Collider other)
     {
-        if (!BattleGroup) return;
+        if (!BattleGroup || (GameManager.Instance && GameManager.Instance.WorldInputBlocked)) return;
         PlayerMovement player = other.GetComponentInParent<PlayerMovement>();
         if (!player || !player.IsPossessed) return;
 

@@ -13,7 +13,19 @@ namespace Game.GridPrototype
         { Transform = actor; Unit = unit; ActorIndex = index; Renderers = actor.GetComponentsInChildren<Renderer>(); }
         public BattleTarget(BattleDestructible prop)
         { Transform = prop.transform; Destructible = prop; ActorIndex = -1; Renderers = prop.GetComponentsInChildren<Renderer>(); }
-        public bool Alive => Transform && Transform.gameObject.activeInHierarchy && Health > 0;
+        public BattleTarget(BattleHoverInfo info)
+        { Transform = info.transform; ActorIndex = -1; Renderers = info.GetComponentsInChildren<Renderer>(); }
+        public bool HasHealth => Unit != null || Destructible;
+        public Color HoverColor(int activeActor)
+        {
+            var info = Transform ? Transform.GetComponent<BattleHoverInfo>() : null;
+            var kind = info ? info.Kind : BattleHoverKind.Automatic;
+            if ((Destructible && Destructible.DangerousWhenDestroyed) || kind == BattleHoverKind.Dangerous || kind == BattleHoverKind.Hostile) return Color.red;
+            if (kind == BattleHoverKind.Automatic) kind = Unit != null ? (ActorIndex == 0 ? BattleHoverKind.Ally : BattleHoverKind.Hostile) : BattleHoverKind.Interactable;
+            if (kind == BattleHoverKind.Ally) return Unit != null && ActorIndex == activeActor ? new Color(.5f, 1f, 0f) : Color.cyan;
+            return kind == BattleHoverKind.Hostile ? Color.red : Color.yellow;
+        }
+        public bool Alive => Transform && Transform.gameObject.activeInHierarchy && (!HasHealth || Health > 0);
         public int Health => Unit != null ? Unit.Health : Destructible ? Destructible.Health : 0;
         public int MaxHealth => Unit != null ? Unit.MaxHealth : Destructible ? Destructible.MaxHealth : 1;
         public string Name
@@ -21,6 +33,8 @@ namespace Game.GridPrototype
             get
             {
                 if (Destructible && !string.IsNullOrWhiteSpace(Destructible.DisplayName)) return Destructible.DisplayName;
+                var hover = Transform ? Transform.GetComponent<BattleHoverInfo>() : null;
+                if (hover && !string.IsNullOrWhiteSpace(hover.DisplayName)) return hover.DisplayName;
                 var info = Transform ? Transform.GetComponent<BattleCharacterInfo>() : null;
                 if (info && !string.IsNullOrWhiteSpace(info.DisplayName)) return info.DisplayName;
                 return Transform ? Transform.name.Replace("(Clone)", "").Trim() : "";

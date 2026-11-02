@@ -89,6 +89,29 @@ public class BattleActionTests
         battle.ChooseAction(first); battle.HoverAction(other);
         Assert.AreSame(first, battle.ChosenAction); Assert.IsNull(battle.HoveredAction); Assert.IsTrue(battle.ActionReady);
     }
+    [Test] public void PushActionMovesWeakerTargetOneCellWithoutSpendingMovement()
+    {
+        battle.Combatants[0].Strength = 10; battle.Combatants[1].Strength = 5;
+        battle.Combatants[2].Position = new Vector2Int(6, 3);
+        var action = new BattleActionOption { Name = "Push", Effect = ActionEffect.Push, Damage = 0 };
+        battle.Loadout.Options.Add(action); battle.ChooseAction(action); battle.ToggleTarget(cells[1]);
+        Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(new Vector2Int(5, 3), battle.Combatants[1].Position);
+        Assert.AreEqual(100, battle.Combatants[1].Health); Assert.AreEqual(3, battle.Movement);
+        Assert.IsFalse(battle.Combatants[0].ActionAvailable);
+    }
+    [Test] public void LethalBurnAtEnemyTurnStartRemovesItAndContinuesOrder()
+    {
+        battle.Combatants[1].Health = 1; battle.Combatants[1].ApplyStatus(CombatStatus.Burning, 1);
+        typeof(InSceneGridBattle).GetMethod("AdvanceTurn", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(battle, null);
+        Assert.AreEqual(2, battle.CurrentActorIndex); Assert.AreEqual(0, battle.Combatants[1].Health);
+        Assert.IsFalse(battle.Actor(1).gameObject.activeSelf); Assert.AreEqual(3, battle.Combatants[2].Movement);
+    }
+    [Test] public void ParalysisRejectsBlockWithoutSpendingAction()
+    {
+        battle.Combatants[0].ApplyStatus(CombatStatus.Paralyzed, 1); battle.Block();
+        Assert.IsTrue(battle.Combatants[0].ActionAvailable); Assert.IsFalse(battle.Combatants[0].Blocking);
+    }
     [Test] public void UpcomingTurnsWrapFromCurrentActorAndSkipDefeatedUnits()
     {
         battle.Combatants[2].Health = 0;
@@ -327,6 +350,28 @@ public class BattleActionTests
         Assert.IsTrue(CompletePrepared()); Assert.AreEqual(0, prop.Health);
         Assert.IsFalse(propObject.activeSelf);
         Assert.AreEqual(Ground.Land, battle.Grid.Board.Cells[cell.x, cell.y].Ground);
+    }
+    [Test] public void PushableCrateMovesAndResamplesItsOldAndNewCell()
+    {
+        var cell = new Vector2Int(2, 3); var end = new Vector2Int(1, 3);
+        var obj = GameObject.CreatePrimitive(PrimitiveType.Cube); objects.Add(obj);
+        obj.transform.position = battle.Grid.Point(cell) + Vector3.up * .5f;
+        var prop = obj.AddComponent<BattleDestructible>(); prop.Pushable = true; prop.PushResistance = 5;
+        Physics.SyncTransforms(); battle.RegisterDestructible(prop); battle.Combatants[0].Strength = 10;
+        var action = new BattleActionOption { Name = "Push", Effect = ActionEffect.Push, Damage = 0 };
+        battle.Loadout.Options.Add(action); battle.ChooseAction(action); Assert.IsTrue(battle.ToggleTarget(cell));
+        Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(Ground.Land, battle.Grid.Board.At(cell).Ground);
+        Assert.AreEqual(Ground.Obstacle, battle.Grid.Board.At(end).Ground);
+        Assert.AreEqual(50, prop.Health);
+    }
+    [Test] public void DodgedEnemyHitDoesNotApplyStatus()
+    {
+        battle.DefenseSettings.EnemyStatus = CombatStatus.Burning; battle.DefenseSettings.EnemyStatusStacks = 2;
+        var sequence = BeginEnemySequence(false);
+        battle.AdvanceDefense(battle.CurrentImpact.Duration - .01f);
+        battle.AdvanceDefense(.04f, true, false);
+        Assert.AreEqual(0, battle.Combatants[0].Stacks(CombatStatus.Burning));
     }
     [Test] public void TargetHoverTemporarilyReplacesPinAndDismissWaitsForHoverExit()
     {

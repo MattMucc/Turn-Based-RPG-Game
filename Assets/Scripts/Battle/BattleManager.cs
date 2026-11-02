@@ -117,6 +117,7 @@ public class BattleManager : MonoBehaviour
             actors.Clear(); Notify("Not enough connected, clear terrain for this group. Move to open ground or assign its Grid Center marker.");
             return false;
         }
+        if (GameManager.Instance.ProgressionMenu) GameManager.Instance.ProgressionMenu.Close();
         group = source; InBattle = true;
         oldCursorLock = Cursor.lockState; oldCursorVisible = Cursor.visible;
         cameraWasEnabled = worldCamera.enabled; inputWasEnabled = input.enabled;
@@ -164,9 +165,15 @@ public class BattleManager : MonoBehaviour
         if (input) { input.SwitchToWorld(); input.enabled = inputWasEnabled; }
         if (worldCamera) worldCamera.enabled = cameraWasEnabled;
         Cursor.lockState = oldCursorLock; Cursor.visible = oldCursorVisible;
+        int experienceReward = 0, gainedLevels = 0;
+        if (victory && group && GameManager.Instance)
+        {
+            experienceReward = group.ClaimVictoryExperience();
+            gainedLevels = GameManager.Instance.Progression.AwardExperience(experienceReward);
+        }
         if (group) group.CompleteEncounter(victory);
         actors.Clear(); group = null; InBattle = false;
-        Notify(victory ? "Victory — enemy group cleared. Back in the overworld." : "Back in the overworld. Encounter reset; re-entry cooldown active.");
+        Notify(victory ? $"Victory: +{experienceReward} party XP." + (gainedLevels > 0 ? $" Party level +{gainedLevels}! Spend points with Tab / Y / Triangle." : " Back in the overworld.") : "Back in the overworld. Encounter reset; re-entry cooldown active.");
     }
 
     private void Notify(string text) { notice = text; noticeUntil = Time.unscaledTime + 7; Debug.Log("[Battle] " + text); }

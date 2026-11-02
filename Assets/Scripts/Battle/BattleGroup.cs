@@ -10,6 +10,14 @@ public struct EnemySpawnEntry
 
 public class BattleGroup : MonoBehaviour
 {
+    [Header("Prototype victory reward")]
+    [SerializeField, Min(0)] private int victoryExperience = 50;
+    private bool experienceClaimed;
+    public int ClaimVictoryExperience()
+    {
+        if (experienceClaimed) return 0;
+        experienceClaimed = true; return Mathf.Max(0, victoryExperience);
+    }
     [Header("Enemy Settings")]
     [SerializeField] private EnemySpawnEntry[] enemySpawnEntries;
     [SerializeField] private LayerMask groundLayer = ~0;

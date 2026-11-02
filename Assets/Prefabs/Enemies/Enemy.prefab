@@ -332,13 +332,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 958e0bc8b93412147922f63ae1d0f193, type: 3}
   m_Name:
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleCharacterInfo
+  BaseHealth: 100
+  HealthPerVitality: 10
+  BurningDamagePerTick: 5
+  RegenerationHealingPerTick: 5
   Portrait: {fileID: 0}
   DisplayName:
   Level: 0
   Race:
   Role:
   Vitality: -1
-  Strength: -1
+  Strength: 5
   Magic: -1
   PhysicalDefense: -1
   MagicalDefense: -1

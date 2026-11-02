@@ -66,6 +66,7 @@ public class PlayerRotation : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (GameManager.Instance && GameManager.Instance.WorldInputBlocked) return;
         UpdateNormalCamera();
     }
 

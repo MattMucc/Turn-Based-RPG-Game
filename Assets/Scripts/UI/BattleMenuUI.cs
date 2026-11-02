@@ -172,7 +172,7 @@ public class BattleMenuUI : MonoBehaviour
         Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a skill available to this character.", () => battle.ActionReady, true);
         Row("Items", () => Open(BattleActionCategory.Item), "Use a carried item. Costs one action and one item.", () => battle.ActionReady, true);
         for (int i = 0; i < 3; i++) pool[i].SetIcons(rootKeyboardIcons[i], rootControllerIcons[i], true);
-        Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Keyboard 4 / controller LT + RB.", () => battle.ActionReady, true);
+        Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Paralyzed prevents Block. Keyboard 4 / controller LT + RB.", () => battle.ActionReady && battle.Combatants[0].CanBlock, true);
         pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon, true);
         Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller LT + B.", () => battle.PlayerReady, true);
         pool[4].SetIcons(runKeyboardIcon, runControllerIcon, true);

@@ -20,6 +20,16 @@ namespace Game.GridPrototype
         [Min(1)] public int MaxTargets = 3;
         [Min(0)] public int Damage = 25;
         [Min(0)] public int Quantity;
+        public ActionEffect Effect;
+        public DamageKind DamageType;
+        public CombatElement Element;
+        public ScalingStat Scaling;
+        [Min(0)] public float StatScaling;
+        [Range(0, 100)] public float HitChance = 100;
+        public CombatStatus InflictedStatus;
+        [Range(0, 100)] public float StatusChance = 100;
+        [Range(1, 10)] public int StatusStacks = 1;
+        [Min(0)] public int BarrierGranted;
         public bool SignatureQte;
         public QteMode QteType;
         [Min(1)] public int QteRequiredTaps = 12;
@@ -32,13 +42,29 @@ namespace Game.GridPrototype
         public QteButton[] QteSequence = Array.Empty<QteButton>();
         [Min(0.1f)] public float QteDuration = 1.5f;
         [Min(0)] public int QteBonusDamage = 15;
+        public bool ApplyHit(GridUnit source, GridUnit target, int power, float hitRoll, float statusRoll, out int healthLost)
+        {
+            healthLost = 0;
+            if (target.Health <= 0 || !CombatMath.Roll(HitChance, hitRoll)) return false;
+            if (Effect == ActionEffect.Damage)
+                healthLost = target.TakeDamage(CombatMath.Damage(source, target, power, DamageType, Scaling, StatScaling));
+            if (CombatMath.Roll(StatusChance, statusRoll)) target.ApplyStatus(InflictedStatus, StatusStacks);
+            target.AddBarrier(BarrierGranted);
+            return true;
+        }
         public bool Available => Category != BattleActionCategory.Item || Quantity > 0;
+        public string EffectTooltip => Effect == ActionEffect.Push ? "\n<b>Push</b>  1 cell forward; requires strictly higher Strength. Blocked destinations stop the push." :
+            $"\n<b>Hit chance</b>  {HitChance:0.#}%" +
+            (Effect == ActionEffect.Damage ? $"\n{DamageType} / {Element}; scaling: {Scaling} × {StatScaling:0.##}. Defense and Block reduce damage." : "") +
+            (InflictedStatus != CombatStatus.None ? $"\n<b>{InflictedStatus}</b>  {StatusChance:0.#}% per landed hit; +{StatusStacks} stacks (maximum 10)." : "") +
+            (BarrierGranted > 0 ? $"\n<b>Barrier</b>  +{BarrierGranted} absorption." : "");
         public string Tooltip => $"<b>{Name}</b>\n{Description}\n\n<b>Reach</b>   {Reach} tiles from the user\n<b>Damage</b>   {Damage} per hit\n<b>Cost</b>   1 action\n\n<b>Targets</b>\n"
             + (Pattern == BattleTargetPattern.Area ? $"Everyone within {Radius} tile(s) of the chosen cell. Allies and destructible objects are also hit." :
                Pattern == BattleTargetPattern.Piercing ? "Hits characters and destructible objects in a straight or diagonal line, including allies. Stops at terrain." :
                Pattern == BattleTargetPattern.Multiple ? $"Assign {MaxTargets} hits to start. Repeated cells and allies are allowed. Hits resolve in selection order." : "One cell. One hit. Can hit allies or destructible objects.")
             + (Category == BattleActionCategory.Item ? $"\n\n<b>Carried</b>   {Quantity}\nUses one item when the action starts." : "")
             + (SignatureQte ? $"\n\n<b>Signature QTE</b>\n{(QteType == QteMode.DualInput ? "Hold the direction and face button together; either input may be held first" : QteType == QteMode.Staged ? "Respond to each prompt; success or failure advances to the next. Timer resets per prompt. All prompts must succeed for bonus damage" : QteType == QteMode.FixedSequence ? "Complete the displayed fixed sequence" : QteType == QteMode.RepeatedTap ? $"Fill the meter by tapping ({Mathf.Max(1, QteRequiredTaps)} taps without decay); pausing gradually drains it" : QteType == QteMode.Hold ? $"Fill the meter by holding ({QteHoldDuration:0.0}s without decay); releasing gradually drains it" : "Press Space / south face button")} before {Mathf.Max(0.1f, QteDuration):0.0}s expires.\nSuccess: +{Mathf.Max(0, QteBonusDamage)} damage per hit ({Damage + Mathf.Max(0, QteBonusDamage)} total).\nWrong input or timeout: normal damage." : "")
+            + EffectTooltip
             + "\nEmpty cells still spend the action.\n\n<color=#80BEFF>Blue tiles</color>: within reach\n<color=#FF9090>Red tiles</color>: affected by this action";
 
     }
@@ -121,7 +147,18 @@ namespace Game.GridPrototype
             Damage = 30, SignatureQte = true, QteType = QteMode.DualInput, QteDuration = 3, QteBonusDamage = 15,
             QteSequence = new[] { QteButton.StickRight, QteButton.South }
         };
-        public List<BattleActionOption> Options = new List<BattleActionOption>
+        public static BattleActionOption[] CreateStatusPrototypes() => new[]
+        {
+            new BattleActionOption { Name = "Ember Volley", Description = "Three separately rolled hits. Each successful burn roll adds two remaining ticks.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Multiple, Reach = 4, MaxTargets = 3, Damage = 5, DamageType = DamageKind.Magical, Element = CombatElement.Fire, Scaling = ScalingStat.Magic, StatScaling = .5f, InflictedStatus = CombatStatus.Burning, StatusChance = 50, StatusStacks = 2 },
+            new BattleActionOption { Name = "Renew", Description = "Three start-of-turn healing ticks. Select yourself or another character.", Category = BattleActionCategory.Skill, Reach = 4, Effect = ActionEffect.Support, Damage = 0, InflictedStatus = CombatStatus.Regeneration, StatusStacks = 3 },
+            new BattleActionOption { Name = "Ward", Description = "Grant a blue shield that absorbs 30 damage before health.", Category = BattleActionCategory.Skill, Reach = 4, Effect = ActionEffect.Support, Damage = 0, BarrierGranted = 30 },
+            new BattleActionOption { Name = "Paralyzing Spark", Description = "Prevents dodge, parry and Block through the target's next turn. Does not skip their turn.", Category = BattleActionCategory.Skill, Reach = 4, Damage = 0, DamageType = DamageKind.Magical, Element = CombatElement.Lightning, InflictedStatus = CombatStatus.Paralyzed },
+            new BattleActionOption { Name = "Push", Description = "Push one cell forward on level, clear ground. Your Strength must exceed the target's Strength or object's push resistance. Rivers, falls and traps are not supported yet.", Category = BattleActionCategory.Attack, Effect = ActionEffect.Push, Damage = 0 }
+        };
+        public List<BattleActionOption> Options = CreateDefaultOptions();
+        private static List<BattleActionOption> CreateDefaultOptions()
+        {
+            var options = new List<BattleActionOption>
         {
             new BattleActionOption { Name = "Strike", Description = "Prototype adjacent attack." },
             new BattleActionOption { Name = "Piercing Attack", Description = "Prototype line targeting.", Pattern = BattleTargetPattern.Piercing, Reach = 4, Damage = 18 },
@@ -135,6 +172,8 @@ namespace Game.GridPrototype
             CreatePrototypeDual(),
             new BattleActionOption { Name = "Blast Flask", Description = "Prototype offensive consumable.", Category = BattleActionCategory.Item, Pattern = BattleTargetPattern.Area, Reach = 3, Damage = 20, Quantity = 3 }
         };
+            options.AddRange(CreateStatusPrototypes()); return options;
+        }
     }
 
     public static class GridTargeting

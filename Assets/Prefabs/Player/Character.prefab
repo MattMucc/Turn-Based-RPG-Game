@@ -335,14 +335,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 958e0bc8b93412147922f63ae1d0f193, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleCharacterInfo
+  BaseHealth: 100
+  HealthPerVitality: 10
+  BurningDamagePerTick: 5
+  RegenerationHealingPerTick: 5
   Portrait: {fileID: 0}
   DisplayName: 
   Level: 0
   Race: 
   Role: 
   Vitality: -1
-  Strength: -1
-  Magic: -1
+  Strength: 10
+  Magic: 10
   PhysicalDefense: -1
   MagicalDefense: -1
   Initiative: 10
@@ -418,6 +422,9 @@ MonoBehaviour:
   ComboFirstImpactPosition: 0.6
   ComboSecondImpactPosition: 0.85
   ComboThirdImpactPosition: 0.7
+  EnemyStatus: 0
+  EnemyStatusChance: 100
+  EnemyStatusStacks: 1
   SingleDamage: 25
   ComboHitDamage: 10
   CounterDamage: 25
@@ -450,6 +457,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 25
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 0
     QteType: 0
     QteRequiredTaps: 12
@@ -469,6 +486,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 18
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 0
     QteType: 0
     QteRequiredTaps: 12
@@ -488,6 +515,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 18
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 0
     QteType: 0
     QteRequiredTaps: 12
@@ -507,6 +544,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 12
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 0
     QteType: 0
     QteRequiredTaps: 12
@@ -526,6 +573,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 20
     Quantity: 3
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 0
     QteType: 0
     QteRequiredTaps: 12
@@ -546,6 +603,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 30
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 1
     QteType: 0
     QteRequiredTaps: 12
@@ -565,6 +632,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 30
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 1
     QteType: 1
     QteRequiredTaps: 12
@@ -584,6 +661,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 30
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 1
     QteType: 2
     QteRequiredTaps: 12
@@ -604,6 +691,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 30
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 1
     QteType: 3
     QteRequiredTaps: 12
@@ -624,6 +721,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 30
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 1
     QteType: 4
     QteRequiredTaps: 12
@@ -643,6 +750,16 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 30
     Quantity: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
     SignatureQte: 1
     QteType: 5
     QteRequiredTaps: 12
@@ -651,6 +768,155 @@ MonoBehaviour:
     QteTapDrainDelay: 0.3
     QteSequence: 0900000000000000
     QteDuration: 3
+    QteBonusDamage: 15
+  - Name: Ember Volley
+    FavoriteSlot: -1
+    Description: Three separately rolled hits. Each successful burn roll adds two
+      remaining ticks.
+    Category: 1
+    Pattern: 3
+    Reach: 4
+    Radius: 1
+    MaxTargets: 3
+    Damage: 5
+    Quantity: 0
+    Effect: 0
+    DamageType: 1
+    Element: 1
+    Scaling: 2
+    StatScaling: 0.5
+    HitChance: 100
+    InflictedStatus: 1
+    StatusChance: 50
+    StatusStacks: 2
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence:
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Renew
+    FavoriteSlot: -1
+    Description: Three start-of-turn healing ticks. Select yourself or another character.
+    Category: 1
+    Pattern: 0
+    Reach: 4
+    Radius: 1
+    MaxTargets: 3
+    Damage: 0
+    Quantity: 0
+    Effect: 1
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 2
+    StatusChance: 100
+    StatusStacks: 3
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence:
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Ward
+    FavoriteSlot: -1
+    Description: Grant a blue shield that absorbs 30 damage before health.
+    Category: 1
+    Pattern: 0
+    Reach: 4
+    Radius: 1
+    MaxTargets: 3
+    Damage: 0
+    Quantity: 0
+    Effect: 1
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 30
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence:
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Paralyzing Spark
+    FavoriteSlot: -1
+    Description: Prevents dodge, parry and Block through the target's next turn.
+      Does not skip their turn.
+    Category: 1
+    Pattern: 0
+    Reach: 4
+    Radius: 1
+    MaxTargets: 3
+    Damage: 0
+    Quantity: 0
+    Effect: 0
+    DamageType: 1
+    Element: 2
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 3
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence:
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Push
+    FavoriteSlot: -1
+    Description: Push one cell forward on level, clear ground. Your Strength must
+      exceed the target's Strength or object's push resistance. Rivers, falls and
+      traps are not supported yet.
+    Category: 0
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 0
+    Quantity: 0
+    Effect: 2
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence:
+    QteDuration: 1.5
     QteBonusDamage: 15
 --- !u!114 &8802730022444101226
 MonoBehaviour:

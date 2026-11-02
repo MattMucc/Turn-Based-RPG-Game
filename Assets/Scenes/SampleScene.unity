@@ -1068,6 +1068,7 @@ GameObject:
   - component: {fileID: 898598908}
   - component: {fileID: 898598910}
   - component: {fileID: 898598907}
+  - component: {fileID: 898598911}
   m_Layer: 0
   m_Name: Managers
   m_TagString: GameManager
@@ -1090,6 +1091,7 @@ MonoBehaviour:
   input: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   outOfCombatMapName: World
   battleMapName: Battle
+  ControllerIcons: 0
 --- !u!114 &898598908
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1102,6 +1104,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6366ff2e378bec4bbf882b65b11d2e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  Progression:
+    Members:
+    - {fileID: 2407421259216672344}
+    FirstLevelCost: 100
+    CostIncreasePerLevel: 50
+    LevelCap: 50
+    PointsPerLevel: 2
+    experience: 0
 --- !u!4 &898598909
 Transform:
   m_ObjectHideFlags: 0
@@ -1134,6 +1144,18 @@ MonoBehaviour:
   gridDepth: 12
   cellSize: 2
   gridOverlayShader: {fileID: 4800000, guid: 55b063adde9d20d4299c829d1b5d79fc, type: 3}
+--- !u!114 &898598911
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 898598906}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10170d6b18dd92a4a9a931a446d12d1a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::ProgressionMenu
 --- !u!4 &1018846185 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8191903454379516405, guid: 039b8ce9a3e94044a88acb13947ac823, type: 3}
@@ -1461,6 +1483,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleDestructible
   DisplayName: Crate
+  Pushable: 0
+  PushResistance: 0
   MaxHealth: 5
   Health: 5
 --- !u!65 &1683397839
@@ -1761,6 +1785,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 33fc2d0129d8dfe4c91a60c0f8d9d7bf, type: 3}
+--- !u!114 &2407421259216672344 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: -1700394924692241525, guid: 33fc2d0129d8dfe4c91a60c0f8d9d7bf, type: 3}
+  m_PrefabInstance: {fileID: 2407421259216672343}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 958e0bc8b93412147922f63ae1d0f193, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleCharacterInfo
 --- !u!1001 &7523841243820907425
 PrefabInstance:
   m_ObjectHideFlags: 0

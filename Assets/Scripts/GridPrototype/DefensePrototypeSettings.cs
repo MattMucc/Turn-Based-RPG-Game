@@ -23,6 +23,10 @@ namespace Game.GridPrototype
         [Range(0.2f, 0.95f)] public float ComboThirdImpactPosition = 0.70f;
         public float ImpactPositionFor(bool combo, int hit) => !combo ? SingleImpactPosition
             : hit == 0 ? ComboFirstImpactPosition : hit == 1 ? ComboSecondImpactPosition : ComboThirdImpactPosition;
+        [Header("Prototype enemy on-hit status")]
+        public CombatStatus EnemyStatus;
+        [Range(0, 100)] public float EnemyStatusChance = 100;
+        [Range(1, 10)] public int EnemyStatusStacks = 1;
         [Min(0)] public int SingleDamage = 25;
         [Min(0)] public int ComboHitDamage = 10;
         [Min(0)] public int CounterDamage = 25;

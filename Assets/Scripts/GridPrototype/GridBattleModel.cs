@@ -16,7 +16,7 @@ namespace Game.GridPrototype
         { Ground = ground; Height = height; }
     }
 
-    public sealed class GridUnit
+    public sealed partial class GridUnit
     {
         public readonly string Name;
         public Vector2Int Position;
@@ -38,6 +38,8 @@ namespace Game.GridPrototype
         {
             if (TurnOpen) throw new InvalidOperationException("Turn already started.");
             if (movementGrant < 0) throw new ArgumentOutOfRangeException(nameof(movementGrant));
+            TickStartEffects();
+            if (Health <= 0) return;
             Movement = checked(Movement + movementGrant);
             ActionAvailable = true;
             Blocking = false;
@@ -63,7 +65,7 @@ namespace Game.GridPrototype
             if (!TurnOpen || !ActionAvailable || movementGain <= 0 || Movement > int.MaxValue - movementGain) return false;
             ActionAvailable = false; Movement += movementGain; return true;
         }
-        public void EndTurn() { TurnOpen = false; ActionAvailable = false; }
+        public void EndTurn() { if (TurnOpen) TickEndEffects(); TurnOpen = false; ActionAvailable = false; }
     }
 
     public sealed class GridRoute
@@ -179,7 +181,7 @@ namespace Game.GridPrototype
                 || !unit.SpendMovement(route.Cost)) return false;
             for (int i = 1; i < route.Stops.Count; i++)
                 if (At(route.Stops[i]).Ground == Ground.Hazard)
-                    unit.Health = Math.Max(1, unit.Health - (unit.Blocking ? 5 : 10));
+                    unit.TakeDamage(Math.Min(Math.Max(0, unit.Health - 1), unit.EffectiveBlock ? 5 : 10));
             unit.Position = destination;
             return true;
         }

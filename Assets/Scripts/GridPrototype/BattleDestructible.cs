@@ -6,6 +6,10 @@ namespace Game.GridPrototype
     public sealed class BattleDestructible : MonoBehaviour
     {
         public string DisplayName;
+        [Tooltip("Red hover warning for objects that can harm characters when destroyed. Does not implement the harmful effect.")]
+        public bool DangerousWhenDestroyed;
+        public bool Pushable;
+        [Min(0)] public int PushResistance;
         [Min(1)] public int MaxHealth = 50;
         [Min(0)] public int Health = 50;
         public bool Alive => gameObject.activeInHierarchy && Health > 0;

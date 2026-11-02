@@ -117,7 +117,7 @@ namespace Game.GridPrototype
             {
                 actors.Add(figures[i]); offsets.Add(footOffsets[i]);
                 if (!figures[i].GetComponent<BattleCharacterInfo>()) figures[i].gameObject.AddComponent<BattleCharacterInfo>();
-                var unit = new GridUnit(figures[i].name, positions[i]); turnOrder.Add(unit); Grid.Board.Units.Add(unit);
+                var unit = new GridUnit(figures[i].name, positions[i]); figures[i].GetComponent<BattleCharacterInfo>().Configure(unit); turnOrder.Add(unit); Grid.Board.Units.Add(unit);
                 battleTargets.Add(new BattleTarget(figures[i], unit, i));
                 figures[i].position = Grid.Point(positions[i]) + Vector3.up * footOffsets[i];
             }
@@ -139,6 +139,9 @@ namespace Game.GridPrototype
             cameraControls.PointerOverUI = p => InspectionOpen || (PointerOverUI?.Invoke(p) ?? false);
             cameraControls.ContextClick = p => { if (TryPickActor(p, out int i)) ContextRequested?.Invoke(i, p); };
             foreach (var prop in FindObjectsByType<BattleDestructible>(FindObjectsSortMode.None)) RegisterDestructible(prop);
+            foreach (var info in FindObjectsByType<BattleHoverInfo>(FindObjectsSortMode.None))
+                if (!battleTargets.Exists(t => t.Transform == info.transform) && Grid.TryCell(info.transform.position, out _))
+                    battleTargets.Add(new BattleTarget(info));
             RebuildOverlay();
             targetHighlight = new GameObject("Hovered battle target").AddComponent<BattleTargetHighlight>();
             targetHighlight.transform.SetParent(transform); targetHighlight.Initialize(shader);
@@ -221,12 +224,12 @@ namespace Game.GridPrototype
             }
             if (ExternalControllerActive)
             {
-                if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid);
+                if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid, actorIndex);
                 return; // Controller navigation supplies its own pointer and consumes gameplay input once.
             }
             bool click = cameraControls.ConsumeClick(out var pointer);
             UpdateTargetFocus(click);
-            if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid);
+            if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid, actorIndex);
             if (!PlayerReady || !GridInputEnabled || InspectionOpen) return;
             var k = Keyboard.current; var pad = Gamepad.current; Vector2Int step = Vector2Int.zero;
             if (k != null && KeyboardGridInputEnabled)
@@ -448,7 +451,7 @@ namespace Game.GridPrototype
                 var footprint = ActionFootprint(cell, action);
                 var hit = new List<BattleTarget>();
                 foreach (var target in battleTargets)
-                    if (target.Alive && footprint.Overlaps(TargetCells(target))) hit.Add(target);
+                    if (target.Alive && target.HasHealth && footprint.Overlaps(TargetCells(target))) hit.Add(target);
                 batches.Add(hit);
             }
             if (!Active.SpendAction()) return false;
@@ -460,7 +463,7 @@ namespace Game.GridPrototype
                 cameraControls.KeyboardInputBlocked = true;
                 sequence = ResolveSignature(batches, aimedCells, action);
             }
-            else sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple);
+            else sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple, action);
             return true;
         }
         public void AdvanceSignature(float deltaTime, bool correct = false, bool wrong = false, bool held = false, bool secondaryHeld = false)
@@ -503,7 +506,7 @@ namespace Game.GridPrototype
                     (CurrentQte.Result == PressQteResult.Success ? Mathf.Max(0, action.QteBonusDamage) : 0);
                 while (signatureFeedbackElapsed < 0.45f) yield return null;
                 signatureVisual.Reset();
-                var hits = ResolveHits(batches, cells, SignatureDamage, action.Pattern == BattleTargetPattern.Multiple);
+                var hits = ResolveHits(batches, cells, SignatureDamage, action.Pattern == BattleTargetPattern.Multiple, action);
                 while (hits.MoveNext()) yield return hits.Current;
             }
             finally
@@ -527,7 +530,7 @@ namespace Game.GridPrototype
             for (int x = 0; x < Grid.Board.Width; x++) for (int y = 0; y < Grid.Board.Depth; y++)
             { var cell = new Vector2Int(x, y); if (target.Occupies(Grid, cell)) yield return cell; }
         }
-        private IEnumerator ResolveHits(List<List<BattleTarget>> batches, List<Vector2Int> cells, int damage, bool sequential)
+        private IEnumerator ResolveHits(List<List<BattleTarget>> batches, List<Vector2Int> cells, int damage, bool sequential, BattleActionOption action)
         {
             for (int i = 0; i < batches.Count; i++)
             {
@@ -540,11 +543,15 @@ namespace Game.GridPrototype
                     if (!target.Alive) continue;
                     if (target.Unit != null)
                     {
-                        var victim = target.Unit; int dealt = victim.Blocking ? damage / 2 : damage;
-                        victim.Health = Mathf.Max(0, victim.Health - dealt); RecordHit(target.ActorIndex, dealt);
+                        var victim = target.Unit;
+                        if (action.Effect == ActionEffect.Push) { TryPush(target); continue; }
+                        action.ApplyHit(turnOrder[0], victim, damage, UnityEngine.Random.value, UnityEngine.Random.value, out int dealt);
+                        RecordHit(target.ActorIndex, dealt);
                         if (victim.Health == 0) { Grid.Board.Units.Remove(victim); target.Transform.gameObject.SetActive(false); }
                     }
-                    else { target.Destructible.TakeDamage(damage); broken |= !target.Alive; }
+                    else if (action.Effect == ActionEffect.Push) TryPush(target);
+                    else if (action.Effect == ActionEffect.Damage && CombatMath.Roll(action.HitChance, UnityEngine.Random.value))
+                    { target.Destructible.TakeDamage(damage); broken |= !target.Alive; }
                 }
                 if (broken) { Physics.SyncTransforms(); Grid.RefreshSurfaces(); RebuildOverlay(); Refresh(); }
                 // Empty hits still spend a slot and keep their place in the sequence.
@@ -555,6 +562,31 @@ namespace Game.GridPrototype
             if (turnOrder[0].Health <= 0) { Finish(false); yield break; }
             ActionResolved?.Invoke();
             if (!turnOrder.Exists(u => u != turnOrder[0] && u.Health > 0)) Finish(true);
+        }
+
+        public bool TryPush(BattleTarget target)
+        {
+            if (target == null || !target.Alive || !target.HasHealth || target.Unit == turnOrder[0]) return false;
+            int resistance = target.Unit != null ? target.Unit.Strength : target.Destructible.PushResistance;
+            if (target.Unit == null && !target.Destructible.Pushable) return false;
+            if (!CombatMath.CanPush(turnOrder[0].Strength, resistance)) return false;
+            Vector3 forward = actors[0].forward;
+            var step = new Vector2Int(Mathf.RoundToInt(forward.x), Mathf.RoundToInt(forward.z));
+            if (step == Vector2Int.zero || !Grid.TryCell(target.Transform.position, out var start)) return false;
+            var end = start + step;
+            if (target.Destructible && (target.Bounds.size.x > Grid.CellSize || target.Bounds.size.z > Grid.CellSize)) return false;
+            float supportHeight = target.Unit != null ? Grid.Point(start).y : target.Bounds.min.y;
+            // Water, drops, elevation changes and trap outcomes need an authored forced-movement policy.
+            if (!Grid.Board.Contains(end) || Grid.Board.At(end).Ground != Ground.Land ||
+                Mathf.Abs(Grid.Point(end).y - supportHeight) > .15f ||
+                Grid.Board.Units.Exists(u => u.Health > 0 && u.Position == end)) return false;
+            if (Mathf.Abs(step.x) + Mathf.Abs(step.y) == 2 &&
+                (Grid.Board.At(start + new Vector2Int(step.x, 0)).Ground != Ground.Land || Grid.Board.At(start + new Vector2Int(0, step.y)).Ground != Ground.Land)) return false;
+            if (target.Unit != null) target.Unit.Position = end;
+            Vector3 displacement = new Vector3(step.x * Grid.CellSize, Grid.Point(end).y - supportHeight, step.y * Grid.CellSize);
+            target.Transform.position += displacement;
+            if (target.Destructible) { Physics.SyncTransforms(); Grid.RefreshSurfaces(); RebuildOverlay(); }
+            Refresh(); return true;
         }
 
         private bool CanStrike(GridUnit attacker, GridUnit target)
@@ -603,11 +635,14 @@ namespace Game.GridPrototype
             { cuePlayed = true; PlayDefenseCue(readyCue); }
             if (impact.Resolve())
             {
-                var defender = turnOrder[0]; bool eligible = !defender.ReactionsDisabled && defender.Health > 0;
-                int damage = impact.Damage(defenseDamage, defender.Blocking, eligible);
+                var defender = turnOrder[0]; bool eligible = defender.CanReact && defender.Health > 0;
+                int rawDamage = CombatMath.Damage(Active, defender, defenseDamage, DamageKind.Physical, ScalingStat.Strength, 1);
+                int damage = impact.Damage(rawDamage, false, eligible);
                 var result = impact.ForTarget(eligible);
                 perfectParries &= result == DefenseResult.Parried;
-                defender.Health = Mathf.Max(0, defender.Health - damage);
+                damage = defender.TakeDamage(damage);
+                if (result != DefenseResult.Dodged && result != DefenseResult.Parried && CombatMath.Roll(DefenseSettings.EnemyStatusChance, UnityEngine.Random.value))
+                    defender.ApplyStatus(DefenseSettings.EnemyStatus, DefenseSettings.EnemyStatusStacks);
                 if (damage > 0) RecordHit(0, damage);
                 DefenseFeedback = ResultLabel(result) + (damage > 0 ? $"  -{damage} HP" + (defender.Blocking ? " (Block)" : "") : "");
                 PlayDefenseCue(damage == 0 ? successCue : failedCue);
@@ -627,12 +662,12 @@ namespace Game.GridPrototype
                 attackerVisual?.Windup(impact.Elapsed / impact.Duration);
                 if (impact.Attempted)
                 {
-                    var result = impact.ForTarget(!turnOrder[0].ReactionsDisabled);
+                    var result = impact.ForTarget(turnOrder[0].CanReact);
                     DefenseFeedback = result == DefenseResult.Dodged ? "Dodge committed" : result == DefenseResult.Parried ? "Parry committed" : ResultLabel(result);
                 }
             }
             else attackerVisual?.Impact(impact.Elapsed - impact.ResolutionTime);
-            if (impact.Attempted && !turnOrder[0].ReactionsDisabled && impact.Choice != DefenseChoice.Both)
+            if (impact.Attempted && turnOrder[0].CanReact && impact.Choice != DefenseChoice.Both)
                 defenderVisual?.React(impact.Choice, impact.Elapsed - impact.AttemptTime);
         }
         private static string ResultLabel(DefenseResult result)
@@ -668,7 +703,7 @@ namespace Game.GridPrototype
                 attackerVisual.Reset(); defenderVisual.Reset();
                 CurrentImpact = DefenseSettings.CreateImpact(windups[hit], impactPosition: DefenseSettings.ImpactPositionFor(combo, hit)); defenseDamage = hitDamage; cuePlayed = false;
                 DefenseCaption = $"{DisplayName(index)} > {DisplayName(0)}  |  Hit {hit + 1}/{windups.Length}";
-                DefenseFeedback = turnOrder[0].ReactionsDisabled ? "Cannot dodge or parry" : "Watch the wind-up";
+                DefenseFeedback = !turnOrder[0].CanReact ? "Cannot dodge or parry" : "Watch the wind-up";
                 PlayDefenseCue(windupCue);
                 while (!CurrentImpact.Resolved) yield return null;
                 while (CurrentImpact.Elapsed < CurrentImpact.ResolutionTime + 0.4f) yield return null;
@@ -677,9 +712,9 @@ namespace Game.GridPrototype
             attackerVisual.Reset(); defenderVisual.Reset(); CurrentImpact = null;
             if (perfectParries && CanStrike(turnOrder[0], turnOrder[index]) && turnOrder[index].Health > 0)
             {
-                int damage = Mathf.Max(0, DefenseSettings.CounterDamage);
+                int damage = CombatMath.Damage(turnOrder[0], turnOrder[index], DefenseSettings.CounterDamage, DamageKind.Physical, ScalingStat.Strength, 1);
                 actors[0].rotation = GridTargeting.Facing(Grid.Point(turnOrder[index].Position) - Grid.Point(turnOrder[0].Position));
-                turnOrder[index].Health = Mathf.Max(0, turnOrder[index].Health - damage); RecordHit(index, damage);
+                damage = turnOrder[index].TakeDamage(damage); RecordHit(index, damage);
                 DefenseFeedback = $"Counterattack!  {damage} damage"; PlayDefenseCue(successCue);
                 if (turnOrder[index].Health == 0) { Grid.Board.Units.Remove(turnOrder[index]); actors[index].gameObject.SetActive(false); }
                 yield return new WaitForSeconds(0.5f);
@@ -726,7 +761,7 @@ namespace Game.GridPrototype
         }
         public void Block()
         {
-            if (PlayerReady && Active.SpendAction())
+            if (PlayerReady && Active.CanBlock && Active.SpendAction())
             { CancelAction(); Active.Blocking = true; ActionResolved?.Invoke(); message = "Blocking until your next turn. Movement remains available."; }
         }
 
@@ -740,6 +775,7 @@ namespace Game.GridPrototype
         {
             busy = true;
             if (advance) AdvanceTurn();
+            if (closing) yield break;
             while (actorIndex != 0 && !closing)
             {
                 int i = actorIndex;
@@ -768,6 +804,7 @@ namespace Game.GridPrototype
                 if (closing) yield break;
                 yield return new WaitForSeconds(0.9f);
                 AdvanceTurn();
+                if (closing) yield break;
             }
             busy = false; message = "Your turn: saved movement + 3, action refreshed."; Refresh();
         }
@@ -775,9 +812,23 @@ namespace Game.GridPrototype
         private void AdvanceTurn()
         {
             Active.EndTurn();
-            actorIndex = initiativeOrder.Next(actorIndex, i => turnOrder[i].Health > 0);
-            round = initiativeOrder.Round;
-            Active.BeginTurn(); selected = Active.Position; FocusActor(actorIndex); Refresh();
+            for (int attempts = 0; attempts < turnOrder.Count; attempts++)
+            {
+                actorIndex = initiativeOrder.Next(actorIndex, i => turnOrder[i].Health > 0);
+                if (actorIndex < 0) { Finish(false); return; }
+                round = initiativeOrder.Round;
+                int before = Active.Health;
+                Active.BeginTurn();
+                if (before != Active.Health) RecordHit(actorIndex, before - Active.Health);
+                if (Active.Health <= 0)
+                {
+                    Grid.Board.Units.Remove(Active); actors[actorIndex].gameObject.SetActive(false);
+                    if (actorIndex == 0) { Finish(false); return; }
+                    if (!turnOrder.Exists(u => u != turnOrder[0] && u.Health > 0)) { Finish(true); return; }
+                    continue;
+                }
+                selected = Active.Position; FocusActor(actorIndex); Refresh(); return;
+            }
         }
 
         public void Finish(bool victory)

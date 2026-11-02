@@ -7,6 +7,7 @@ namespace Game.GridPrototype
     public sealed class BattleTargetHighlight : MonoBehaviour
     {
         private BattleTarget current;
+        private int activeActor = -1;
         private TerrainBattleGrid grid;
         private Material outlineMaterial, circleMaterial;
         private Mesh disc;
@@ -28,13 +29,14 @@ namespace Game.GridPrototype
             circle.GetComponent<MeshFilter>().sharedMesh = disc; circle.GetComponent<MeshRenderer>().sharedMaterial = circleMaterial;
             circle.SetActive(false);
         }
-        public void Show(BattleTarget target, TerrainBattleGrid terrain)
+        public void Show(BattleTarget target, TerrainBattleGrid terrain, int activeActorIndex = -1)
         {
-            grid = terrain;
+            grid = terrain; activeActor = activeActorIndex;
             if (current != target)
             {
                 foreach (var pair in copies) if (pair.copy) Release(pair.copy.gameObject);
                 copies.Clear(); current = target;
+
                 if (target?.Alive == true) foreach (var source in target.Renderers)
                 {
                     if (!source || !source.enabled) continue;
@@ -60,6 +62,7 @@ namespace Game.GridPrototype
         private void UpdateGeometry()
         {
             if (!circle) return;
+            if (current != null) outlineMaterial.color = current.HoverColor(activeActor);
             bool visible = current?.Alive == true; circle.SetActive(visible);
             foreach (var pair in copies)
             {

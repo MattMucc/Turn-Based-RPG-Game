@@ -72,7 +72,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void Update()
     {
-        if (!IsPossessed || !input || !Application.isFocused) return;
+        if (!IsPossessed || !input || !Application.isFocused || (GameManager.Instance && GameManager.Instance.WorldInputBlocked)) return;
         if (input.WorldAttackPressed) TryEncounterStrike();
         StepMovement(Time.deltaTime, input.Move, input.JumpPressed, input.JumpHeld, input.DashPressed,
             input.SprintPressed, input.SprintHeld, input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad);
