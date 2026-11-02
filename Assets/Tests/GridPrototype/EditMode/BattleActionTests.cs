@@ -181,7 +181,7 @@ public class BattleActionTests
         Assert.AreEqual(true, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
         Find("Skills").onClick.Invoke();
         Assert.AreEqual(false, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
-        Assert.AreEqual(5, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(battle.Loadout.Options.FindAll(o => o.Category == BattleActionCategory.Skill).Count + 2, container.GetComponentsInChildren<Button>().Length);
         Find("Favorites").onClick.Invoke();
         Find("Multi-target Skill").onClick.Invoke();
         menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
@@ -203,7 +203,7 @@ public class BattleActionTests
         Assert.IsFalse(Find("Area Skill").interactable);
         Assert.IsTrue(Find("Multi-target Skill").interactable);
         Assert.IsFalse(Find("Undo Hit").interactable);
-        Assert.AreEqual(6, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(battle.Loadout.Options.FindAll(o => o.Category == BattleActionCategory.Skill).Count + 3, container.GetComponentsInChildren<Button>().Length);
         Assert.IsTrue(battle.KeyboardGridInputEnabled);
         battle.ToggleTarget(cells[1]); battle.ToggleTarget(cells[1]);
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
@@ -371,13 +371,28 @@ public class BattleActionTests
         Assert.AreEqual(DefenseResult.Parried, battle.CurrentImpact.Result);
         Assert.AreEqual(100, battle.Combatants[0].Health);
     }
-    [TestCase(true, false, 55)]
-    [TestCase(false, true, 70)]
-    [TestCase(false, false, 70)]
-    public void SignatureResolvesOnceAndReturnsRemainingMovement(bool success, bool wrong, int remainingHealth)
+    [TestCase(true, false, 55, QteMode.SinglePress)]
+    [TestCase(false, true, 70, QteMode.SinglePress)]
+    [TestCase(false, false, 70, QteMode.SinglePress)]
+    [TestCase(true, false, 55, QteMode.FixedSequence)]
+    [TestCase(false, true, 70, QteMode.FixedSequence)]
+    [TestCase(false, false, 70, QteMode.FixedSequence)]
+    [TestCase(true, false, 55, QteMode.RepeatedTap)]
+    [TestCase(false, true, 70, QteMode.RepeatedTap)]
+    [TestCase(false, false, 70, QteMode.RepeatedTap)]
+    [TestCase(true, false, 55, QteMode.Hold)]
+    [TestCase(false, true, 70, QteMode.Hold)]
+    [TestCase(false, false, 70, QteMode.Hold)]
+    [TestCase(true, false, 55, QteMode.Staged)]
+    [TestCase(false, true, 70, QteMode.Staged)]
+    [TestCase(false, false, 70, QteMode.Staged)]
+    [TestCase(true, false, 55, QteMode.DualInput)]
+    [TestCase(false, true, 70, QteMode.DualInput)]
+    [TestCase(false, false, 70, QteMode.DualInput)]
+    public void SignatureResolvesOnceAndReturnsRemainingMovement(bool success, bool wrong, int remainingHealth, QteMode mode)
     {
         battle.SetAutoCamera(false);
-        var action = battle.Loadout.Options.Find(o => o.SignatureQte);
+        var action = battle.Loadout.Options.Find(o => o.SignatureQte && o.QteType == mode);
         Assert.IsTrue(battle.ChooseAction(action)); battle.ToggleTarget(cells[1]);
         Assert.IsTrue(battle.TryPrepareAction(out var sequence));
         Assert.IsTrue(battle.SignatureActive); Assert.IsFalse(battle.PlayerReady);
@@ -388,8 +403,32 @@ public class BattleActionTests
         if (battle.CurrentQte == null) Assert.IsTrue(sequence.MoveNext());
         battle.AdvanceSignature(0.5f, true); // Held/launch input cannot win during preparation.
         Assert.AreEqual(PressQteResult.Waiting, battle.CurrentQte.Result);
-        if (success || wrong) battle.AdvanceSignature(0, success, wrong);
-        else battle.AdvanceSignature(2);
+        if (mode == QteMode.FixedSequence)
+        {
+            Assert.AreEqual(4, battle.CurrentQte.InputCount);
+            for (int step = 0; step < 3; step++) battle.AdvanceSignature(0.1f, true);
+            Assert.IsFalse(battle.CurrentQte.Complete);
+            Assert.AreEqual(100, battle.Combatants[1].Health);
+        }
+        if (mode == QteMode.RepeatedTap)
+            for (int tap = 0; tap < action.QteRequiredTaps - 1; tap++) battle.AdvanceSignature(0.1f, true);
+        if (mode == QteMode.Staged)
+        {
+            for (int stage = 0; stage < action.QteSequence.Length - 1; stage++)
+            {
+                battle.AdvanceSignature(0, true); Assert.IsFalse(battle.CurrentQte.Complete);
+                battle.AdvanceSignature(0.35f);
+            }
+        }
+        if (mode == QteMode.DualInput && success)
+        {
+            battle.AdvanceSignature(0.1f, true, secondaryHeld: true);
+            Assert.IsFalse(battle.CurrentQte.Complete);
+            battle.AdvanceSignature(0, true, held: true, secondaryHeld: true);
+        }
+        else if (mode == QteMode.Hold && success) battle.AdvanceSignature(action.QteHoldDuration, true, held: true);
+        else if (success || wrong) battle.AdvanceSignature(0, success, wrong);
+        else battle.AdvanceSignature(5);
         Assert.IsTrue(sequence.MoveNext()); // Result feedback before applying damage.
         battle.AdvanceSignature(0.5f);
         Assert.IsTrue(sequence.MoveNext());

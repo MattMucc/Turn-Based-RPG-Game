@@ -235,7 +235,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.HorizontalLayoutGroup
   m_Padding:
     m_Left: 3
-    m_Right: 0
+    m_Right: 3
     m_Top: 0
     m_Bottom: 0
   m_ChildAlignment: 3

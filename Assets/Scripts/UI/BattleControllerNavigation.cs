@@ -259,6 +259,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         badge.text = State.Mode == BattleControllerMode.Cursor ? "Cursor  •  View: free flight\nLT + D-pad: panels  •  L3: focus"
             : State.Mode == BattleControllerMode.FreeFlight ? "Free flight  •  View: cursor\nRT + right stick: height  •  L3: focus"
             : area + "  •  LT + D-pad: panels\nLeft stick: cursor  •  View: free flight";
+        badge.text = ControllerGlyphs.Adapt(badge.text);
     }
     private GameObject RaycastUI(Vector2 position)
     {
@@ -285,14 +286,15 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         if (!EventSystem.current) return;
         ExecuteEvents.ExecuteHierarchy(target, PointerData(), ExecuteEvents.pointerClickHandler);
     }
+    public const float ScrollSpeed = 3f;
     public static bool ScrollHovered(GameObject target, Vector2 stick, float seconds)
     {
         var scroll = target ? target.GetComponentInParent<ScrollRect>() : null;
         if (!scroll || !scroll.isActiveAndEnabled) return false;
         // Consume the stick over the whole scroll window, even at its endpoint.
         if (stick != Vector2.zero) scroll.velocity = Vector2.zero;
-        if (scroll.vertical) scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + stick.y * seconds);
-        if (scroll.horizontal) scroll.horizontalNormalizedPosition = Mathf.Clamp01(scroll.horizontalNormalizedPosition + stick.x * seconds);
+        if (scroll.vertical) scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + stick.y * seconds * ScrollSpeed);
+        if (scroll.horizontal) scroll.horizontalNormalizedPosition = Mathf.Clamp01(scroll.horizontalNormalizedPosition + stick.x * seconds * ScrollSpeed);
         return true;
     }
     private void OnApplicationFocus(bool focused)

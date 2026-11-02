@@ -21,6 +21,15 @@ namespace Game.GridPrototype
         [Min(0)] public int Damage = 25;
         [Min(0)] public int Quantity;
         public bool SignatureQte;
+        public QteMode QteType;
+        [Min(1)] public int QteRequiredTaps = 12;
+        [Min(0.1f)] public float QteHoldDuration = 2;
+        [Tooltip("Fraction of a full tap/hold meter lost per second without input. 0.2 means 20 percentage points per second.")]
+        [Min(0)] public float QteProgressDrainPerSecond = 0.2f;
+        [Tooltip("Seconds after the most recent tap before the tap meter starts draining. Holding the button does not count as tapping.")]
+        [Min(0)] public float QteTapDrainDelay = 0.3f;
+        [Tooltip("SinglePress ignores this array. FixedSequence: up to 8 face/D-pad inputs, shared deadline. Staged: up to 8 prompts, QteDuration per prompt; left stick allowed. DualInput: exactly two entries, left-stick direction then face button.")]
+        public QteButton[] QteSequence = Array.Empty<QteButton>();
         [Min(0.1f)] public float QteDuration = 1.5f;
         [Min(0)] public int QteBonusDamage = 15;
         public bool Available => Category != BattleActionCategory.Item || Quantity > 0;
@@ -29,7 +38,7 @@ namespace Game.GridPrototype
                Pattern == BattleTargetPattern.Piercing ? "Hits characters and destructible objects in a straight or diagonal line, including allies. Stops at terrain." :
                Pattern == BattleTargetPattern.Multiple ? $"Assign {MaxTargets} hits to start. Repeated cells and allies are allowed. Hits resolve in selection order." : "One cell. One hit. Can hit allies or destructible objects.")
             + (Category == BattleActionCategory.Item ? $"\n\n<b>Carried</b>   {Quantity}\nUses one item when the action starts." : "")
-            + (SignatureQte ? $"\n\n<b>Signature QTE</b>\nPress Space / south face button before {Mathf.Max(0.1f, QteDuration):0.0}s expires.\nSuccess: +{Mathf.Max(0, QteBonusDamage)} damage per hit ({Damage + Mathf.Max(0, QteBonusDamage)} total).\nWrong input or timeout: normal damage." : "")
+            + (SignatureQte ? $"\n\n<b>Signature QTE</b>\n{(QteType == QteMode.DualInput ? "Hold the direction and face button together; either input may be held first" : QteType == QteMode.Staged ? "Respond to each prompt; success or failure advances to the next. Timer resets per prompt. All prompts must succeed for bonus damage" : QteType == QteMode.FixedSequence ? "Complete the displayed fixed sequence" : QteType == QteMode.RepeatedTap ? $"Fill the meter by tapping ({Mathf.Max(1, QteRequiredTaps)} taps without decay); pausing gradually drains it" : QteType == QteMode.Hold ? $"Fill the meter by holding ({QteHoldDuration:0.0}s without decay); releasing gradually drains it" : "Press Space / south face button")} before {Mathf.Max(0.1f, QteDuration):0.0}s expires.\nSuccess: +{Mathf.Max(0, QteBonusDamage)} damage per hit ({Damage + Mathf.Max(0, QteBonusDamage)} total).\nWrong input or timeout: normal damage." : "")
             + "\nEmpty cells still spend the action.\n\n<color=#80BEFF>Blue tiles</color>: within reach\n<color=#FF9090>Red tiles</color>: affected by this action";
 
     }
@@ -71,6 +80,47 @@ namespace Game.GridPrototype
             Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
             Damage = 30, SignatureQte = true, QteDuration = 1.5f, QteBonusDamage = 15
         };
+        public static BattleActionOption CreatePrototypeSequence() => new BattleActionOption
+        {
+            QteType = QteMode.FixedSequence, Name = "Sequence Strike", Description = "Complete the fixed input sequence to strengthen the impact.",
+            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
+            Damage = 30, SignatureQte = true, QteDuration = 4, QteBonusDamage = 15,
+            QteSequence = new[] { QteButton.West, QteButton.North, QteButton.East, QteButton.South }
+        };
+        public static BattleActionOption CreatePrototypeMash() => new BattleActionOption
+        {
+            Name = "Burst Strike", Description = "Repeatedly tap the displayed button to charge the impact.",
+            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
+            Damage = 30, SignatureQte = true, QteType = QteMode.RepeatedTap,
+            QteDuration = 4, QteRequiredTaps = 12, QteBonusDamage = 15
+        };
+        public static BattleActionOption CreatePrototypeHold() => new BattleActionOption
+        {
+            Name = "Charged Strike", Description = "Hold the displayed button to charge the impact. Release gradually drains the charge.",
+            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
+            Damage = 30, SignatureQte = true, QteType = QteMode.Hold,
+            QteDuration = 4, QteHoldDuration = 2, QteBonusDamage = 15
+        };
+        private void OnValidate()
+        {
+            foreach (var option in Options)
+                if (option != null && (option.QteType == QteMode.FixedSequence || option.QteType == QteMode.Staged || option.QteType == QteMode.DualInput))
+                    option.QteSequence = PressQte.Normalize(option.QteType, option.QteSequence);
+        }
+        public static BattleActionOption CreatePrototypeStaged() => new BattleActionOption
+        {
+            Name = "Flow Strike", Description = "React to one prompt at a time. Misses still advance to the next prompt.",
+            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
+            Damage = 30, SignatureQte = true, QteType = QteMode.Staged, QteDuration = 2, QteBonusDamage = 15,
+            QteSequence = new[] { QteButton.StickRight, QteButton.East, QteButton.DpadUp, QteButton.South }
+        };
+        public static BattleActionOption CreatePrototypeDual() => new BattleActionOption
+        {
+            Name = "Twin Strike", Description = "Combine a direction with a face button. Either may be held first.",
+            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
+            Damage = 30, SignatureQte = true, QteType = QteMode.DualInput, QteDuration = 3, QteBonusDamage = 15,
+            QteSequence = new[] { QteButton.StickRight, QteButton.South }
+        };
         public List<BattleActionOption> Options = new List<BattleActionOption>
         {
             new BattleActionOption { Name = "Strike", Description = "Prototype adjacent attack." },
@@ -78,6 +128,11 @@ namespace Game.GridPrototype
             new BattleActionOption { Name = "Area Skill", Description = "Prototype area targeting.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Area, Reach = 4, Damage = 18 },
             new BattleActionOption { Name = "Multi-target Skill", Description = "Prototype independent target selection.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Multiple, Reach = 4, Damage = 12 },
             CreatePrototypeSignature(),
+            CreatePrototypeSequence(),
+            CreatePrototypeMash(),
+            CreatePrototypeHold(),
+            CreatePrototypeStaged(),
+            CreatePrototypeDual(),
             new BattleActionOption { Name = "Blast Flask", Description = "Prototype offensive consumable.", Category = BattleActionCategory.Item, Pattern = BattleTargetPattern.Area, Reach = 3, Damage = 20, Quantity = 3 }
         };
     }

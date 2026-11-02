@@ -34,6 +34,8 @@ public class PlayerInputReader : MonoBehaviour
     private bool inBattle = false;
 
     // Control Scheme
+    public ControllerIconStyle ControllerIcons = ControllerIconStyle.Auto;
+    private bool previousPlayStation;
     public enum ControlScheme { Keyboard, Gamepad }
     public ControlScheme CurrentScheme { get; private set; } = ControlScheme.Keyboard;
     public event Action<ControlScheme> OnControlSchemeChanged;
@@ -164,6 +166,7 @@ public class PlayerInputReader : MonoBehaviour
         }
 
         DetectSchemeSwitch();
+        if (CurrentScheme == ControlScheme.Gamepad) TrySwitchScheme(CurrentScheme);
     }
 
     public void SwitchToBattle()
@@ -216,7 +219,9 @@ public class PlayerInputReader : MonoBehaviour
 
     private void TrySwitchScheme(ControlScheme newScheme)
     {
-        if (CurrentScheme == newScheme) return;
+        bool playStation = ControllerGlyphs.PlayStation;
+        if (CurrentScheme == newScheme && previousPlayStation == playStation) return;
+        previousPlayStation = playStation;
 
         CurrentScheme = newScheme;
         OnControlSchemeChanged?.Invoke(CurrentScheme);

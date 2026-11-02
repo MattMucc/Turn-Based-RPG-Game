@@ -445,6 +445,7 @@ MonoBehaviour:
     Damage: 25
     Quantity: 0
     SignatureQte: 0
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Piercing Attack
@@ -458,6 +459,7 @@ MonoBehaviour:
     Damage: 18
     Quantity: 0
     SignatureQte: 0
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Area Skill
@@ -471,6 +473,7 @@ MonoBehaviour:
     Damage: 18
     Quantity: 0
     SignatureQte: 0
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Multi-target Skill
@@ -484,6 +487,7 @@ MonoBehaviour:
     Damage: 12
     Quantity: 0
     SignatureQte: 0
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Blast Flask
@@ -497,6 +501,7 @@ MonoBehaviour:
     Damage: 20
     Quantity: 3
     SignatureQte: 0
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Signature Strike
@@ -511,7 +516,90 @@ MonoBehaviour:
     Damage: 30
     Quantity: 0
     SignatureQte: 1
+    QteType: 0
+    QteSequence:
     QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Sequence Strike
+    FavoriteSlot: -1
+    Description: Complete the fixed input sequence to strengthen the impact.
+    Category: 1
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 30
+    Quantity: 0
+    SignatureQte: 1
+    QteType: 1
+    QteSequence: 02000000030000000100000000000000
+    QteDuration: 4
+    QteBonusDamage: 15
+  - Name: Burst Strike
+    FavoriteSlot: -1
+    Description: Repeatedly tap the displayed button to charge the impact.
+    Category: 1
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 30
+    Quantity: 0
+    SignatureQte: 1
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteType: 2
+    QteRequiredTaps: 12
+    QteSequence:
+    QteDuration: 4
+    QteBonusDamage: 15
+  - Name: Charged Strike
+    FavoriteSlot: -1
+    Description: Hold the displayed button to charge the impact. Release gradually drains the charge.
+    Category: 1
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 30
+    Quantity: 0
+    SignatureQte: 1
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteType: 3
+    QteHoldDuration: 2
+    QteSequence:
+    QteDuration: 4
+    QteBonusDamage: 15
+  - Name: Flow Strike
+    FavoriteSlot: -1
+    Description: React to one prompt at a time. Misses still advance to the next prompt.
+    Category: 1
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 30
+    Quantity: 0
+    SignatureQte: 1
+    QteType: 4
+    QteSequence: 09000000010000000400000000000000
+    QteDuration: 2
+    QteBonusDamage: 15
+  - Name: Twin Strike
+    FavoriteSlot: -1
+    Description: Combine a direction with a face button. Either may be held first.
+    Category: 1
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 30
+    Quantity: 0
+    SignatureQte: 1
+    QteType: 5
+    QteSequence: 0900000000000000
+    QteDuration: 3
     QteBonusDamage: 15
 --- !u!114 &8802730022444101226
 MonoBehaviour:

@@ -24,7 +24,12 @@ public sealed class BattleHud : MonoBehaviour
     private TMP_Text defenseCaption, defensePrompt, defenseResult, assistanceLabel;
     private RectTransform qteLayer, qtePrompt, qteFill;
     private TMP_Text qteCaption, qteCountdown, qteKey;
-    private Image qteIcon;
+    private Image qteIcon, dualIcon;
+    private RectTransform dualPrompt;
+    private readonly List<Image> sequenceIcons = new();
+    private readonly List<Image> sequenceFrames = new();
+    private QteProgressRing tapRing;
+    private QteTriangleCue triangleCue;
     private Sprite qteKeyboardIcon, qteControllerIcon;
     public void SetQteIcons(Sprite keyboard, Sprite controller)
     { qteKeyboardIcon = keyboard; qteControllerIcon = controller; }
@@ -173,11 +178,21 @@ public sealed class BattleHud : MonoBehaviour
         qteFill = Rect("Time remaining fill", track); Stretch(qteFill);
         var fill = qteFill.gameObject.AddComponent<Image>(); fill.color = new Color(1, 0.75f, 0.2f); fill.raycastTarget = false;
         qtePrompt = Rect("QTE input", qteLayer); qtePrompt.sizeDelta = new Vector2(104, 48);
-        var background = qtePrompt.gameObject.AddComponent<Image>(); background.color = Dark; background.raycastTarget = false;
+        var background = qtePrompt.gameObject.AddComponent<Image>(); background.color = Color.clear; background.raycastTarget = false;
         var iconRect = Rect("Input icon", qtePrompt); Stretch(iconRect);
         iconRect.offsetMin = new Vector2(12, 6); iconRect.offsetMax = new Vector2(-12, -6);
         qteIcon = iconRect.gameObject.AddComponent<Image>(); qteIcon.preserveAspect = true; qteIcon.raycastTarget = false;
         qteKey = Text(qtePrompt, 18);
+        dualPrompt = Rect("QTE second input", qteLayer); dualPrompt.sizeDelta = new Vector2(64, 48);
+        var secondIconRect = Rect("Input icon", dualPrompt); Stretch(secondIconRect);
+        secondIconRect.offsetMin = new Vector2(12, 6); secondIconRect.offsetMax = new Vector2(-12, -6);
+        dualIcon = secondIconRect.gameObject.AddComponent<Image>(); dualIcon.preserveAspect = true; dualIcon.raycastTarget = false;
+        dualPrompt.gameObject.SetActive(false);
+        var ringRect = Rect("Tap progress ring", qtePrompt); ringRect.sizeDelta = new Vector2(80, 80);
+        tapRing = ringRect.gameObject.AddComponent<QteProgressRing>(); tapRing.raycastTarget = false;
+        tapRing.color = new Color(0.3f, 1, 0.55f); tapRing.gameObject.SetActive(false);
+        var triangleRect = Rect("QTE triangle cue", qtePrompt); triangleRect.sizeDelta = new Vector2(18, 14);
+        triangleCue = triangleRect.gameObject.AddComponent<QteTriangleCue>(); triangleCue.gameObject.SetActive(false);
         qteLayer.gameObject.SetActive(false);
     }
 
@@ -189,11 +204,77 @@ public sealed class BattleHud : MonoBehaviour
         var qte = battle.CurrentQte;
         bool controller = GameManager.Instance && GameManager.Instance.Input
             && GameManager.Instance.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad;
-        var lane = controller ? QteLane.Right : QteLane.Bottom;
+        bool dual = qte != null && qte.Mode == QteMode.DualInput;
+        bool sequence = qte != null && qte.Mode == QteMode.FixedSequence;
+        bool mash = qte != null && qte.Mode == QteMode.RepeatedTap;
+        bool hold = qte != null && qte.Mode == QteMode.Hold;
+        bool ringPrompt = mash || hold;
+        var inputButton = qte != null ? qte.Expected : QteButton.South;
+        var lane = sequence ? QteLane.Bottom : inputButton >= QteButton.StickUp || (controller && inputButton >= QteButton.DpadUp)
+            ? QteLane.Left : !controller && inputButton == QteButton.South ? QteLane.Bottom : QteLane.Right;
         qtePrompt.anchorMin = qtePrompt.anchorMax = QteLayout.Anchor(lane);
         qtePrompt.anchoredPosition = QteLayout.Offset(lane);
-        qteIcon.sprite = controller ? qteControllerIcon : qteKeyboardIcon;
-        qteIcon.enabled = qteIcon.sprite != null; qteKey.text = qteIcon.enabled ? "" : controller ? "A" : "SPACE";
+        Color faceColor;
+        qteIcon.sprite = ControllerGlyphs.Face(inputButton, controller, out faceColor);
+        if (!qteIcon.sprite) qteIcon.sprite = controller ? qteControllerIcon : qteKeyboardIcon;
+        qteIcon.color = faceColor;
+        ControllerGlyphs.StyleQte(qteIcon, inputButton, controller);
+        qteIcon.enabled = !sequence && qteIcon.sprite != null;
+        qteKey.text = qteIcon.enabled || sequence ? "" : controller ? "A" : "SPACE";
+        bool largeStickPrompt = controller && inputButton >= QteButton.StickUp && !sequence;
+        qtePrompt.sizeDelta = largeStickPrompt ? new Vector2(108, 96)
+            : new Vector2(sequence ? Mathf.Min(root.rect.width - 24, qte.InputCount * 54) : ringPrompt ? 64 : 104, 48);
+        tapRing.gameObject.SetActive(ringPrompt);
+        tapRing.Progress = mash ? qte.TapProgress : hold ? qte.HoldProgress : 0;
+        qteIcon.rectTransform.localScale = qte != null && qte.InputHeld ? Vector3.one * 0.88f : Vector3.one;
+        triangleCue.gameObject.SetActive(ringPrompt);
+        if (ringPrompt)
+        {
+            // Fit the circle to the displayed sprite's outer extent (preserveAspect may letterbox it).
+            float aspect = qteIcon.sprite ? qteIcon.sprite.rect.width / qteIcon.sprite.rect.height : 1;
+            float width = qtePrompt.sizeDelta.x - 24, height = qtePrompt.sizeDelta.y - 12;
+            if (width / height > aspect) width = height * aspect; else height = width / aspect;
+            tapRing.FitToIcon(Mathf.Max(width, height) * 0.5f);
+            triangleCue.Present(hold, tapRing.OuterRadius, qte.Duration - qte.Remaining, !qte.Complete && qte.Result != PressQteResult.Preparing);
+        }
+        for (int i = 0; i < sequenceFrames.Count; i++) sequenceFrames[i].gameObject.SetActive(sequence && i < qte.InputCount);
+        if (sequence)
+        {
+            float spacing = Mathf.Min(54, qtePrompt.sizeDelta.x / qte.InputCount);
+            for (int i = 0; i < qte.InputCount; i++)
+            {
+                if (i == sequenceIcons.Count)
+                {
+                    var frame = Rect("Sequence input " + i, qtePrompt);
+                    var frameImage = frame.gameObject.AddComponent<Image>(); frameImage.raycastTarget = false;
+                    var progress = Rect("Step progress", frame); progress.anchorMin = new Vector2(0, 0); progress.anchorMax = new Vector2(1, 0);
+                    progress.sizeDelta = new Vector2(0, 2); progress.anchoredPosition = new Vector2(0, -2);
+                    progress.gameObject.AddComponent<Image>().raycastTarget = false;
+                    var inner = Rect("Button icon", frame); Stretch(inner); inner.offsetMin = new Vector2(4, 4); inner.offsetMax = new Vector2(-4, -4);
+                    var image = inner.gameObject.AddComponent<Image>(); image.preserveAspect = true; image.raycastTarget = false;
+                    sequenceFrames.Add(frameImage); sequenceIcons.Add(image);
+                }
+                var border = sequenceFrames[i]; border.gameObject.SetActive(true);
+                border.rectTransform.sizeDelta = new Vector2(Mathf.Min(46, spacing - 2), 46);
+                border.rectTransform.anchoredPosition = new Vector2((i - (qte.InputCount - 1) * 0.5f) * spacing, 0);
+                border.color = Color.clear;
+                border.transform.Find("Step progress").GetComponent<Image>().color = i < qte.CompletedInputs ? new Color(0.15f, 0.6f, 0.3f) : i == qte.CompletedInputs
+                    ? qte.Complete ? new Color(0.7f, 0.12f, 0.12f) : new Color(0.8f, 0.6f, 0.12f) : Dark;
+                sequenceIcons[i].sprite = ControllerGlyphs.Face(qte.InputAt(i), controller, out faceColor);
+                sequenceIcons[i].color = faceColor;
+                ControllerGlyphs.StyleQte(sequenceIcons[i], qte.InputAt(i), controller);
+            }
+        }
+        dualPrompt.gameObject.SetActive(dual);
+        if (dual)
+        {
+            var secondaryLane = !controller && qte.Secondary == QteButton.South ? QteLane.Bottom : QteLane.Right;
+            dualPrompt.anchorMin = dualPrompt.anchorMax = QteLayout.Anchor(secondaryLane);
+            dualPrompt.anchoredPosition = QteLayout.Offset(secondaryLane);
+            dualIcon.sprite = ControllerGlyphs.Face(qte.Secondary, controller, out faceColor);
+            dualIcon.color = faceColor; ControllerGlyphs.StyleQte(dualIcon, qte.Secondary, controller);
+            dualIcon.rectTransform.localScale = qte.SecondaryHeld ? Vector3.one * 0.88f : Vector3.one;
+        }
         qtePrompt.gameObject.SetActive(qte != null);
         if (qte == null)
         {
@@ -201,8 +282,11 @@ public sealed class BattleHud : MonoBehaviour
             qteFill.anchorMin = new Vector2(0.5f, 0); qteFill.anchorMax = new Vector2(0.5f, 1);
             return;
         }
-        qteCaption.text = qte.Result == PressQteResult.Preparing ? "Get ready"
-            : qte.Result == PressQteResult.Waiting ? "Press before time runs out"
+        qteCaption.text = qte.Mode == QteMode.Staged && qte.Result == PressQteResult.StageFeedback
+            ? $"{qte.StageIndex + 1}/{qte.InputCount}: {(qte.LastStageResult == PressQteResult.Success ? "Success" : qte.LastStageResult == PressQteResult.TimedOut ? "Time up" : "Wrong input")}"
+            : qte.Mode == QteMode.Staged && qte.Result == PressQteResult.Waiting ? $"Prompt {qte.StageIndex + 1}/{qte.InputCount}"
+            : qte.Result == PressQteResult.Preparing ? "Get ready"
+            : qte.Result == PressQteResult.Waiting ? dual ? $"Hold both: {(qte.InputHeld ? 1 : 0) + (qte.SecondaryHeld ? 1 : 0)}/2" : hold ? $"Hold: {qte.HeldTime:0.0}/{qte.HoldDuration:0.0}s" : mash ? $"Tap repeatedly: {qte.TapProgress:0%}" : sequence ? $"{qte.CompletedInputs}/{qte.InputCount} � press in order" : "Press before time runs out"
             : qte.Result == PressQteResult.Success ? "Success — bonus damage"
             : qte.Result == PressQteResult.WrongInput ? "Wrong input — normal damage" : "Time up — normal damage";
         qteCountdown.text = qte.Result == PressQteResult.Preparing ? "" : qte.Remaining.ToString("0.00") + "s";
@@ -210,8 +294,7 @@ public sealed class BattleHud : MonoBehaviour
         qteFill.anchorMin = new Vector2(0.5f - half, 0); qteFill.anchorMax = new Vector2(0.5f + half, 1);
         qteFill.GetComponent<Image>().color = !qte.Complete ? new Color(1, 0.75f, 0.2f)
             : qte.Result == PressQteResult.Success ? new Color(0.3f, 1, 0.55f) : new Color(1, 0.3f, 0.25f);
-        qtePrompt.GetComponent<Image>().color = !qte.Complete ? Dark
-            : qte.Result == PressQteResult.Success ? new Color(0.08f, 0.35f, 0.16f, 0.95f) : new Color(0.4f, 0.08f, 0.06f, 0.95f);
+        qtePrompt.GetComponent<Image>().color = Color.clear;
     }
 
     private void BuildDefense()
@@ -253,7 +336,7 @@ public sealed class BattleHud : MonoBehaviour
         if (inspectionLayer.gameObject.activeSelf) CloseInspection();
         defenseCaption.text = battle.DefenseCaption;
         bool controller = GameManager.Instance && GameManager.Instance.Input && GameManager.Instance.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad;
-        defensePrompt.text = controller ? "B: Dodge   |   RB: Parry" : "Space: Dodge   |   R: Parry";
+        defensePrompt.text = controller ? ControllerGlyphs.PlayStation ? "Circle: Dodge   |   R1: Parry" : "B: Dodge   |   RB: Parry" : "Space: Dodge   |   R: Parry";
         defenseResult.text = battle.DefenseFeedback;
         var hit = battle.CurrentImpact;
         if (hit == null) return;
@@ -335,7 +418,7 @@ public sealed class BattleHud : MonoBehaviour
     {
         if (!examinePanel.gameObject.activeSelf) return;
         var scroll = examinePanel.GetComponentInChildren<ScrollRect>();
-        scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + direction * seconds);
+        scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + direction * seconds * BattleControllerNavigation.ScrollSpeed);
     }
     public void ControllerPortraitStep(int delta, bool activate)
     {

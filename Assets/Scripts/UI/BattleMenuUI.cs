@@ -39,6 +39,7 @@ public class BattleMenuUI : MonoBehaviour
     private TMP_Text tooltip, targetCounter;
     private ScrollRect tooltipScroll;
     private GameObject tooltipPanel;
+    private Image shortcutDimmer;
     private int rows, highlighted = -1;
     private bool browsing, moving, initialized;
     private BattleActionCategory category;
@@ -92,6 +93,13 @@ public class BattleMenuUI : MonoBehaviour
         endRect.anchorMin = endRect.anchorMax = endRect.pivot = Vector2.zero;
         endRect.anchoredPosition = new Vector2(12, 12); endRect.sizeDelta = new Vector2(180, 28);
         remainingTurnButton.gameObject.SetActive(false);
+        var dimmer = new GameObject("Shortcut focus dimmer", typeof(RectTransform), typeof(Image));
+        dimmer.transform.SetParent(transform, false);
+        var dimRect = (RectTransform)dimmer.transform; dimRect.anchorMin = Vector2.zero; dimRect.anchorMax = Vector2.one;
+        dimRect.offsetMin = dimRect.offsetMax = Vector2.zero;
+        shortcutDimmer = dimmer.GetComponent<Image>(); shortcutDimmer.color = new Color(0, 0, 0, 0.45f);
+        shortcutDimmer.raycastTarget = false; dimmer.SetActive(false);
+        viewport.SetAsLastSibling(); tooltipPanel.transform.SetAsLastSibling(); targetCounter.transform.parent.SetAsLastSibling();
     }
 
     private TMP_Text MakeText(string name, Vector2 anchor, Vector2 position, Vector2 size, bool background)
@@ -269,7 +277,7 @@ public class BattleMenuUI : MonoBehaviour
         if (!battle.ChooseAction(option)) return;
         Open(category);
         battle.GridInputEnabled = battle.KeyboardGridInputEnabled = true;
-        highlighted = -1; tooltip.text = option.Tooltip; tooltipPanel.SetActive(true);
+        highlighted = -1; tooltip.text = ControllerGlyphs.Adapt(option.Tooltip); tooltipPanel.SetActive(true);
         for (int i = 0; i < rows; i++) pool[i].SetSelected(descriptions[i] == option.Tooltip);
         UpdateAvailability();
     }
@@ -286,7 +294,7 @@ public class BattleMenuUI : MonoBehaviour
         battle.CancelAction(); Root();
     }
     private void ShowTooltip(int index)
-    { if (index >= 0 && index < descriptions.Count) { tooltip.text = descriptions[index]; tooltipPanel.SetActive(true); if (battle) battle.HoverAction(previewOptions[index]); } }
+    { if (index >= 0 && index < descriptions.Count) { tooltip.text = ControllerGlyphs.Adapt(descriptions[index]); tooltipPanel.SetActive(true); if (battle) battle.HoverAction(previewOptions[index]); } }
     private void FitTooltip()
     {
         var bounds = ((RectTransform)transform).rect;
@@ -364,8 +372,21 @@ public class BattleMenuUI : MonoBehaviour
         => (keyboard != null && keyboard.tKey.wasPressedThisFrame)
             || (gamepad != null && gamepad.rightStickButton.wasPressedThisFrame);
 
+    public bool ShouldShowShortcutFocus(bool applicationFocused)
+    {
+        return battle && battle.PlayerReady && battle.ActionReady && !battle.InspectionOpen
+            && battle.ChosenAction == null && !battle.ControllerInputLocked && viewport.gameObject.activeInHierarchy
+            && controllerNavigation && controllerNavigation.ControllerActive && Gamepad.current != null
+            && Gamepad.current.leftTrigger.isPressed && !Gamepad.current.rightTrigger.isPressed
+            && applicationFocused;
+    }
+    public void UpdateShortcutFocus()
+    {
+        if (shortcutDimmer) shortcutDimmer.gameObject.SetActive(ShouldShowShortcutFocus(Application.isFocused));
+    }
     private void LateUpdate()
     {
+        UpdateShortcutFocus();
         if (!battle) return;
         UpdateAvailability();
         bool targeting = battle.ChosenAction != null;

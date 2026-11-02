@@ -18,6 +18,34 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private PlayerInputReader source;
     private bool selected, highlighted, triggerShortcut;
     private string caption;
+    private Image triggerIcon;
+    private TMP_Text shortcutPlus;
+    private PlayerInputReader.ControlScheme displayedScheme;
+    private static readonly Color DarkGlyph = new Color(0.08f, 0.09f, 0.11f);
+    private void EnsureShortcut()
+    {
+        if (!icon) return;
+        if (!triggerIcon) triggerIcon = transform.Find("Shortcut trigger")?.GetComponent<Image>();
+        if (!shortcutPlus) shortcutPlus = transform.Find("Shortcut plus")?.GetComponent<TMP_Text>();
+        if (!triggerIcon)
+        {
+            var obj = new GameObject("Shortcut trigger", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
+            obj.transform.SetParent(transform, false); triggerIcon = obj.GetComponent<Image>();
+            triggerIcon.preserveAspect = true; triggerIcon.raycastTarget = false;
+            var layout = obj.GetComponent<LayoutElement>(); layout.minWidth = layout.preferredWidth = 16.5f; layout.minHeight = layout.preferredHeight = 16.5f;
+            layout.flexibleHeight = 0;
+        }
+        if (!shortcutPlus)
+        {
+            var obj = new GameObject("Shortcut plus", typeof(RectTransform), typeof(TextMeshProUGUI), typeof(LayoutElement));
+            obj.transform.SetParent(transform, false); shortcutPlus = obj.GetComponent<TextMeshProUGUI>();
+            shortcutPlus.font = label.font; shortcutPlus.fontSize = 10; shortcutPlus.text = "+";
+            shortcutPlus.alignment = TextAlignmentOptions.Center; shortcutPlus.raycastTarget = false;
+            var layout = obj.GetComponent<LayoutElement>(); layout.minWidth = layout.preferredWidth = 8;
+        }
+        label.transform.SetAsFirstSibling(); triggerIcon.transform.SetAsLastSibling();
+        shortcutPlus.transform.SetAsLastSibling(); icon.transform.SetAsLastSibling();
+    }
     public Action<bool> HoverChanged;
     public Sprite KeyboardIcon => keyboardIcon;
     public Sprite ControllerIcon => controllerIcon;
@@ -48,8 +76,28 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private void OnDestroy() { if (source) source.OnControlSchemeChanged -= UpdateIcon; }
     private void UpdateIcon(PlayerInputReader.ControlScheme scheme)
     {
-        if (icon) icon.sprite = scheme == PlayerInputReader.ControlScheme.Gamepad ? controllerIcon : keyboardIcon;
-        if (label && caption != null) label.text = (triggerShortcut && scheme == PlayerInputReader.ControlScheme.Gamepad ? "LT + " : "") + caption;
+        displayedScheme = scheme;
+        EnsureShortcut();
+        if (icon)
+        {
+            Color tint = Color.white;
+            icon.sprite = scheme == PlayerInputReader.ControlScheme.Gamepad ? ControllerGlyphs.Resolve(controllerIcon, out tint) : keyboardIcon;
+            if (scheme == PlayerInputReader.ControlScheme.Gamepad && tint == Color.white)
+                tint = Available ? DarkGlyph : Color.white;
+            tint.a = icon.color.a; icon.color = tint;
+            ControllerGlyphs.StyleFace(icon);
+        }
+        bool chord = triggerShortcut && scheme == PlayerInputReader.ControlScheme.Gamepad && icon && icon.gameObject.activeSelf;
+        if (triggerIcon)
+        {
+            var catalog = ControllerGlyphs.Catalog;
+            triggerIcon.sprite = catalog ? ControllerGlyphs.Resolve(catalog.Buttons[4].Xbox, out _) : null;
+            triggerIcon.color = Available ? DarkGlyph : Color.white;
+            triggerIcon.gameObject.SetActive(chord);
+            shortcutPlus.color = Available ? DarkGlyph : Color.white;
+            shortcutPlus.gameObject.SetActive(chord);
+        }
+        if (label && caption != null) label.text = caption;
     }
     public void Configure(string text, UnityAction action, bool showIcon = false)
     {
@@ -59,19 +107,22 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         if (row)
         {
             row.childControlWidth = true; row.childForceExpandWidth = false;
+            row.padding.right = row.padding.left;
             var labelLayout = label.GetComponent<LayoutElement>();
             if (!labelLayout) labelLayout = label.gameObject.AddComponent<LayoutElement>();
             labelLayout.minWidth = 0; labelLayout.preferredWidth = 0; labelLayout.flexibleWidth = 1;
         }
         if (icon)
         {
-            icon.rectTransform.sizeDelta = new Vector2(22, 22);
+            icon.rectTransform.sizeDelta = new Vector2(16.5f, 16.5f);
             var iconLayout = icon.GetComponent<LayoutElement>();
             if (!iconLayout) iconLayout = icon.gameObject.AddComponent<LayoutElement>();
-            iconLayout.minWidth = iconLayout.preferredWidth = 22; iconLayout.flexibleWidth = 0;
+            iconLayout.minWidth = iconLayout.preferredWidth = 16.5f; iconLayout.flexibleWidth = 0;
+            iconLayout.minHeight = iconLayout.preferredHeight = 16.5f; iconLayout.flexibleHeight = 0;
             icon.gameObject.SetActive(showIcon);
         }
         selected = highlighted = false; SetAvailable(true);
+        UpdateIcon(source ? source.CurrentScheme : displayedScheme);
     }
     public void SetAvailable(bool available)
     {
@@ -79,6 +130,7 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         button.image.color = !available ? new Color(0.3f, 0.3f, 0.3f, 0.8f) : highlighted || selected ? highlightedColor : normalColor;
         label.color = available ? new Color(0.05f, 0.06f, 0.08f) : new Color(0.12f, 0.12f, 0.12f);
         if (outline) outline.enabled = selected || (highlighted && available);
+        UpdateIcon(source ? source.CurrentScheme : displayedScheme);
     }
     public void SetSelected(bool value) { selected = value; SetAvailable(Available); }
     public void SetHighlighted(bool value) { highlighted = value; SetAvailable(Available); }

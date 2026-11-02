@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e20aa88b823c40788e1728c14f8bb250, type: 3}
+  m_Name: ControllerGlyphs
+  m_EditorClassIdentifier: Assembly-CSharp::ControllerGlyphs
+  Buttons:
+  - Xbox: {fileID: 21300000, guid: 19b84d13b4e51a64b8aa6f9532611ef6, type: 3}
+    PlayStation: {fileID: 21300000, guid: 02b95ae4605dbb948aa440a62175c40e, type: 3}
+    XboxColor: {r: 0.25, g: 0.8, b: 0.3, a: 1}
+  - Xbox: {fileID: 21300000, guid: f4e83e5b560bef7408b322d1703b4d22, type: 3}
+    PlayStation: {fileID: 21300000, guid: c4e2123aca855c547899d4e1cbd4312b, type: 3}
+    XboxColor: {r: 0.95, g: 0.2, b: 0.18, a: 1}
+  - Xbox: {fileID: 21300000, guid: 31261ef829c8d5443941fedf93581633, type: 3}
+    PlayStation: {fileID: 21300000, guid: 380a24cb7426df2488b581cba5fe7a41, type: 3}
+    XboxColor: {r: 0.15, g: 0.5, b: 1, a: 1}
+  - Xbox: {fileID: 21300000, guid: f3565a7a017759148b71fa384df16242, type: 3}
+    PlayStation: {fileID: 21300000, guid: 03d93f0af71a932438f67fe810db03b9, type: 3}
+    XboxColor: {r: 1, g: 0.8, b: 0.12, a: 1}
+  - Xbox: {fileID: 21300000, guid: 99e3ae56e068f9d4a880289d87a4c4a2, type: 3}
+    PlayStation: {fileID: 21300000, guid: 340813340169a9f4e9222a2ed4b4ca5b, type: 3}
+    XboxColor: {r: 1, g: 1, b: 1, a: 1}
+  - Xbox: {fileID: 21300000, guid: b5acca5b493797f4eb71cb59d573ffc9, type: 3}
+    PlayStation: {fileID: 21300000, guid: 33cd37725f2325248af5a05d1ebac12c, type: 3}
+    XboxColor: {r: 1, g: 1, b: 1, a: 1}
+  - Xbox: {fileID: 21300000, guid: 6f2bf985368854e409f94054cafc28b4, type: 3}
+    PlayStation: {fileID: 21300000, guid: 5bc5c58f25a195e48a39ed8a641b7399, type: 3}
+    XboxColor: {r: 1, g: 1, b: 1, a: 1}
+  - Xbox: {fileID: 21300000, guid: f26be72dc8be4764ca51a54b57d312d0, type: 3}
+    PlayStation: {fileID: 21300000, guid: c5592df54283ce742af9371403fc8a72, type: 3}
+    XboxColor: {r: 1, g: 1, b: 1, a: 1}
+  - Xbox: {fileID: 21300000, guid: 18e5191cf4ec7cb4fb09b913d3cb123f, type: 3}
+    PlayStation: {fileID: 21300000, guid: 18e5191cf4ec7cb4fb09b913d3cb123f, type: 3}
+    XboxColor: {r: 1, g: 1, b: 1, a: 1}
+  - Xbox: {fileID: 21300000, guid: e5ac73b6ab71b5446a70c3cf954f4d2f, type: 3}
+    PlayStation: {fileID: 21300000, guid: e5ac73b6ab71b5446a70c3cf954f4d2f, type: 3}
+    XboxColor: {r: 1, g: 1, b: 1, a: 1}
+  KeyboardFaces:
+  - {fileID: 21300000, guid: b2a784b6d9a009048b62e01f373ec4e9, type: 3}
+  - {fileID: 21300000, guid: fc7cc6af66ebe0840921aa4ea7253660, type: 3}
+  - {fileID: 21300000, guid: 17760f9e1b48ec3448520e717d358d52, type: 3}
+  - {fileID: 21300000, guid: 764669c5ed0537147b335cdb4ee888e3, type: 3}
+  KeyboardDirections:
+  - {fileID: 21300000, guid: 764669c5ed0537147b335cdb4ee888e3, type: 3}
+  - {fileID: 21300000, guid: fc7cc6af66ebe0840921aa4ea7253660, type: 3}
+  - {fileID: 21300000, guid: e75ac8c35380caa44ab7ecbadcfaeb45, type: 3}
+  - {fileID: 21300000, guid: 17760f9e1b48ec3448520e717d358d52, type: 3}
+  - {fileID: 21300000, guid: 080e9c0f37c820a4ba5f661d8c493a4d, type: 3}
+  - {fileID: 21300000, guid: 56f1002c9c66c894cb96ca4fb7172c97, type: 3}
+  - {fileID: 21300000, guid: af856ace946144443ab99a512ce0590d, type: 3}
+  - {fileID: 21300000, guid: f1dbccfd651b49a438d4645df3ba4062, type: 3}

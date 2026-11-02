@@ -208,8 +208,8 @@ namespace Game.GridPrototype
             }
             if (SignatureActive && CurrentQte != null && Application.isFocused && !InspectionOpen)
             {
-                qteInput.Read(Keyboard.current, Gamepad.current, out bool correct, out bool wrong);
-                AdvanceSignature(Time.unscaledDeltaTime, Time.frameCount > qteOpenedFrame && correct, Time.frameCount > qteOpenedFrame && wrong);
+                qteInput.Read(Keyboard.current, Gamepad.current, out bool correct, out bool wrong, CurrentQte.Expected, CurrentQte.Mode == QteMode.DualInput ? CurrentQte.Secondary : (QteButton?)null);
+                AdvanceSignature(Time.unscaledDeltaTime, Time.frameCount > qteOpenedFrame && correct, Time.frameCount > qteOpenedFrame && wrong, PressQteInput.IsHeld(Keyboard.current, Gamepad.current, CurrentQte.Expected), CurrentQte.Mode == QteMode.DualInput && PressQteInput.IsHeld(Keyboard.current, Gamepad.current, CurrentQte.Secondary));
             }
             if (ExternalControllerActive)
             {
@@ -455,11 +455,11 @@ namespace Game.GridPrototype
             else sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple);
             return true;
         }
-        public void AdvanceSignature(float deltaTime, bool correct = false, bool wrong = false)
+        public void AdvanceSignature(float deltaTime, bool correct = false, bool wrong = false, bool held = false, bool secondaryHeld = false)
         {
             if (!SignatureActive || CurrentQte == null || closing) return;
             bool wasComplete = CurrentQte.Complete;
-            CurrentQte.Advance(deltaTime, correct, wrong);
+            CurrentQte.Advance(deltaTime, correct, wrong, held, secondaryHeld);
             if (!wasComplete && CurrentQte.Complete)
                 PlayDefenseCue(CurrentQte.Result == PressQteResult.Success ? successCue : failedCue);
             if (wasComplete) signatureFeedbackElapsed += Mathf.Max(0, deltaTime);
@@ -487,7 +487,7 @@ namespace Game.GridPrototype
                 if (closing) yield break;
                 signatureVisual = new DefenseVisual(actors[0]);
                 EnsureDefenseAudio(); PlayDefenseCue(windupCue);
-                CurrentQte = new PressQte(action.QteDuration);
+                CurrentQte = new PressQte(action.QteDuration, inputs: action.QteSequence, mode: action.QteType, requiredTaps: action.QteRequiredTaps, holdDuration: action.QteHoldDuration, progressDrainPerSecond: action.QteProgressDrainPerSecond, tapDrainDelay: action.QteTapDrainDelay);
                 qteInput.Reset(Gamepad.current); qteOpenedFrame = Time.frameCount;
                 signatureFeedbackElapsed = 0;
                 while (!CurrentQte.Complete) yield return null;
