@@ -58,6 +58,11 @@ namespace Game.GridPrototype
             return true;
         }
 
+        public bool Dash(int movementGain = 3)
+        {
+            if (!TurnOpen || !ActionAvailable || movementGain <= 0 || Movement > int.MaxValue - movementGain) return false;
+            ActionAvailable = false; Movement += movementGain; return true;
+        }
         public void EndTurn() { TurnOpen = false; ActionAvailable = false; }
     }
 

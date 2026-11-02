@@ -73,7 +73,7 @@ public class BattleManager : MonoBehaviour
         Instance = this; DontDestroyOnLoad(gameObject);
     }
 
-    public bool TryStartBattle(BattleGroup source, List<GameObject> enemies)
+    public bool TryStartBattle(BattleGroup source, List<GameObject> enemies, bool preemptive = false)
     {
         if (InBattle || !source || !GameManager.Instance || !GameManager.Instance.PossessedCharacter) return false;
         var player = GameManager.Instance.PossessedCharacter;
@@ -134,8 +134,9 @@ public class BattleManager : MonoBehaviour
             var encounter = encounterRoot.AddComponent<InSceneGridBattle>();
             var figures = new List<Transform>(); var offsets = new List<float>();
             foreach (var actor in actors) { figures.Add(actor.Transform); offsets.Add(actor.FootOffset); }
-            encounter.Initialize(grid, figures, offsets, positions, worldCamera, shader, CompleteBattle);
+            encounter.Initialize(grid, figures, offsets, positions, worldCamera, shader, CompleteBattle, preemptive);
             if (battleMenu) battleMenu.Bind(encounter);
+            Debug.Log(preemptive ? "[Battle] Pre-emptive strike: controlled character acts first this round." : "[Battle] Initiative determines turn order.");
             return true;
         }
         catch (Exception exception)

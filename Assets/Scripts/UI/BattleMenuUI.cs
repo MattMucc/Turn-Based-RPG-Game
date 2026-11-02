@@ -176,8 +176,9 @@ public class BattleMenuUI : MonoBehaviour
         pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon, true);
         Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller LT + B.", () => battle.PlayerReady, true);
         pool[4].SetIcons(runKeyboardIcon, runControllerIcon, true);
+        Row("Dash", () => battle.Dash(), "Spend your action to gain 3 movement points. Move normally afterward; unused points carry over.", () => battle.ActionReady);
         Row("End Turn", () => battle.EndTurn(), "T / controller right-stick click (R3): end this turn. Unspent movement carries over; your next turn grants three more points.", () => battle.PlayerReady, true);
-        pool[5].SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
+        pool[6].SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
         FinishList();
     }
     private void Open(BattleActionCategory selectedCategory)

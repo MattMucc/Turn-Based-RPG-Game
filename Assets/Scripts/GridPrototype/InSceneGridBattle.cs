@@ -26,6 +26,8 @@ namespace Game.GridPrototype
         private Dictionary<Vector2Int, GridRoute> reachable;
         private Vector2Int selected;
         private int actorIndex, round = 1;
+        private InitiativeOrder initiativeOrder;
+        private bool openingEnemyTurnPending;
         private bool busy, closing, playerTurning;
         private Quaternion playerTurnStart, playerTurnEnd;
         private float playerTurnElapsed;
@@ -65,10 +67,7 @@ namespace Game.GridPrototype
         public int RecentDamage(int index) => hitTime.TryGetValue(index, out float time) && Time.time - time < 1.2f ? hitDamage[index] : 0;
         public List<int> UpcomingTurns()
         {
-            var result = new List<int>();
-            for (int offset = 0; offset < turnOrder.Count; offset++)
-            { int i = (actorIndex + offset) % turnOrder.Count; if (turnOrder[i].Health > 0) result.Add(i); }
-            return result;
+            return initiativeOrder.Preview(actorIndex, i => turnOrder[i].Health > 0);
         }
         public void SetAutoCamera(bool value)
         { AutoCamera = value; if (value) FocusActor(actorIndex); else cameraControls.ReleaseFocus(); }
@@ -103,7 +102,7 @@ namespace Game.GridPrototype
 
 
         public void Initialize(TerrainBattleGrid grid, IReadOnlyList<Transform> figures, IReadOnlyList<float> footOffsets,
-            IReadOnlyList<Vector2Int> positions, Camera sourceCamera, Shader shader, Action<bool> onFinished)
+            IReadOnlyList<Vector2Int> positions, Camera sourceCamera, Shader shader, Action<bool> onFinished, bool preemptive = false)
         {
             Grid = grid; finished = onFinished; overlayShader = shader;
             // Pick the closest encounter enemy before grid placement moves either actor.
@@ -143,7 +142,14 @@ namespace Game.GridPrototype
             RebuildOverlay();
             targetHighlight = new GameObject("Hovered battle target").AddComponent<BattleTargetHighlight>();
             targetHighlight.transform.SetParent(transform); targetHighlight.Initialize(shader);
+            var initiatives = new List<int>();
+            foreach (var figure in actors) initiatives.Add(figure.GetComponent<BattleCharacterInfo>().EffectiveInitiative);
+            initiativeOrder = new InitiativeOrder(initiatives, preemptive ? 0 : -1);
+            actorIndex = initiativeOrder.First;
             Active.BeginTurn(); selected = Active.Position;
+            openingEnemyTurnPending = actorIndex != 0;
+            busy = openingEnemyTurnPending;
+            FocusActor(actorIndex);
             message = "Choose a command or move to a green tile."; Refresh();
         }
 
@@ -197,6 +203,8 @@ namespace Game.GridPrototype
         {
             if (Grid == null || closing) return;
             if (Application.isFocused) AdvanceFacing(Time.deltaTime);
+            if (openingEnemyTurnPending && !playerTurning && Application.isFocused)
+            { openingEnemyTurnPending = false; StartCoroutine(EnemyRound(false)); }
             if (DefenseActive && Application.isFocused && !InspectionOpen)
             {
                 var keyboard = Keyboard.current; var gamepad = Gamepad.current;
@@ -711,6 +719,11 @@ namespace Game.GridPrototype
                 if (clip) { if (Application.isPlaying) Destroy(clip); else DestroyImmediate(clip); }
         }
 
+        public void Dash()
+        {
+            if (PlayerReady && !InspectionOpen && ChosenAction == null && Active.Dash())
+            { CancelAction(); ActionResolved?.Invoke(); message = "Dash: +3 movement points. Choose where to move, then End Turn."; Refresh(); }
+        }
         public void Block()
         {
             if (PlayerReady && Active.SpendAction())
@@ -720,16 +733,16 @@ namespace Game.GridPrototype
         public void EndTurn()
         {
             if (!PlayerReady) return;
-            CancelAction(); Active.EndTurn(); StartCoroutine(EnemyRound()); ActionResolved?.Invoke();
+            CancelAction(); StartCoroutine(EnemyRound()); ActionResolved?.Invoke();
         }
 
-        private IEnumerator EnemyRound()
+        private IEnumerator EnemyRound(bool advance = true)
         {
             busy = true;
-            for (int i = 1; i < turnOrder.Count; i++)
+            if (advance) AdvanceTurn();
+            while (actorIndex != 0 && !closing)
             {
-                if (turnOrder[i].Health <= 0) continue;
-                actorIndex = i; Active.BeginTurn(); selected = Active.Position; FocusActor(i); Refresh();
+                int i = actorIndex;
                 yield return new WaitForSeconds(0.6f);
                 if (!CanStrike(Active, turnOrder[0]))
                 {
@@ -753,10 +766,18 @@ namespace Game.GridPrototype
                 if (CanStrike(Active, turnOrder[0]) && Active.SpendAction())
                     yield return EnemyAttack(i, (i + round) % 2 != 0);
                 if (closing) yield break;
-                Active.EndTurn(); yield return new WaitForSeconds(0.9f);
+                yield return new WaitForSeconds(0.9f);
+                AdvanceTurn();
             }
-            actorIndex = 0; round++; Active.BeginTurn(); selected = Active.Position; FocusActor(0);
             busy = false; message = "Your turn: saved movement + 3, action refreshed."; Refresh();
+        }
+
+        private void AdvanceTurn()
+        {
+            Active.EndTurn();
+            actorIndex = initiativeOrder.Next(actorIndex, i => turnOrder[i].Health > 0);
+            round = initiativeOrder.Round;
+            Active.BeginTurn(); selected = Active.Position; FocusActor(actorIndex); Refresh();
         }
 
         public void Finish(bool victory)

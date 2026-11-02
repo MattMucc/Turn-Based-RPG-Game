@@ -74,8 +74,25 @@ public class EnemyMovement : MonoBehaviour
         lastPos = transform.position;
     }
 
+    public bool IsAwareOf(Transform target)
+    {
+        return currentState == EnemyState.Chasing || CanSee(target);
+    }
+    public bool CanSee(Transform target)
+    {
+        if (!target || (battleGroup && !battleGroup.IsPlayerInBounds(target.position))) return false;
+        Vector3 origin = transform.position + Vector3.up * .5f;
+        Vector3 destination = target.position + Vector3.up * .5f;
+        Vector3 direction = destination - origin;
+        if (direction.magnitude > detectionRadius || Vector3.Angle(transform.forward, direction) > fieldOfView) return false;
+        foreach (var hit in Physics.RaycastAll(origin, direction.normalized, direction.magnitude, detectionLayer, QueryTriggerInteraction.Ignore))
+            if (!hit.transform.IsChildOf(transform) && !hit.transform.IsChildOf(target)) return false;
+        return true;
+    }
+
     private void Idle()
     {
+        if (CanSee(playerTransform)) { battleGroup.AlertGroup(); return; }
         idleTimer -= Time.deltaTime;
         if (idleTimer <= 0f)
             StartRoaming();
@@ -83,42 +100,8 @@ public class EnemyMovement : MonoBehaviour
 
     private void Roam()
     {
-        // Check if the player is within distance and view
-        if (playerTransform)
-        {
-            if (battleGroup.IsPlayerInBounds(playerTransform.position))
-            {
-                float distToPlayer = Vector3.Distance(transform.position, playerTransform.position);
-                if (distToPlayer <= detectionRadius)
-                {
-                    Vector3 dirToPlayer = (playerTransform.position - transform.position).normalized;
-                    float angle = Vector3.Angle(transform.forward, dirToPlayer);
-                    if (angle <= fieldOfView)
-                    {
-                        Vector3 origin = transform.position + Vector3.up * 0.5f;
-                        if (Physics.Raycast(origin, dirToPlayer, out RaycastHit hit, detectionRadius, detectionLayer, QueryTriggerInteraction.Ignore))
-                        {
-                            if (hit.transform.root.CompareTag("Player"))
-                            {
-                                // Clear line of sight
-                                detectionState = DetectionState.Detected;
-                                battleGroup.AlertGroup();
-                                return;
-                            }
-
-                            // Obstacle is blocking line of sight
-                            detectionState = DetectionState.InRange;
-                        }
-                    }
-                    else
-                        detectionState = DetectionState.InRange; // Outside the cone
-                }
-                else
-                    detectionState = DetectionState.Clear; // Outside the radius
-            }
-            else
-                detectionState = DetectionState.Clear; // Outside the bounds
-        }
+        if (CanSee(playerTransform)) { detectionState = DetectionState.Detected; battleGroup.AlertGroup(); return; }
+        detectionState = DetectionState.Clear;
 
         // Stuck detection
         stuckTimer += Time.deltaTime;

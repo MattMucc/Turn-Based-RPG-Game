@@ -454,7 +454,7 @@ public sealed class BattleHud : MonoBehaviour
             card.Portrait.color = portraits[i] ? Color.white : new Color(0.3f, 0.35f, 0.43f);
             var unit = battle.Combatants[i]; card.Health.text = $"{unit.Health}/{unit.MaxHealth}";
             int hits = battle.AssignedHits(i); card.Hits.text = hits > 0 ? $"x{hits}" : "";
-            card.Border.color = slot == controllerPortrait ? new Color(0.1f, 0.85f, 1) : i == battle.CurrentActorIndex ? new Color(1, 0.75f, 0.25f) : Dark;
+            card.Border.color = slot == controllerPortrait ? new Color(0.1f, 0.85f, 1) : slot == 0 ? new Color(1, 0.75f, 0.25f) : Dark;
         }
     }
 }

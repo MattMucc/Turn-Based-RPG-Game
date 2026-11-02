@@ -345,7 +345,7 @@ MonoBehaviour:
   Magic: -1
   PhysicalDefense: -1
   MagicalDefense: -1
-  Initiative: -1
+  Initiative: 10
   Resistances: 
   Statuses: 
 --- !u!114 &2859656913483122428
@@ -367,6 +367,12 @@ MonoBehaviour:
   moveDecelRate: 50
   airControlMultiplier: 0.8
   rotationSmoothTime: 12
+  dashSpeed: 12
+  dashDuration: 0.22
+  dashCooldown: 0.6
+  encounterStrikeReach: 3.5
+  encounterStrikeHalfAngle: 60
+  encounterStrikeCooldown: 0.4
   baseJumpHeight: 2
   holdJumpMultiplier: 2
   coyoteTime: 0.2
@@ -445,6 +451,11 @@ MonoBehaviour:
     Damage: 25
     Quantity: 0
     SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
@@ -459,6 +470,11 @@ MonoBehaviour:
     Damage: 18
     Quantity: 0
     SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
@@ -473,6 +489,11 @@ MonoBehaviour:
     Damage: 18
     Quantity: 0
     SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
@@ -487,6 +508,11 @@ MonoBehaviour:
     Damage: 12
     Quantity: 0
     SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
@@ -501,6 +527,11 @@ MonoBehaviour:
     Damage: 20
     Quantity: 3
     SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
@@ -517,6 +548,10 @@ MonoBehaviour:
     Quantity: 0
     SignatureQte: 1
     QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence:
     QteDuration: 1.5
     QteBonusDamage: 15
@@ -532,6 +567,10 @@ MonoBehaviour:
     Quantity: 0
     SignatureQte: 1
     QteType: 1
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 02000000030000000100000000000000
     QteDuration: 4
     QteBonusDamage: 15
@@ -546,16 +585,18 @@ MonoBehaviour:
     Damage: 30
     Quantity: 0
     SignatureQte: 1
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
     QteType: 2
     QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence:
     QteDuration: 4
     QteBonusDamage: 15
   - Name: Charged Strike
     FavoriteSlot: -1
-    Description: Hold the displayed button to charge the impact. Release gradually drains the charge.
+    Description: Hold the displayed button to charge the impact. Release gradually
+      drains the charge.
     Category: 1
     Pattern: 0
     Reach: 1
@@ -564,16 +605,18 @@ MonoBehaviour:
     Damage: 30
     Quantity: 0
     SignatureQte: 1
+    QteType: 3
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteType: 3
-    QteHoldDuration: 2
     QteSequence:
     QteDuration: 4
     QteBonusDamage: 15
   - Name: Flow Strike
     FavoriteSlot: -1
-    Description: React to one prompt at a time. Misses still advance to the next prompt.
+    Description: React to one prompt at a time. Misses still advance to the next
+      prompt.
     Category: 1
     Pattern: 0
     Reach: 1
@@ -583,6 +626,10 @@ MonoBehaviour:
     Quantity: 0
     SignatureQte: 1
     QteType: 4
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 09000000010000000400000000000000
     QteDuration: 2
     QteBonusDamage: 15
@@ -598,6 +645,10 @@ MonoBehaviour:
     Quantity: 0
     SignatureQte: 1
     QteType: 5
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
     QteSequence: 0900000000000000
     QteDuration: 3
     QteBonusDamage: 15

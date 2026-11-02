@@ -128,6 +128,7 @@ GameObject:
   - component: {fileID: -1083373368044996749}
   - component: {fileID: 8972257642219513300}
   - component: {fileID: 8592491984726968532}
+  - component: {fileID: 8198747651643438598}
   m_Layer: 7
   m_Name: Enemy
   m_TagString: Enemy
@@ -319,3 +320,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c25ab4827475f094b81a89034c881467, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyTrigger
+--- !u!114 &8198747651643438598
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7468749988293964581}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 958e0bc8b93412147922f63ae1d0f193, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleCharacterInfo
+  Portrait: {fileID: 0}
+  DisplayName:
+  Level: 0
+  Race:
+  Role:
+  Vitality: -1
+  Strength: -1
+  Magic: -1
+  PhysicalDefense: -1
+  MagicalDefense: -1
+  Initiative: 12
+  Resistances:
+  Statuses:

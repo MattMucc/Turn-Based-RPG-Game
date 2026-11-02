@@ -115,10 +115,10 @@ public class BattleGroup : MonoBehaviour
             movement.StartChasing();
     }
 
-    public void TriggerBattle()
+    public void TriggerBattle(bool preemptive = false)
     {
         if (battleTriggered || Time.time < retryAfter || !BattleManager.Instance || BattleManager.Instance.InBattle) return;
-        battleTriggered = BattleManager.Instance.TryStartBattle(this, spawnedEnemies);
+        battleTriggered = BattleManager.Instance.TryStartBattle(this, spawnedEnemies, preemptive);
         if (!battleTriggered) retryAfter = Time.time + 3;
     }
 

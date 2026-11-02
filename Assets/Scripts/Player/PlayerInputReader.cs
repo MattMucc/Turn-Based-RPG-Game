@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
+[DefaultExecutionOrder(-100)]
 public class PlayerInputReader : MonoBehaviour
 {
     [SerializeField] private InputActionAsset input;
@@ -14,7 +15,7 @@ public class PlayerInputReader : MonoBehaviour
     private InputAction lookAction;
     private InputAction sprintAction;
     private InputAction jumpAction;
-    private InputAction crouchAction;
+    private InputAction crouchAction, dashAction;
     private InputAction worldAttackAction;
     private InputAction interactAction;
 
@@ -47,6 +48,7 @@ public class PlayerInputReader : MonoBehaviour
     public bool SprintHeld { get; private set; }
     public bool JumpPressed { get; private set; }
     public bool JumpHeld { get; private set; }
+    public bool DashPressed { get; private set; }
     public bool CrouchPressed { get; private set; }
     public bool CrouchHeld { get; private set; }
     public bool WorldAttackPressed { get; private set; }
@@ -85,6 +87,7 @@ public class PlayerInputReader : MonoBehaviour
             sprintAction = inputMap.FindAction("Sprint", true);
             jumpAction = inputMap.FindAction("Jump", true);
             crouchAction = inputMap.FindAction("Crouch", true);
+            dashAction = inputMap.FindAction("Dash", false);
             worldAttackAction = inputMap.FindAction("Attack", true);
             interactAction = inputMap.FindAction("Interact", true);
         }
@@ -137,6 +140,7 @@ public class PlayerInputReader : MonoBehaviour
             SprintPressed = sprintAction.WasPressedThisFrame();
             JumpPressed = jumpAction.WasPressedThisFrame();
             CrouchPressed = crouchAction.WasPressedThisFrame();
+            DashPressed = dashAction != null && dashAction.WasPressedThisFrame();
             WorldAttackPressed = worldAttackAction.WasPressedThisFrame();
             InteractPressed = interactAction.WasPressedThisFrame();
 
@@ -149,6 +153,7 @@ public class PlayerInputReader : MonoBehaviour
         }
         else
         {
+            DashPressed = false;
             // Shortcuts
             AttackPressed = attackAction.WasPressedThisFrame();
             SkillsPressed = skillsAction.WasPressedThisFrame();

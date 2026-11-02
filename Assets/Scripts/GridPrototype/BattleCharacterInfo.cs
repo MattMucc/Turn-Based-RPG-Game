@@ -2,9 +2,10 @@ using UnityEngine;
 
 namespace Game.GridPrototype
 {
-    // Optional authored metadata. Unassigned stats do not pretend to be combat formulas.
+    // Initiative now determines encounter order; other stats remain descriptive until their formulas are designed.
     public sealed class BattleCharacterInfo : MonoBehaviour
     {
+        public int EffectiveInitiative => Mathf.Max(0, Initiative);
         public Texture Portrait;
         public string DisplayName;
         [Min(0)] public int Level;
@@ -18,7 +19,7 @@ namespace Game.GridPrototype
             string name = string.IsNullOrWhiteSpace(DisplayName) ? fallbackName : DisplayName;
             string statuses = string.IsNullOrWhiteSpace(Statuses) ? "None" : Statuses;
             if (unit.Blocking) statuses = "Blocking" + (statuses == "None" ? "" : "\n" + statuses);
-            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {Value(Vitality)}\nStrength  {Value(Strength)}\nMagic  {Value(Magic)}\nPhysical Defense  {Value(PhysicalDefense)}\nMagical Defense  {Value(MagicalDefense)}\nInitiative  {Value(Initiative)}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
+            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {Value(Vitality)}\nStrength  {Value(Strength)}\nMagic  {Value(Magic)}\nPhysical Defense  {Value(PhysicalDefense)}\nMagical Defense  {Value(MagicalDefense)}\nInitiative  {EffectiveInitiative}{(Initiative < 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
         }
         private static string Assigned(string value) => string.IsNullOrWhiteSpace(value) ? "Not assigned" : value;
     }
