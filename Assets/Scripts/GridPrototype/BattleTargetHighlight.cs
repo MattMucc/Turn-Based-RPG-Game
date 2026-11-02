@@ -11,6 +11,7 @@ namespace Game.GridPrototype
         private TerrainBattleGrid grid;
         private Material outlineMaterial, circleMaterial;
         private Mesh disc;
+        private readonly List<Mesh> outlineMeshes = new();
         private GameObject circle;
         private readonly List<(Renderer source, Renderer copy)> copies = new();
         public void Initialize(Shader overlayShader)
@@ -35,7 +36,9 @@ namespace Game.GridPrototype
             if (current != target)
             {
                 foreach (var pair in copies) if (pair.copy) Release(pair.copy.gameObject);
-                copies.Clear(); current = target;
+                copies.Clear();
+                foreach (var mesh in outlineMeshes) Release(mesh); outlineMeshes.Clear();
+                current = target;
 
                 if (target?.Alive == true) foreach (var source in target.Renderers)
                 {
@@ -43,12 +46,12 @@ namespace Game.GridPrototype
                     var obj = new GameObject("Red silhouette"); obj.transform.SetParent(transform); Renderer copy;
                     if (source is SkinnedMeshRenderer skin)
                     {
-                        var skinned = obj.AddComponent<SkinnedMeshRenderer>(); skinned.sharedMesh = skin.sharedMesh;
+                        var skinned = obj.AddComponent<SkinnedMeshRenderer>(); skinned.sharedMesh = OutlineMesh(skin.sharedMesh);
                         skinned.bones = skin.bones; skinned.rootBone = skin.rootBone; skinned.localBounds = skin.localBounds;
                         skinned.updateWhenOffscreen = true; copy = skinned;
                     }
                     else if (source is MeshRenderer && source.TryGetComponent<MeshFilter>(out var filter))
-                    { obj.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh; copy = obj.AddComponent<MeshRenderer>(); }
+                    { obj.AddComponent<MeshFilter>().sharedMesh = OutlineMesh(filter.sharedMesh); copy = obj.AddComponent<MeshRenderer>(); }
                     else { Release(obj); continue; }
                     var materials = new Material[Mathf.Max(1, source.sharedMaterials.Length)];
                     for (int i = 0; i < materials.Length; i++) materials[i] = outlineMaterial;
@@ -57,6 +60,26 @@ namespace Game.GridPrototype
                 }
             }
             UpdateGeometry();
+        }
+        // Join normal directions at split vertices so flat-faced cubes gain a continuous silhouette.
+        // Only the temporary copy changes; source art, skin weights and colliders remain untouched.
+        public static Mesh CreateOutlineMesh(Mesh source)
+        {
+            if (!source || !source.isReadable) return source;
+            var vertices = source.vertices; var normals = source.normals;
+            if (normals.Length != vertices.Length) return source;
+            var joined = new Dictionary<Vector3, Vector3>();
+            for (int i = 0; i < vertices.Length; i++)
+                joined[vertices[i]] = (joined.TryGetValue(vertices[i], out var normal) ? normal : Vector3.zero) + normals[i];
+            for (int i = 0; i < normals.Length; i++) normals[i] = joined[vertices[i]].normalized;
+            var copy = Instantiate(source); copy.name = source.name + " hover outline"; copy.normals = normals;
+            return copy;
+        }
+        private Mesh OutlineMesh(Mesh source)
+        {
+            var copy = CreateOutlineMesh(source);
+            if (copy && copy != source) outlineMeshes.Add(copy);
+            return copy;
         }
         private void LateUpdate() => UpdateGeometry();
         private void UpdateGeometry()
@@ -84,6 +107,6 @@ namespace Game.GridPrototype
         private static void Release(Object obj)
         { if (obj is GameObject go) go.SetActive(false); if (Application.isPlaying) Destroy(obj); else DestroyImmediate(obj); }
         private void OnDestroy()
-        { if (outlineMaterial) Release(outlineMaterial); if (circleMaterial) Release(circleMaterial); if (disc) Release(disc); }
+        { foreach (var mesh in outlineMeshes) if (mesh) Release(mesh); outlineMeshes.Clear(); if (outlineMaterial) Release(outlineMaterial); if (circleMaterial) Release(circleMaterial); if (disc) Release(disc); }
     }
 }

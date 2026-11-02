@@ -190,15 +190,15 @@ public class BattleActionTests
         var fill = (RectTransform)track.Find("Target current health");
         float trackWidth = track.rect.width;
         Assert.IsTrue(targetPanel.gameObject.activeSelf);
-        Assert.AreEqual("37/100", track.GetComponentInChildren<TMP_Text>().text);
+        Assert.AreEqual("37 / 100", track.GetComponentInChildren<TMP_Text>().text);
         Assert.AreEqual(0.37f, fill.anchorMax.x, 0.001f);
         battle.Combatants[2].MaxHealth = 200; battle.Combatants[2].Health = 150;
         battle.TargetFocus.Hover(battle.Targetables[2]); hudType.GetMethod("Render").Invoke(hud, null);
-        Assert.AreEqual("150/200", track.GetComponentInChildren<TMP_Text>().text);
+        Assert.AreEqual("150 / 200", track.GetComponentInChildren<TMP_Text>().text);
         Assert.AreEqual(battle.Targetables[2].Name, targetPanel.Find("Target name").GetComponentInChildren<TMP_Text>().text);
         Assert.AreEqual(trackWidth, track.rect.width); Assert.AreEqual(0.75f, fill.anchorMax.x, 0.001f);
         battle.TargetFocus.Hover(null); hudType.GetMethod("Render").Invoke(hud, null);
-        Assert.AreEqual("37/100", track.GetComponentInChildren<TMP_Text>().text);
+        Assert.AreEqual("37 / 100", track.GetComponentInChildren<TMP_Text>().text);
         battle.TargetFocus.Dismiss(); hudType.GetMethod("Render").Invoke(hud, null);
         Assert.IsFalse(targetPanel.gameObject.activeSelf);
         Assert.AreEqual(true, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
@@ -231,7 +231,7 @@ public class BattleActionTests
         battle.ToggleTarget(cells[1]); battle.ToggleTarget(cells[1]);
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         var counter = root.transform.Find("Target selection count").GetComponentInChildren<TMP_Text>();
-        Assert.AreEqual("2/3 targets selected", counter.text);
+        Assert.AreEqual("2 / 3 targets selected", counter.text);
         Assert.IsTrue(counter.gameObject.activeInHierarchy);
         menuType.GetMethod("CancelSelection", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         Assert.IsNull(battle.ChosenAction); Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
@@ -350,6 +350,39 @@ public class BattleActionTests
         Assert.IsTrue(CompletePrepared()); Assert.AreEqual(0, prop.Health);
         Assert.IsFalse(propObject.activeSelf);
         Assert.AreEqual(Ground.Land, battle.Grid.Board.Cells[cell.x, cell.y].Ground);
+    }
+    [Test] public void CrateOnUnsampledCellStillRegistersAndCanBeHovered()
+    {
+        var cell = new Vector2Int(2, 3);
+        var obj = GameObject.CreatePrimitive(PrimitiveType.Cube); objects.Add(obj);
+        obj.transform.position = battle.Grid.Point(cell) + Vector3.up * .5f;
+        var prop = obj.AddComponent<BattleDestructible>(); Physics.SyncTransforms();
+        battle.Grid.HasSurface[cell.x, cell.y] = false; battle.RegisterDestructible(prop);
+        battle.Grid.HasSurface[cell.x, cell.y] = false;
+        Assert.IsFalse(battle.Grid.TryCell(obj.transform.position, out _));
+        Assert.IsTrue(battle.Grid.TryCoordinate(obj.transform.position, out _));
+        Assert.IsTrue(battle.TryPickTarget(battle.BattleCamera.WorldToScreenPoint(obj.transform.position), out var target, out _));
+        Assert.AreSame(prop, target.Destructible);
+    }
+    [Test] public void CrateColliderCanBeHoveredAndOutlineCopyJoinsItsHardEdges()
+    {
+        var cell = new Vector2Int(2, 3);
+        var obj = GameObject.CreatePrimitive(PrimitiveType.Cube); objects.Add(obj);
+        obj.transform.position = battle.Grid.Point(cell) + Vector3.up * .5f;
+        var prop = obj.AddComponent<BattleDestructible>(); Physics.SyncTransforms(); battle.RegisterDestructible(prop);
+        var point = battle.BattleCamera.WorldToScreenPoint(obj.transform.position);
+        Assert.IsTrue(battle.TryPickTarget(point, out var target, out _)); Assert.AreSame(prop, target.Destructible);
+        Assert.AreEqual(Color.yellow, target.HoverColor(0));
+        var source = obj.GetComponent<MeshFilter>().sharedMesh; var copy = BattleTargetHighlight.CreateOutlineMesh(source);
+        try
+        {
+            Assert.AreNotSame(source, copy); var vertices = copy.vertices; var normals = copy.normals;
+            for (int i = 0; i < vertices.Length; i++)
+                for (int j = i + 1; j < vertices.Length; j++)
+                    if (vertices[i] == vertices[j]) Assert.That(Vector3.Dot(normals[i], normals[j]), Is.GreaterThan(.999f));
+            Assert.AreEqual(1, Mathf.Abs(source.normals[0].x) + Mathf.Abs(source.normals[0].y) + Mathf.Abs(source.normals[0].z));
+        }
+        finally { Object.DestroyImmediate(copy); }
     }
     [Test] public void PushableCrateMovesAndResamplesItsOldAndNewCell()
     {

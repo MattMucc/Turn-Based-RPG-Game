@@ -30,11 +30,14 @@ namespace Game.GridPrototype
         }
 
         public Vector3 Point(Vector2Int cell) => Centers[cell.x, cell.y];
+        public bool TryCoordinate(Vector3 world, out Vector2Int cell)
+        {
+            cell = new Vector2Int(Mathf.FloorToInt((world.x - Origin.x) / CellSize + .5f), Mathf.FloorToInt((world.z - Origin.z) / CellSize + .5f));
+            return Board.Contains(cell);
+        }
         public bool TryCell(Vector3 world, out Vector2Int cell)
         {
-            cell = new Vector2Int(Mathf.FloorToInt((world.x - Origin.x) / CellSize + 0.5f),
-                Mathf.FloorToInt((world.z - Origin.z) / CellSize + 0.5f));
-            return Board.Contains(cell) && HasSurface[cell.x, cell.y];
+            return TryCoordinate(world, out cell) && HasSurface[cell.x, cell.y];
         }
 
         private bool GroundAt(Vector3 point, out RaycastHit result)

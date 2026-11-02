@@ -323,7 +323,7 @@ public class BattleMenuUI : MonoBehaviour
         targetCounter.transform.parent.gameObject.SetActive(showCount);
         if (showCount)
         {
-            targetCounter.text = $"{battle.TargetCount}/{battle.TargetLimit} targets selected";
+            targetCounter.text = $"{battle.TargetCount} / {battle.TargetLimit} targets selected";
             ((RectTransform)targetCounter.transform.parent).anchoredPosition = new Vector2(12, 16 + viewport.sizeDelta.y);
         }
     }

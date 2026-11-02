@@ -1154,7 +1154,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 10170d6b18dd92a4a9a931a446d12d1a, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProgressionMenu
 --- !u!4 &1018846185 stripped
 Transform:
@@ -1468,7 +1468,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 2147483647
+  m_StaticEditorFlags: 2147483643
   m_IsActive: 1
 --- !u!114 &1683397838
 MonoBehaviour:
@@ -1483,6 +1483,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleDestructible
   DisplayName: Crate
+  DangerousWhenDestroyed: 0
   Pushable: 0
   PushResistance: 0
   MaxHealth: 5
@@ -1794,7 +1795,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 958e0bc8b93412147922f63ae1d0f193, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleCharacterInfo
 --- !u!1001 &7523841243820907425
 PrefabInstance:

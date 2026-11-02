@@ -335,6 +335,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 958e0bc8b93412147922f63ae1d0f193, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleCharacterInfo
+  AutomaticGrowth:
+    Vitality: 1
+    Strength: 0
+    Magic: 0
+    PhysicalDefense: 0
+    MagicalDefense: 0
+    Initiative: 0
+  AllocatedPoints:
+    Vitality: 0
+    Strength: 0
+    Magic: 0
+    PhysicalDefense: 0
+    MagicalDefense: 0
+    Initiative: 0
+  unspentPoints: 0
+  rewardedLevel: 1
   BaseHealth: 100
   HealthPerVitality: 10
   BurningDamagePerTick: 5
@@ -410,7 +426,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.DefensePrototypeSettings
   DodgeWindow: 0.3
-  ParryWindow: 0.15
+  ParryWindow: 0.12
   AssistanceMultiplier: 1.75
   Assisted: 0
   InputLatencyCompensation: 0
@@ -619,7 +635,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Sequence Strike
@@ -677,7 +693,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 4
     QteBonusDamage: 15
   - Name: Charged Strike
@@ -707,7 +723,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 4
     QteBonusDamage: 15
   - Name: Flow Strike
@@ -796,7 +812,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Renew
@@ -825,7 +841,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Ward
@@ -854,7 +870,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Paralyzing Spark
@@ -884,7 +900,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Push
@@ -915,7 +931,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
 --- !u!114 &8802730022444101226

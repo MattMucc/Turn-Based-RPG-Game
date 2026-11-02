@@ -91,12 +91,13 @@ public sealed class BattleHud : MonoBehaviour
         var picture = Rect("Portrait", card.Rect); Stretch(picture); picture.offsetMin = Vector2.one * 3; picture.offsetMax = Vector2.one * -3;
         card.Portrait = picture.gameObject.AddComponent<RawImage>(); card.Portrait.raycastTarget = false;
         var hp = Rect("HP overlay", card.Rect); hp.anchorMin = Vector2.zero; hp.anchorMax = new Vector2(1, 0);
-        hp.pivot = new Vector2(0.5f, 0); hp.offsetMin = new Vector2(3, 3); hp.offsetMax = new Vector2(-3, 21);
+        hp.pivot = new Vector2(0.5f, 0); hp.offsetMin = new Vector2(3, 3); hp.offsetMax = new Vector2(-3, 10.5f);
         var back = hp.gameObject.AddComponent<Image>(); back.color = new Color(0, 0, 0, 0.8f); back.raycastTarget = false;
         card.HealthFill = Rect("Portrait health fill", hp); Stretch(card.HealthFill);
         var healthImage = card.HealthFill.gameObject.AddComponent<Image>(); healthImage.color = new Color(.75f, .12f, .1f); healthImage.raycastTarget = false;
         card.Health = Text(hp, 11);
-        card.Shield = MakeShield(card.Rect, 23, 10, out card.ShieldFill, out card.ShieldText);
+        card.Shield = MakeShield(card.Rect, 12.5f, 7.5f, out card.ShieldFill, out card.ShieldText);
+        FitPortraitNumber(card.Health, card.Rect, .17f); FitPortraitNumber(card.ShieldText, card.Rect, .17f);
         card.Hits = Text(card.Rect, 14); card.Hits.alignment = TextAlignmentOptions.TopRight; card.Hits.color = new Color(1, 0.8f, 0.25f);
         var click = card.Rect.gameObject.AddComponent<BattlePortrait>();
         click.LeftClick = () => { battle.FocusCharacter(card.Index); battle.TargetFocus.Pin(battle.Targetables[card.Index]); };
@@ -142,6 +143,13 @@ public sealed class BattleHud : MonoBehaviour
         }
         layoutLabel.text = "Turn order: " + (top ? "Top" : "Right");
     }
+    private static void FitPortraitNumber(TMP_Text text, RectTransform portrait, float relativeSize)
+    {
+        text.enableAutoSizing = true; text.fontSizeMin = 2;
+        text.fontSizeMax = Mathf.Clamp(portrait.rect.width * relativeSize, 2, 18);
+        text.textWrappingMode = TextWrappingModes.NoWrap;
+        text.rectTransform.offsetMin = new Vector2(1, 0); text.rectTransform.offsetMax = new Vector2(-1, 0);
+    }
     private RectTransform MakeShield(RectTransform parent, float bottom, float height, out RectTransform fill, out TMP_Text label)
     {
         var track = Rect("Barrier shield", parent); track.anchorMin = Vector2.zero; track.anchorMax = new Vector2(1, 0);
@@ -157,7 +165,7 @@ public sealed class BattleHud : MonoBehaviour
         track.gameObject.SetActive(unit != null && unit.Barrier > 0);
         if (unit == null || unit.Barrier <= 0) return;
         fill.anchorMax = new Vector2(unit.Barrier / (float)Mathf.Max(1, unit.BarrierMaximum), 1);
-        label.text = unit.Barrier.ToString();
+        label.text = $"{unit.Barrier} / {unit.BarrierMaximum}";
     }
     private void BuildTargetDetails()
     {
@@ -182,7 +190,7 @@ public sealed class BattleHud : MonoBehaviour
         if (target == null) return;
         UpdateShield(targetShield, targetShieldFill, targetShieldText, target.Unit);
         targetFill.parent.gameObject.SetActive(target.HasHealth);
-        targetName.text = target.Name; targetHealth.text = $"{target.Health}/{target.MaxHealth}";
+        targetName.text = target.Name; targetHealth.text = $"{target.Health} / {target.MaxHealth}";
         targetFill.anchorMax = new Vector2(Mathf.Clamp01(target.Health / (float)Mathf.Max(1, target.MaxHealth)), 1);
     }
     private void BuildSignature()
@@ -309,10 +317,10 @@ public sealed class BattleHud : MonoBehaviour
             return;
         }
         qteCaption.text = qte.Mode == QteMode.Staged && qte.Result == PressQteResult.StageFeedback
-            ? $"{qte.StageIndex + 1}/{qte.InputCount}: {(qte.LastStageResult == PressQteResult.Success ? "Success" : qte.LastStageResult == PressQteResult.TimedOut ? "Time up" : "Wrong input")}"
-            : qte.Mode == QteMode.Staged && qte.Result == PressQteResult.Waiting ? $"Prompt {qte.StageIndex + 1}/{qte.InputCount}"
+            ? $"{qte.StageIndex + 1} / {qte.InputCount}: {(qte.LastStageResult == PressQteResult.Success ? "Success" : qte.LastStageResult == PressQteResult.TimedOut ? "Time up" : "Wrong input")}"
+            : qte.Mode == QteMode.Staged && qte.Result == PressQteResult.Waiting ? $"Prompt {qte.StageIndex + 1} / {qte.InputCount}"
             : qte.Result == PressQteResult.Preparing ? "Get ready"
-            : qte.Result == PressQteResult.Waiting ? dual ? $"Hold both: {(qte.InputHeld ? 1 : 0) + (qte.SecondaryHeld ? 1 : 0)}/2" : hold ? $"Hold: {qte.HeldTime:0.0}/{qte.HoldDuration:0.0}s" : mash ? $"Tap repeatedly: {qte.TapProgress:0%}" : sequence ? $"{qte.CompletedInputs}/{qte.InputCount} — press in order" : "Press before time runs out"
+            : qte.Result == PressQteResult.Waiting ? dual ? $"Hold both: {(qte.InputHeld ? 1 : 0) + (qte.SecondaryHeld ? 1 : 0)} / 2" : hold ? $"Hold: {qte.HeldTime:0.0} / {qte.HoldDuration:0.0}s" : mash ? $"Tap repeatedly: {qte.TapProgress:0%}" : sequence ? $"{qte.CompletedInputs} / {qte.InputCount} — press in order" : "Press before time runs out"
             : qte.Result == PressQteResult.Success ? "Success â€” bonus damage"
             : qte.Result == PressQteResult.WrongInput ? "Wrong input â€” normal damage" : "Time up â€” normal damage";
         qteCountdown.text = qte.Result == PressQteResult.Preparing ? "" : qte.Remaining.ToString("0.00") + "s";
@@ -482,7 +490,8 @@ public sealed class BattleHud : MonoBehaviour
             var unit = battle.Combatants[i];
             card.HealthFill.anchorMax = new Vector2(Mathf.Clamp01(unit.Health / (float)Mathf.Max(1, unit.MaxHealth)), 1);
             UpdateShield(card.Shield, card.ShieldFill, card.ShieldText, unit);
-            card.Health.text = $"{unit.Health}/{unit.MaxHealth}";
+            FitPortraitNumber(card.Health, card.Rect, .17f); FitPortraitNumber(card.ShieldText, card.Rect, .17f);
+            card.Health.text = $"{unit.Health} / {unit.MaxHealth}";
             int hits = battle.AssignedHits(i); card.Hits.text = hits > 0 ? $"x{hits}" : "";
             card.Border.color = slot == controllerPortrait ? new Color(0.1f, 0.85f, 1) : slot == 0 ? new Color(1, 0.75f, 0.25f) : Dark;
         }

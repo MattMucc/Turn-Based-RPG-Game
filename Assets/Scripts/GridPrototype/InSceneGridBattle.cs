@@ -140,7 +140,7 @@ namespace Game.GridPrototype
             cameraControls.ContextClick = p => { if (TryPickActor(p, out int i)) ContextRequested?.Invoke(i, p); };
             foreach (var prop in FindObjectsByType<BattleDestructible>(FindObjectsSortMode.None)) RegisterDestructible(prop);
             foreach (var info in FindObjectsByType<BattleHoverInfo>(FindObjectsSortMode.None))
-                if (!battleTargets.Exists(t => t.Transform == info.transform) && Grid.TryCell(info.transform.position, out _))
+                if (!battleTargets.Exists(t => t.Transform == info.transform) && Grid.TryCoordinate(info.transform.position, out _))
                     battleTargets.Add(new BattleTarget(info));
             RebuildOverlay();
             targetHighlight = new GameObject("Hovered battle target").AddComponent<BattleTargetHighlight>();
@@ -160,7 +160,7 @@ namespace Game.GridPrototype
         {
             if (!prop || battleTargets.Exists(t => t.Destructible == prop)) return;
             var target = new BattleTarget(prop);
-            if (!Grid.TryCell(target.Bounds.center, out _)) return;
+            if (!Grid.TryCoordinate(target.Bounds.center, out _)) return;
             battleTargets.Add(target);
             if (overlay) { Grid.RefreshSurfaces(); RebuildOverlay(); Refresh(); }
         }
@@ -336,7 +336,7 @@ namespace Game.GridPrototype
                     if (!renderer || !renderer.enabled || !renderer.bounds.IntersectRay(ray, out float distance) || distance > nearest) continue;
                     Vector2Int candidateCell;
                     if (candidate.Unit != null) candidateCell = candidate.Unit.Position;
-                    else if (!Grid.TryCell(ray.GetPoint(distance + 0.02f), out candidateCell)) continue;
+                    else if (!Grid.TryCoordinate(ray.GetPoint(distance + 0.02f), out candidateCell)) continue;
                     if (!Grid.Board.Contains(candidateCell) || !candidate.Occupies(Grid, candidateCell)) continue;
                     nearest = distance; cell = candidateCell; target = candidate;
                 }
@@ -702,7 +702,7 @@ namespace Game.GridPrototype
             {
                 attackerVisual.Reset(); defenderVisual.Reset();
                 CurrentImpact = DefenseSettings.CreateImpact(windups[hit], impactPosition: DefenseSettings.ImpactPositionFor(combo, hit)); defenseDamage = hitDamage; cuePlayed = false;
-                DefenseCaption = $"{DisplayName(index)} > {DisplayName(0)}  |  Hit {hit + 1}/{windups.Length}";
+                DefenseCaption = $"{DisplayName(index)} > {DisplayName(0)}  |  Hit {hit + 1} / {windups.Length}";
                 DefenseFeedback = !turnOrder[0].CanReact ? "Cannot dodge or parry" : "Watch the wind-up";
                 PlayDefenseCue(windupCue);
                 while (!CurrentImpact.Resolved) yield return null;
