@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     public sealed class GridPrototypeArena : MonoBehaviour
     {
@@ -50,7 +50,7 @@ namespace Tenebrasia.GridPrototype
             Board.Units.Add(new GridUnit("Arcanist", new Vector2Int(1, 5)));
             terrainView = new GameObject("Terrain and tactical overlay").AddComponent<GridTerrainView>();
             terrainView.transform.SetParent(transform, false);
-            if (!OverlayShader) OverlayShader = Shader.Find("Tenebrasia/GridOverlay");
+            if (!OverlayShader) OverlayShader = Shader.Find("Game/GridOverlay");
             terrainView.Build(Board, CellSize, ElevationStep, SurfaceMaterial, OverlayShader);
             for (int x = 0; x < Board.Width; x++) for (int z = 0; z < Board.Depth; z++)
             {

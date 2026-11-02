@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Opt in deliberately: ordinary scenery never becomes attackable automatically.
     public sealed class BattleDestructible : MonoBehaviour

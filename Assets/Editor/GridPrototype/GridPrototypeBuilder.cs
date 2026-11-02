@@ -2,13 +2,13 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 
 public static class GridPrototypeBuilder
 {
     public const string ScenePath = "Assets/Scenes/GridPrototype.unity";
 
-    [MenuItem("Tools/Tenebrasia/Create Grid Prototype Scene")]
+    [MenuItem("Tools/Game/Create Grid Prototype Scene")]
     public static void CreateScene()
     {
         if (EditorApplication.isPlaying) { Debug.LogError("Stop play mode before creating the prototype scene."); return; }

@@ -366,7 +366,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e7a837aa6bc7fa5479becee18b720552, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Tenebrasia.Grid::Tenebrasia.GridPrototype.GridPrototypeArena
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.GridPrototypeArena
   SurfaceMaterial: {fileID: 2100000, guid: 48b46f4128c14b549b0e0025b56b9678, type: 2}
   ArenaCamera: {fileID: 1132118145}
   OverlayShader: {fileID: 4800000, guid: 55b063adde9d20d4299c829d1b5d79fc, type: 3}

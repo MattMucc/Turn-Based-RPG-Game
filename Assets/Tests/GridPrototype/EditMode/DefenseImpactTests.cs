@@ -1,6 +1,6 @@
 using NUnit.Framework;
 using UnityEngine;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 
 public class DefenseImpactTests
 {

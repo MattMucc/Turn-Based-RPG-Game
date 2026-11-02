@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Temporary tuning, not final combat balance. Stored on the possessed character.
     public sealed class DefensePrototypeSettings : MonoBehaviour
@@ -10,7 +10,7 @@ namespace Tenebrasia.GridPrototype
         [Min(1)] public float AssistanceMultiplier = 1.75f;
         public bool Assisted;
         [Tooltip("Compensates display/input latency without widening the defense window. Set to zero to disable.")]
-        [Range(0, 0.1f)] public float InputLatencyCompensation = 0.035f;
+        [Range(0, 0.1f)] public float InputLatencyCompensation = 0f;
         [Min(0.5f)] public float SingleWindup = 1.4f;
         [Min(0.5f)] public float ComboFirstWindup = 1.2f;
         [Min(0.5f)] public float ComboSecondWindup = 0.9f;

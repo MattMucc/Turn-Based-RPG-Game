@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Prototype encounter controller. Unit zero is the currently possessed world
     // character; the rest are the actual spawned members of the triggering group.

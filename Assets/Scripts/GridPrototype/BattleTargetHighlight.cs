@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     public sealed class BattleTargetHighlight : MonoBehaviour
     {

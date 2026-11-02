@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     public sealed class BattleTarget
     {

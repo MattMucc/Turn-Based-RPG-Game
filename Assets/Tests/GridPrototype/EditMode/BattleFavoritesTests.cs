@@ -4,7 +4,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 public class BattleFavoritesTests : InputTestFixture
 {
     [Test] public void StableSlotsSurviveReorderingDepletionAndReassignment()
@@ -38,6 +38,24 @@ public class BattleFavoritesTests : InputTestFixture
             Assert.AreEqual(6, loadout.Options.Count); Assert.IsFalse(loadout.AssignFavorite(loadout.Options[0], 4));
         }
         finally { UnityEngine.Object.DestroyImmediate(obj); }
+    }
+    [Test] public void EndTurnUsesKeyboardTAndRightStickClickButNotStart()
+    {
+        var method = Type.GetType("BattleMenuUI, Assembly-CSharp").GetMethod("PressedEndTurn", BindingFlags.Static | BindingFlags.NonPublic);
+        var keyboard = InputSystem.AddDevice<Keyboard>();
+        var pad = InputSystem.AddDevice<Gamepad>();
+        Press(keyboard.tKey);
+        Assert.AreEqual(true, method.Invoke(null, new object[] { keyboard, pad }));
+        InputSystem.Update();
+        Assert.AreEqual(false, method.Invoke(null, new object[] { keyboard, pad }));
+        Release(keyboard.tKey);
+        Press(pad.startButton);
+        Assert.AreEqual(false, method.Invoke(null, new object[] { keyboard, pad }));
+        Release(pad.startButton);
+        Press(pad.rightStickButton);
+        Assert.AreEqual(true, method.Invoke(null, new object[] { keyboard, pad }));
+        InputSystem.Update();
+        Assert.AreEqual(false, method.Invoke(null, new object[] { keyboard, pad }));
     }
     [Test] public void ControllerFavoritesRequireTriggerAndMapABXY()
     {

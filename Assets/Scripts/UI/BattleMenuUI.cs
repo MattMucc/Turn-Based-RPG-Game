@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using TMPro;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -27,6 +27,7 @@ public class BattleMenuUI : MonoBehaviour
     private readonly List<string> descriptions = new();
     private readonly List<BattleActionOption> previewOptions = new();
     private BattleHud hud;
+    private BattleMenuButton remainingTurnButton;
     private readonly List<RaycastResult> raycasts = new();
     private InSceneGridBattle battle;
     private PlayerInputReader input;
@@ -80,6 +81,13 @@ public class BattleMenuUI : MonoBehaviour
         var hudRect = (RectTransform)hudRoot.transform; hudRect.SetParent(transform, false);
         hudRect.anchorMin = Vector2.zero; hudRect.anchorMax = Vector2.one; hudRect.offsetMin = hudRect.offsetMax = Vector2.zero;
         hud = hudRoot.AddComponent<BattleHud>();
+        remainingTurnButton = Instantiate(attackButton, transform);
+        remainingTurnButton.name = "Remaining turn";
+        remainingTurnButton.Configure("End Turn", () => battle.EndTurn(), false);
+        var endRect = (RectTransform)remainingTurnButton.transform;
+        endRect.anchorMin = endRect.anchorMax = endRect.pivot = Vector2.zero;
+        endRect.anchoredPosition = new Vector2(12, 12); endRect.sizeDelta = new Vector2(180, 28);
+        remainingTurnButton.gameObject.SetActive(false);
     }
 
     private TMP_Text MakeText(string name, Vector2 anchor, Vector2 position, Vector2 size, bool background)
@@ -112,7 +120,7 @@ public class BattleMenuUI : MonoBehaviour
     private bool IsOverUI(Vector2 point)
     {
         if (!isActiveAndEnabled) return false;
-        if (RectTransformUtility.RectangleContainsScreenPoint(viewport, point, GetComponentInParent<Canvas>().worldCamera)) return true;
+        if (viewport.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(viewport, point, GetComponentInParent<Canvas>().worldCamera)) return true;
         if (!EventSystem.current) return false;
         raycasts.Clear(); EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = point }, raycasts);
         return raycasts.Exists(r => r.module is GraphicRaycaster);
@@ -152,7 +160,7 @@ public class BattleMenuUI : MonoBehaviour
         pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon);
         Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller B.", () => battle.PlayerReady, true);
         pool[4].SetIcons(runKeyboardIcon, runControllerIcon);
-        Row("End Turn", () => battle.EndTurn(), "End this turn. Unspent movement carries over; your next turn grants three more points.", () => battle.PlayerReady);
+        Row("End Turn", () => battle.EndTurn(), "T / controller right-stick click (R3): end this turn. Unspent movement carries over; your next turn grants three more points.", () => battle.PlayerReady);
         FinishList();
     }
     private void Open(BattleActionCategory selectedCategory)
@@ -283,7 +291,17 @@ public class BattleMenuUI : MonoBehaviour
     private void UpdateAvailability()
     {
         for (int i = 0; i < rows; i++) pool[i].SetAvailable(availability[i]());
-        bool showCount = battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;
+        bool commandsVisible = battle.CurrentActorIndex == 0 && battle.Combatants[0].ActionAvailable && !battle.DefenseActive;
+        viewport.gameObject.SetActive(commandsVisible);
+        remainingTurnButton.gameObject.SetActive(battle.PlayerReady && !battle.Combatants[0].ActionAvailable);
+        remainingTurnButton.SetAvailable(battle.PlayerReady);
+        if (!commandsVisible)
+        {
+            tooltipPanel.SetActive(false); battle.HoverAction(null);
+            if (highlighted >= 0) pool[highlighted].SetHighlighted(false);
+            highlighted = -1;
+        }
+        bool showCount = commandsVisible && battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;
         targetCounter.transform.parent.gameObject.SetActive(showCount);
         if (showCount)
         {
@@ -291,6 +309,15 @@ public class BattleMenuUI : MonoBehaviour
             ((RectTransform)targetCounter.transform.parent).anchoredPosition = new Vector2(12, 16 + viewport.sizeDelta.y);
         }
     }
+    private bool CanUseEndTurnShortcut()
+        => battle && battle.PlayerReady && !battle.InspectionOpen && !browsing && !editingFavorites
+            && battle.ChosenAction == null
+            && (viewport.gameObject.activeInHierarchy || remainingTurnButton.gameObject.activeInHierarchy);
+
+    private static bool PressedEndTurn(Keyboard keyboard, Gamepad gamepad)
+        => (keyboard != null && keyboard.tKey.wasPressedThisFrame)
+            || (gamepad != null && gamepad.rightStickButton.wasPressedThisFrame);
+
     private void LateUpdate()
     {
         if (!battle) return;
@@ -300,6 +327,14 @@ public class BattleMenuUI : MonoBehaviour
         if (battle.InspectionOpen || (hud && hud.InspectionDismissedFrame == Time.frameCount)) return;
         if (!battle.PlayerReady) return;
         var k = Keyboard.current; var pad = Gamepad.current;
+        // Match the visible main-menu End Turn control, never an ability submenu or target selection.
+        if (CanUseEndTurnShortcut() && PressedEndTurn(k, pad)) { battle.EndTurn(); return; }
+        if (!battle.Combatants[0].ActionAvailable)
+        {
+            if ((k != null && k.tabKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame))
+            { moving = !moving; battle.KeyboardGridInputEnabled = moving; }
+            return;
+        }
         bool trigger = pad != null && pad.leftTrigger.isPressed;
         bool cancel = (k != null && k.backspaceKey.wasPressedThisFrame) || (!trigger && pad != null && pad.buttonEast.wasPressedThisFrame);
         int favorite = PressedFavorite(k, pad);

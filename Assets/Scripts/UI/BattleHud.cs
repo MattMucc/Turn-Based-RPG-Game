@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using TMPro;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;

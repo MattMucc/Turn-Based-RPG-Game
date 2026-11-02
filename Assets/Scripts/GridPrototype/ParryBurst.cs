@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Camera-facing procedural impact flash; no particle package or texture dependency.
     public sealed class ParryBurst : MonoBehaviour

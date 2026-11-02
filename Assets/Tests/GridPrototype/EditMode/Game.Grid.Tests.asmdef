@@ -1,0 +1,6 @@
+{
+  "name": "Game.Grid.Tests",
+  "references": ["Game.Grid", "UnityEngine.UI", "Unity.TextMeshPro", "Unity.InputSystem", "Unity.InputSystem.TestFramework"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

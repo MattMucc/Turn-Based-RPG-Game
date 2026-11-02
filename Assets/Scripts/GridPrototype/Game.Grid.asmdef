@@ -1,4 +1,4 @@
 {
-  "name": "Tenebrasia.Grid",
+  "name": "Game.Grid",
   "references": ["Unity.InputSystem"]
 }

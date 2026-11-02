@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Encounter-local clock: never changes global Time.timeScale or camera input.
     public sealed class DefenseSlowMotion

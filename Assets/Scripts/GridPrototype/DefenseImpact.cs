@@ -1,6 +1,6 @@
 using System;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     public enum DefenseChoice { Dodge, Parry, Both }
     public enum DefenseResult { Waiting, Dodged, Parried, TooEarly, TooLate, Unparryable, ConflictingInput, Unable }

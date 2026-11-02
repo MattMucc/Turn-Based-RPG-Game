@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Terrain geometry and tactical overlays are separate renderers. A future authored
     // terrain can replace the generated mesh without becoming a collection of tiles.

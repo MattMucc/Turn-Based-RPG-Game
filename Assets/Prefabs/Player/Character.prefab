@@ -269,7 +269,10 @@ GameObject:
   m_Component:
   - component: {fileID: 4995605689948366331}
   - component: {fileID: 943386667413263667}
+  - component: {fileID: -1700394924692241525}
   - component: {fileID: 2859656913483122428}
+  - component: {fileID: 4755640766620171417}
+  - component: {fileID: 6714576581853998703}
   - component: {fileID: 8802730022444101226}
   m_Layer: 6
   m_Name: Character
@@ -320,6 +323,31 @@ CharacterController:
   m_SkinWidth: 0.02
   m_MinMoveDistance: 0.001
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &-1700394924692241525
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7100641842900395914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 958e0bc8b93412147922f63ae1d0f193, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleCharacterInfo
+  Portrait: {fileID: 0}
+  DisplayName: 
+  Level: 0
+  Race: 
+  Role: 
+  Vitality: -1
+  Strength: -1
+  Magic: -1
+  PhysicalDefense: -1
+  MagicalDefense: -1
+  Initiative: -1
+  Resistances: 
+  Statuses: 
 --- !u!114 &2859656913483122428
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -359,6 +387,99 @@ MonoBehaviour:
   IsGrounded: 0
   IsJumping: 0
   IsCrouching: 0
+--- !u!114 &4755640766620171417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7100641842900395914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 32a9cc9ae5891dd47a89203cb455b49a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.DefensePrototypeSettings
+  DodgeWindow: 0.3
+  ParryWindow: 0.15
+  AssistanceMultiplier: 1.75
+  Assisted: 0
+  InputLatencyCompensation: 0
+  SingleWindup: 1.4
+  ComboFirstWindup: 1.2
+  ComboSecondWindup: 0.9
+  ComboThirdWindup: 1.1
+  SingleDamage: 25
+  ComboHitDamage: 10
+  CounterDamage: 25
+  CueVolume: 0.15
+  ParrySparks: 1
+  DodgeSlowMotion: 1
+  DodgeSlowMotionDuration: 0.18
+  DodgeSlowMotionSpeed: 0.15
+--- !u!114 &6714576581853998703
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7100641842900395914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ed38ec3ffb48ff478301f878e67a5f0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleActionLoadout
+  favoritesInitialized: 0
+  Options:
+  - Name: Strike
+    FavoriteSlot: -1
+    Description: Prototype adjacent attack.
+    Category: 0
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 25
+    Quantity: 0
+  - Name: Piercing Attack
+    FavoriteSlot: -1
+    Description: Prototype line targeting.
+    Category: 0
+    Pattern: 2
+    Reach: 4
+    Radius: 1
+    MaxTargets: 3
+    Damage: 18
+    Quantity: 0
+  - Name: Area Skill
+    FavoriteSlot: -1
+    Description: Prototype area targeting.
+    Category: 1
+    Pattern: 1
+    Reach: 4
+    Radius: 1
+    MaxTargets: 3
+    Damage: 18
+    Quantity: 0
+  - Name: Multi-target Skill
+    FavoriteSlot: -1
+    Description: Prototype independent target selection.
+    Category: 1
+    Pattern: 3
+    Reach: 4
+    Radius: 1
+    MaxTargets: 3
+    Damage: 12
+    Quantity: 0
+  - Name: Blast Flask
+    FavoriteSlot: -1
+    Description: Prototype offensive throwable.
+    Category: 2
+    Pattern: 1
+    Reach: 3
+    Radius: 1
+    MaxTargets: 3
+    Damage: 20
+    Quantity: 3
 --- !u!114 &8802730022444101226
 MonoBehaviour:
   m_ObjectHideFlags: 0

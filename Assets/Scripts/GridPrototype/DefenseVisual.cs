@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Prototype visual motion only. Never changes GridUnit.Position or movement budgets.
     internal sealed class DefenseVisual

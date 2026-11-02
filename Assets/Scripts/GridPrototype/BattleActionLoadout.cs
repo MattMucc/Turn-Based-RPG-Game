@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     public enum BattleActionCategory { Attack, Skill, Item }
     public enum BattleTargetPattern { Single, Area, Piercing, Multiple }

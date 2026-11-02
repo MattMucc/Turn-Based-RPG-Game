@@ -1,4 +1,4 @@
-Shader "Tenebrasia/BattleTargetOutline"
+Shader "Game/BattleTargetOutline"
 {
     Properties { _Color ("Color", Color) = (1,0.05,0.03,1) _Width ("Width", Float) = 0.045 }
     SubShader

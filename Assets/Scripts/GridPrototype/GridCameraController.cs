@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // A drag never becomes a grid click, even if the pointer returns to its origin.
     public sealed class GridPointerGesture

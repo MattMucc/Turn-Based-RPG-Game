@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 
 public class TerrainBattleGridTests
 {

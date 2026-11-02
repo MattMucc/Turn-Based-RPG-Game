@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 
 public class BattleManager : MonoBehaviour
 {
@@ -78,7 +78,7 @@ public class BattleManager : MonoBehaviour
         if (InBattle || !source || !GameManager.Instance || !GameManager.Instance.PossessedCharacter) return false;
         var player = GameManager.Instance.PossessedCharacter;
         input = GameManager.Instance.Input; worldCamera = Camera.main;
-        Shader shader = gridOverlayShader ? gridOverlayShader : Shader.Find("Tenebrasia/GridOverlay");
+        Shader shader = gridOverlayShader ? gridOverlayShader : Shader.Find("Game/GridOverlay");
         if (!worldCamera || !input || !shader) { Notify("Battle cannot start: missing camera, input or grid shader."); return false; }
         actors.Clear(); actors.Add(new ActorSnapshot(player.transform));
         var seen = new HashSet<GameObject> { player.gameObject };
@@ -98,6 +98,13 @@ public class BattleManager : MonoBehaviour
         }
         Physics.SyncTransforms();
         Vector3 center = source.GridCenter ? source.GridCenter.position : player.transform.position;
+        // Stable world-aligned cells let authored scenery occupy the same tiles from any approach.
+        // Explicit encounter centers retain their authored alignment.
+        if (!source.GridCenter)
+        {
+            center.x = Mathf.Round(center.x / cellSize) * cellSize;
+            center.z = Mathf.Round(center.z / cellSize) * cellSize;
+        }
         var grid = new TerrainBattleGrid(center, gridWidth, gridDepth, cellSize, source.GroundLayers, ignored, radius, height);
         // With an authored center, use formation preferences there, not a distant player's old position.
         if (source.GridCenter)

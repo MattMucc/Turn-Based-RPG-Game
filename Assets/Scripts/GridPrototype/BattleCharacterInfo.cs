@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Tenebrasia.GridPrototype
+namespace Game.GridPrototype
 {
     // Optional authored metadata. Unassigned stats do not pretend to be combat formulas.
     public sealed class BattleCharacterInfo : MonoBehaviour

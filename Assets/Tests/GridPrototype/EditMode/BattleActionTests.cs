@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using Object = UnityEngine.Object;
 using NUnit.Framework;
 using UnityEngine;
-using Tenebrasia.GridPrototype;
+using Game.GridPrototype;
 
 public class BattleActionTests
 {
@@ -25,7 +25,7 @@ public class BattleActionTests
         for (int i = 0; i < cells.Length; i++) figures.Add(Create("Test unit " + i).transform);
         var camera = Create("Source camera").AddComponent<Camera>();
         battle = Create("Test encounter").AddComponent<InSceneGridBattle>();
-        battle.Initialize(grid, figures, new float[cells.Length], cells, camera, Shader.Find("Tenebrasia/GridOverlay"), victory => { });
+        battle.Initialize(grid, figures, new float[cells.Length], cells, camera, Shader.Find("Game/GridOverlay"), victory => { });
         battle.AdvanceFacing(1);
     }
     [TearDown] public void Cleanup()
@@ -171,11 +171,14 @@ public class BattleActionTests
         Assert.AreEqual("37/100", track.GetComponentInChildren<TMP_Text>().text);
         battle.TargetFocus.Dismiss(); hudType.GetMethod("Render").Invoke(hud, null);
         Assert.IsFalse(targetPanel.gameObject.activeSelf);
+        Assert.AreEqual(true, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
         Find("Skills").onClick.Invoke();
+        Assert.AreEqual(false, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
         Assert.AreEqual(4, container.GetComponentsInChildren<Button>().Length);
         Find("Favorites").onClick.Invoke();
         Find("Multi-target Skill").onClick.Invoke();
         menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
+        Assert.AreEqual(false, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
         Assert.AreEqual(2, battle.Loadout.Options.Find(o => o.Pattern == BattleTargetPattern.Multiple).FavoriteSlot);
         Find("Back").onClick.Invoke();
         menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
@@ -210,6 +213,22 @@ public class BattleActionTests
         menuType.GetMethod("Unbind").Invoke(menu, null); Assert.IsFalse(root.activeSelf);
         menuType.GetMethod("Bind").Invoke(menu, new object[] { battle }); Assert.IsTrue(root.activeSelf);
         Assert.AreEqual(6, container.GetComponentsInChildren<Button>().Length);
+        battle.Block();
+        menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
+        Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        Assert.IsTrue(root.transform.Find("Remaining turn").gameObject.activeSelf);
+        Assert.AreEqual(true, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
+        Assert.IsTrue(((Component)hud).gameObject.activeInHierarchy);
+        Assert.AreEqual(3, battle.Movement);
+        typeof(InSceneGridBattle).GetField("actorIndex", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(battle, 1);
+        menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
+        Assert.IsFalse(root.transform.Find("Remaining turn").gameObject.activeSelf);
+        Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        typeof(InSceneGridBattle).GetField("actorIndex", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(battle, 0);
+        battle.Combatants[0].EndTurn(); battle.Combatants[0].BeginTurn();
+        menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
+        Assert.IsTrue(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        Assert.IsFalse(root.transform.Find("Remaining turn").gameObject.activeSelf);
         menuType.GetMethod("Unbind").Invoke(menu, null);
     }
     [Test] public void HitsResolveInSelectionOrderWithDelaysAndLockOtherActions()
@@ -319,6 +338,7 @@ public class BattleActionTests
     }
     [Test] public void DelayedParryPreventsDamageBeforeCompensatedDeadline()
     {
+        battle.DefenseSettings.InputLatencyCompensation = 0.035f;
         var sequence = BeginEnemySequence(false);
         battle.AdvanceDefense(battle.CurrentImpact.Duration + 0.016f);
         Assert.IsFalse(battle.CurrentImpact.Resolved);
