@@ -21,9 +21,10 @@ namespace Game.GridPrototype
         public float AttemptTime { get; private set; }
         public DefenseChoice Choice { get; private set; }
         public DefenseResult Result { get; private set; } = DefenseResult.Waiting;
-        // The impact sits at 75%; the remaining track shows post-impact recovery.
-        public const float ImpactBarPosition = 0.75f;
-        public float BarPosition(float seconds) => Math.Min(1f, Math.Max(0f, seconds / Duration * ImpactBarPosition));
+        // Each authored hit owns its position; the remaining track shows recovery.
+        public const float ImpactBarPosition = 0.75f; // Default for callers without authored timing.
+        public float ImpactPosition { get; }
+        public float BarPosition(float seconds) => Math.Min(1f, Math.Max(0f, seconds / Duration * ImpactPosition));
         public float DisplayTime => Attempted ? AttemptTime : Elapsed;
         public string AttemptFeedback
         {
@@ -38,9 +39,10 @@ namespace Game.GridPrototype
         }
         public bool Due => Elapsed >= ResolutionTime;
 
-        public DefenseImpact(float duration, float dodgeWindow, float parryWindow, bool parryable = true, float inputLatencyCompensation = 0)
+        public DefenseImpact(float duration, float dodgeWindow, float parryWindow, bool parryable = true, float inputLatencyCompensation = 0, float impactPosition = ImpactBarPosition)
         {
             if (duration <= 0 || dodgeWindow <= 0 || parryWindow <= 0) throw new ArgumentOutOfRangeException();
+            ImpactPosition = Math.Max(0.2f, Math.Min(0.95f, impactPosition));
             InputLatencyCompensation = Math.Max(0, Math.Min(0.1f, inputLatencyCompensation));
             Duration = duration; DodgeWindow = Math.Min(duration, dodgeWindow);
             ParryWindow = Math.Min(DodgeWindow, parryWindow); Parryable = parryable;

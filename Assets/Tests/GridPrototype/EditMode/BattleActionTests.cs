@@ -136,7 +136,14 @@ public class BattleActionTests
             UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Third Party Downloads/GameInputControllerIconsFree/keyboard/keyboard-outlined/4.png"));
         menuType.GetField("runKeyboardIcon", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu,
             UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Third Party Downloads/GameInputControllerIconsFree/keyboard/keyboard-outlined/5.png"));
+        var endKey = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Third Party Downloads/GameInputControllerIconsFree/keyboard/keyboard-outlined/t.png");
+        var endPad = UnityEditor.AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Third Party Downloads/Flat Icons [Free]/Free Flat Button Solid Right 3 Icon.png");
+        menuType.GetField("endTurnKeyboardIcon", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu, endKey);
+        menuType.GetField("endTurnControllerIcon", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu, endPad);
         menuType.GetMethod("Bind").Invoke(menu, new object[] { battle });
+        Assert.AreSame(endKey, buttonType.GetProperty("KeyboardIcon").GetValue(Find("End Turn").GetComponent(buttonType)));
+        Assert.AreSame(endPad, buttonType.GetProperty("ControllerIcon").GetValue(Find("End Turn").GetComponent(buttonType)));
+        Assert.AreSame(endPad, buttonType.GetProperty("ControllerIcon").GetValue(root.transform.Find("Remaining turn").GetComponent(buttonType)));
         Assert.AreEqual("4", ((Sprite)buttonType.GetProperty("KeyboardIcon").GetValue(Find("Block").GetComponent(buttonType))).name);
         Assert.AreEqual("5", ((Sprite)buttonType.GetProperty("KeyboardIcon").GetValue(Find("Run").GetComponent(buttonType))).name);
         Assert.AreEqual(6, container.GetComponentsInChildren<Button>().Length);
@@ -174,7 +181,7 @@ public class BattleActionTests
         Assert.AreEqual(true, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
         Find("Skills").onClick.Invoke();
         Assert.AreEqual(false, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
-        Assert.AreEqual(4, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(5, container.GetComponentsInChildren<Button>().Length);
         Find("Favorites").onClick.Invoke();
         Find("Multi-target Skill").onClick.Invoke();
         menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
@@ -196,7 +203,7 @@ public class BattleActionTests
         Assert.IsFalse(Find("Area Skill").interactable);
         Assert.IsTrue(Find("Multi-target Skill").interactable);
         Assert.IsFalse(Find("Undo Hit").interactable);
-        Assert.AreEqual(5, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(6, container.GetComponentsInChildren<Button>().Length);
         Assert.IsTrue(battle.KeyboardGridInputEnabled);
         battle.ToggleTarget(cells[1]); battle.ToggleTarget(cells[1]);
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
@@ -229,6 +236,22 @@ public class BattleActionTests
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         Assert.IsTrue(root.transform.Find("Battle command viewport").gameObject.activeSelf);
         Assert.IsFalse(root.transform.Find("Remaining turn").gameObject.activeSelf);
+        battle.SetAutoCamera(false);
+        battle.ChooseAction(battle.Loadout.Options.Find(o => o.SignatureQte)); battle.ToggleTarget(cells[1]);
+        battle.TryPrepareAction(out var signature);
+        signature.MoveNext(); battle.AdvanceFacing(1); if (battle.CurrentQte == null) signature.MoveNext();
+        battle.AdvanceSignature(0.5f); battle.AdvanceSignature(0.75f);
+        hudType.GetMethod("Render").Invoke(hud, null);
+        menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
+        Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        var qteRoot = ((Component)hud).transform.Find("Signature QTE");
+        Assert.IsTrue(qteRoot.gameObject.activeSelf);
+        var qteFill = (RectTransform)qteRoot.Find("QTE countdown/Deadline track/Time remaining fill");
+        Assert.AreEqual(0.25f, qteFill.anchorMin.x, 0.0001f);
+        Assert.AreEqual(0.75f, qteFill.anchorMax.x, 0.0001f);
+        StringAssert.Contains("0.75", qteRoot.Find("QTE countdown/Seconds remaining").GetComponentInChildren<TMP_Text>().text);
+        Assert.AreEqual(new Vector2(0.5f, 0), ((RectTransform)qteRoot.Find("QTE input")).anchorMin);
+        battle.Finish(false); ((IDisposable)signature).Dispose();
         menuType.GetMethod("Unbind").Invoke(menu, null);
     }
     [Test] public void HitsResolveInSelectionOrderWithDelaysAndLockOtherActions()
@@ -348,6 +371,49 @@ public class BattleActionTests
         Assert.AreEqual(DefenseResult.Parried, battle.CurrentImpact.Result);
         Assert.AreEqual(100, battle.Combatants[0].Health);
     }
+    [TestCase(true, false, 55)]
+    [TestCase(false, true, 70)]
+    [TestCase(false, false, 70)]
+    public void SignatureResolvesOnceAndReturnsRemainingMovement(bool success, bool wrong, int remainingHealth)
+    {
+        battle.SetAutoCamera(false);
+        var action = battle.Loadout.Options.Find(o => o.SignatureQte);
+        Assert.IsTrue(battle.ChooseAction(action)); battle.ToggleTarget(cells[1]);
+        Assert.IsTrue(battle.TryPrepareAction(out var sequence));
+        Assert.IsTrue(battle.SignatureActive); Assert.IsFalse(battle.PlayerReady);
+        Assert.IsFalse(battle.TryPrepareAction(out _));
+        int movement = battle.Movement;
+        Assert.IsTrue(sequence.MoveNext());
+        battle.AdvanceFacing(1);
+        if (battle.CurrentQte == null) Assert.IsTrue(sequence.MoveNext());
+        battle.AdvanceSignature(0.5f, true); // Held/launch input cannot win during preparation.
+        Assert.AreEqual(PressQteResult.Waiting, battle.CurrentQte.Result);
+        if (success || wrong) battle.AdvanceSignature(0, success, wrong);
+        else battle.AdvanceSignature(2);
+        Assert.IsTrue(sequence.MoveNext()); // Result feedback before applying damage.
+        battle.AdvanceSignature(0.5f);
+        Assert.IsTrue(sequence.MoveNext());
+        Assert.AreEqual(remainingHealth, battle.Combatants[1].Health);
+        Assert.IsFalse(sequence.MoveNext());
+        Assert.IsFalse(battle.SignatureActive); Assert.IsNull(battle.CurrentQte);
+        Assert.IsTrue(battle.PlayerReady); Assert.IsFalse(battle.ActionReady);
+        Assert.AreEqual(movement, battle.Movement);
+        Assert.IsFalse(battle.BattleCamera.GetComponent<GridCameraController>().KeyboardInputBlocked);
+    }
+    [Test] public void SignatureWaitsForCameraAndClearsOnExit()
+    {
+        var action = battle.Loadout.Options.Find(o => o.SignatureQte);
+        battle.ChooseAction(action); battle.ToggleTarget(cells[1]); battle.TryPrepareAction(out var sequence);
+        Assert.IsTrue(sequence.MoveNext()); Assert.IsNull(battle.CurrentQte);
+        battle.AdvanceFacing(1); Assert.IsTrue(sequence.MoveNext()); Assert.IsNull(battle.CurrentQte);
+        battle.BattleCamera.GetComponent<GridCameraController>().AdvanceFocus(1);
+        Assert.IsTrue(sequence.MoveNext()); Assert.IsNotNull(battle.CurrentQte);
+        battle.Finish(false);
+        Assert.IsFalse(battle.SignatureActive); Assert.IsNull(battle.CurrentQte);
+        Assert.IsFalse(battle.BattleCamera.GetComponent<GridCameraController>().KeyboardInputBlocked);
+        ((IDisposable)sequence).Dispose();
+    }
+
     private void DefendCurrentHit(bool parry, bool dodge = false)
     {
         battle.AdvanceDefense(battle.CurrentImpact.Duration - 0.05f);

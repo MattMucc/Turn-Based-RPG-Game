@@ -20,18 +20,26 @@ public sealed class BattleHud : MonoBehaviour
     private TMP_FontAsset font;
     private RectTransform root, orderPanel, orderContent, inspectionLayer, contextPanel, examinePanel, examineContent;
     private TMP_Text examineText, layoutLabel, cameraLabel, targetName, targetHealth;
-    private RectTransform targetPanel, targetFill, defensePanel, defenseMarker, dodgeWindow, parryWindow;
+    private RectTransform targetPanel, targetFill, defensePanel, defenseMarker, impactLine, dodgeWindow, parryWindow;
     private TMP_Text defenseCaption, defensePrompt, defenseResult, assistanceLabel;
+    private RectTransform qteLayer, qtePrompt, qteFill;
+    private TMP_Text qteCaption, qteCountdown, qteKey;
+    private Image qteIcon;
+    private Sprite qteKeyboardIcon, qteControllerIcon;
+    public void SetQteIcons(Sprite keyboard, Sprite controller)
+    { qteKeyboardIcon = keyboard; qteControllerIcon = controller; }
     private readonly List<Card> cards = new();
     private readonly List<Texture> portraits = new();
     private ScrollRect orderScroll;
     private bool top = true, autoCamera = true;
+    private BattleTarget inspectedTarget;
+    private int controllerPortrait = -1;
     private int lastActor = -1, lastCount = -1, inspected = -1;
     private static readonly Color Dark = new Color(0.035f, 0.045f, 0.065f, 0.96f);
 
     public void Bind(InSceneGridBattle source, TMP_FontAsset textFont)
     {
-        if (battle) battle.ContextRequested -= ShowContext;
+        if (battle) { battle.ContextRequested -= ShowContext; battle.TargetContextRequested -= ShowTargetContext; }
         battle = source; font = textFont; root = (RectTransform)transform;
         for (int i = transform.childCount - 1; i >= 0; i--) Remove(transform.GetChild(i).gameObject);
         cards.Clear(); portraits.Clear();
@@ -52,8 +60,8 @@ public sealed class BattleHud : MonoBehaviour
         { autoCamera = !autoCamera; battle.SetAutoCamera(autoCamera); cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off"); });
         cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off");
         assistanceLabel = Setting("Defense timing", new Vector2(-12, 72), () =>
-        { if (!battle.DefenseActive) battle.DefenseSettings.Assisted = !battle.DefenseSettings.Assisted; });
-        BuildDefense(); BuildTargetDetails(); BuildInspection(); battle.ContextRequested += ShowContext;
+        { if (!battle.DefenseActive && !battle.SignatureActive) battle.DefenseSettings.Assisted = !battle.DefenseSettings.Assisted; });
+        BuildDefense(); BuildSignature(); BuildTargetDetails(); BuildInspection(); battle.ContextRequested += ShowContext; battle.TargetContextRequested += ShowTargetContext;
         battle.SetAutoCamera(autoCamera); ApplyLayout(); Render();
     }
     private static void Remove(GameObject obj)
@@ -146,6 +154,66 @@ public sealed class BattleHud : MonoBehaviour
         targetName.text = target.Name; targetHealth.text = $"{target.Health}/{target.MaxHealth}";
         targetFill.anchorMax = new Vector2(Mathf.Clamp01(target.Health / (float)Mathf.Max(1, target.MaxHealth)), 1);
     }
+    private void BuildSignature()
+    {
+        qteLayer = Rect("Signature QTE", root); Stretch(qteLayer);
+        var footer = Rect("QTE countdown", qteLayer);
+        footer.anchorMin = footer.anchorMax = new Vector2(0.5f, 0);
+        footer.pivot = new Vector2(0.5f, 0); footer.anchoredPosition = new Vector2(0, 16);
+        footer.sizeDelta = new Vector2(260, 90);
+        var caption = Rect("QTE feedback", footer); caption.anchorMin = new Vector2(0, 1); caption.anchorMax = Vector2.one;
+        caption.pivot = new Vector2(0.5f, 1); caption.sizeDelta = new Vector2(0, 30);
+        qteCaption = Text(caption, 14); qteCaption.outlineWidth = 0.2f; qteCaption.outlineColor = Color.black;
+        var number = Rect("Seconds remaining", footer); number.anchorMin = number.anchorMax = new Vector2(0.5f, 0);
+        number.anchoredPosition = new Vector2(0, 40); number.sizeDelta = new Vector2(100, 28);
+        qteCountdown = Text(number, 20); qteCountdown.outlineWidth = 0.2f; qteCountdown.outlineColor = Color.black;
+        var track = Rect("Deadline track", footer); track.anchorMin = track.anchorMax = new Vector2(0.5f, 0);
+        track.anchoredPosition = new Vector2(0, 12); track.sizeDelta = new Vector2(220, 8);
+        var trackImage = track.gameObject.AddComponent<Image>(); trackImage.color = Dark; trackImage.raycastTarget = false;
+        qteFill = Rect("Time remaining fill", track); Stretch(qteFill);
+        var fill = qteFill.gameObject.AddComponent<Image>(); fill.color = new Color(1, 0.75f, 0.2f); fill.raycastTarget = false;
+        qtePrompt = Rect("QTE input", qteLayer); qtePrompt.sizeDelta = new Vector2(104, 48);
+        var background = qtePrompt.gameObject.AddComponent<Image>(); background.color = Dark; background.raycastTarget = false;
+        var iconRect = Rect("Input icon", qtePrompt); Stretch(iconRect);
+        iconRect.offsetMin = new Vector2(12, 6); iconRect.offsetMax = new Vector2(-12, -6);
+        qteIcon = iconRect.gameObject.AddComponent<Image>(); qteIcon.preserveAspect = true; qteIcon.raycastTarget = false;
+        qteKey = Text(qtePrompt, 18);
+        qteLayer.gameObject.SetActive(false);
+    }
+
+    private void DrawSignature()
+    {
+        qteLayer.gameObject.SetActive(battle.SignatureActive);
+        if (!battle.SignatureActive) return;
+        if (inspectionLayer.gameObject.activeSelf) CloseInspection();
+        var qte = battle.CurrentQte;
+        bool controller = GameManager.Instance && GameManager.Instance.Input
+            && GameManager.Instance.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad;
+        var lane = controller ? QteLane.Right : QteLane.Bottom;
+        qtePrompt.anchorMin = qtePrompt.anchorMax = QteLayout.Anchor(lane);
+        qtePrompt.anchoredPosition = QteLayout.Offset(lane);
+        qteIcon.sprite = controller ? qteControllerIcon : qteKeyboardIcon;
+        qteIcon.enabled = qteIcon.sprite != null; qteKey.text = qteIcon.enabled ? "" : controller ? "A" : "SPACE";
+        qtePrompt.gameObject.SetActive(qte != null);
+        if (qte == null)
+        {
+            qteCaption.text = battle.SignatureName; qteCountdown.text = "";
+            qteFill.anchorMin = new Vector2(0.5f, 0); qteFill.anchorMax = new Vector2(0.5f, 1);
+            return;
+        }
+        qteCaption.text = qte.Result == PressQteResult.Preparing ? "Get ready"
+            : qte.Result == PressQteResult.Waiting ? "Press before time runs out"
+            : qte.Result == PressQteResult.Success ? "Success — bonus damage"
+            : qte.Result == PressQteResult.WrongInput ? "Wrong input — normal damage" : "Time up — normal damage";
+        qteCountdown.text = qte.Result == PressQteResult.Preparing ? "" : qte.Remaining.ToString("0.00") + "s";
+        float half = qte.Fraction * 0.5f;
+        qteFill.anchorMin = new Vector2(0.5f - half, 0); qteFill.anchorMax = new Vector2(0.5f + half, 1);
+        qteFill.GetComponent<Image>().color = !qte.Complete ? new Color(1, 0.75f, 0.2f)
+            : qte.Result == PressQteResult.Success ? new Color(0.3f, 1, 0.55f) : new Color(1, 0.3f, 0.25f);
+        qtePrompt.GetComponent<Image>().color = !qte.Complete ? Dark
+            : qte.Result == PressQteResult.Success ? new Color(0.08f, 0.35f, 0.16f, 0.95f) : new Color(0.4f, 0.08f, 0.06f, 0.95f);
+    }
+
     private void BuildDefense()
     {
         defensePanel = Rect("Reactive defense", root); defensePanel.anchorMin = defensePanel.anchorMax = new Vector2(0.5f, 0);
@@ -161,7 +229,7 @@ public sealed class BattleHud : MonoBehaviour
         dodgeWindow.gameObject.AddComponent<Image>().color = new Color(0.1f, 0.45f, 0.8f); dodgeWindow.GetComponent<Image>().raycastTarget = false;
         parryWindow = Rect("Parry window", track); Stretch(parryWindow);
         parryWindow.gameObject.AddComponent<Image>().color = new Color(1, 0.72f, 0.15f); parryWindow.GetComponent<Image>().raycastTarget = false;
-        var impactLine = Rect("Impact at 75 percent", track);
+        impactLine = Rect("Authored impact", track);
         impactLine.anchorMin = new Vector2(DefenseImpact.ImpactBarPosition, 0);
         impactLine.anchorMax = new Vector2(DefenseImpact.ImpactBarPosition, 1);
         impactLine.sizeDelta = new Vector2(2, 6);
@@ -179,7 +247,7 @@ public sealed class BattleHud : MonoBehaviour
     private void DrawDefense()
     {
         assistanceLabel.text = "Timing: " + (battle.DefenseSettings.Assisted ? "Assisted" : "Standard");
-        assistanceLabel.GetComponentInParent<Button>().interactable = !battle.DefenseActive;
+        assistanceLabel.GetComponentInParent<Button>().interactable = !battle.DefenseActive && !battle.SignatureActive;
         defensePanel.gameObject.SetActive(battle.DefenseActive);
         if (!battle.DefenseActive) return;
         if (inspectionLayer.gameObject.activeSelf) CloseInspection();
@@ -190,10 +258,12 @@ public sealed class BattleHud : MonoBehaviour
         var hit = battle.CurrentImpact;
         if (hit == null) return;
         dodgeWindow.anchorMin = new Vector2(hit.BarPosition(hit.Duration - hit.DodgeWindow), 0);
-        dodgeWindow.anchorMax = new Vector2(DefenseImpact.ImpactBarPosition, 1);
+        dodgeWindow.anchorMax = new Vector2(hit.ImpactPosition, 1);
         parryWindow.gameObject.SetActive(hit.Parryable);
         parryWindow.anchorMin = new Vector2(hit.BarPosition(hit.Duration - hit.ParryWindow), 0);
-        parryWindow.anchorMax = new Vector2(DefenseImpact.ImpactBarPosition, 1);
+        parryWindow.anchorMax = new Vector2(hit.ImpactPosition, 1);
+        impactLine.anchorMin = new Vector2(hit.ImpactPosition, 0);
+        impactLine.anchorMax = new Vector2(hit.ImpactPosition, 1);
         dodgeWindow.GetComponent<Image>().color = hit.Resolved ? new Color(0.2f, 0.25f, 0.3f) : new Color(0.1f, 0.45f, 0.8f);
         parryWindow.GetComponent<Image>().color = hit.Resolved ? new Color(0.35f, 0.3f, 0.2f) : new Color(1, 0.72f, 0.15f);
         // Keep the registered press visible instead of letting the cursor run past it.
@@ -210,7 +280,7 @@ public sealed class BattleHud : MonoBehaviour
         var shade = inspectionLayer.gameObject.AddComponent<Image>(); shade.color = new Color(0, 0, 0, 0.35f);
         var dismiss = inspectionLayer.gameObject.AddComponent<Button>(); dismiss.targetGraphic = shade; dismiss.onClick.AddListener(CloseInspection);
         contextPanel = Rect("Character context menu", inspectionLayer); contextPanel.sizeDelta = new Vector2(140, 30);
-        Button(contextPanel, "Examine", () => ShowExamine(inspected));
+        Button(contextPanel, "Examine", ControllerInspectSubmit);
         examinePanel = Rect("Examine character", inspectionLayer); examinePanel.gameObject.AddComponent<Image>().color = Dark;
         var panelBlocker = examinePanel.gameObject.AddComponent<Button>(); panelBlocker.targetGraphic = examinePanel.GetComponent<Image>();
         var panelNav = panelBlocker.navigation; panelNav.mode = Navigation.Mode.None; panelBlocker.navigation = panelNav;
@@ -228,8 +298,13 @@ public sealed class BattleHud : MonoBehaviour
     }
     public void ShowContext(int index, Vector2 screenPosition)
     {
-        if (!battle || battle.DefenseActive || index < 0 || index >= battle.Combatants.Count) return;
-        inspected = index; battle.InspectionOpen = true; inspectionLayer.gameObject.SetActive(true);
+        if (!battle || battle.DefenseActive || battle.SignatureActive || index < 0 || index >= battle.Combatants.Count) return;
+        ShowTargetContext(battle.Targetables[index], screenPosition);
+    }
+    public void ShowTargetContext(BattleTarget target, Vector2 screenPosition)
+    {
+        if (!battle || battle.ControllerInputLocked || target == null || !target.Alive) return;
+        inspectedTarget = target; inspected = target.ActorIndex; battle.InspectionOpen = true; inspectionLayer.gameObject.SetActive(true);
         contextPanel.gameObject.SetActive(true); examinePanel.gameObject.SetActive(false);
         var canvas = GetComponentInParent<Canvas>();
         RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPosition, canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera, out var p);
@@ -237,25 +312,55 @@ public sealed class BattleHud : MonoBehaviour
     }
     public void ShowExamine(int index)
     {
-        inspected = index; battle.InspectionOpen = true; inspectionLayer.gameObject.SetActive(true);
+        inspected = index; inspectedTarget = battle.Targetables[index]; battle.InspectionOpen = true; inspectionLayer.gameObject.SetActive(true);
         contextPanel.gameObject.SetActive(false); examinePanel.gameObject.SetActive(true); UpdateExamine();
     }
     private void UpdateExamine()
     {
-        var info = battle.Info(inspected); examineText.text = info.Details(battle.Combatants[inspected], battle.DisplayName(inspected));
+        if (inspectedTarget == null) return;
+        if (inspected >= 0)
+        {
+            var info = battle.Info(inspected);
+            examineText.text = info.Details(battle.Combatants[inspected], battle.DisplayName(inspected));
+        }
+        else examineText.text = $"<b>{inspectedTarget.Name}</b>\nHealth  {inspectedTarget.Health} / {inspectedTarget.MaxHealth}\n\nDestructible object";
         examineContent.sizeDelta = new Vector2(0, examineText.GetPreferredValues(examineText.text, Mathf.Max(100, examinePanel.rect.width - 50), 0).y + 16);
     }
+    public void ControllerInspectSubmit()
+    {
+        if (!battle.InspectionOpen || inspectedTarget == null) return;
+        contextPanel.gameObject.SetActive(false); examinePanel.gameObject.SetActive(true); UpdateExamine();
+    }
+    public void ControllerInspectScroll(float direction, float seconds)
+    {
+        if (!examinePanel.gameObject.activeSelf) return;
+        var scroll = examinePanel.GetComponentInChildren<ScrollRect>();
+        scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + direction * seconds);
+    }
+    public void ControllerPortraitStep(int delta, bool activate)
+    {
+        var order = battle.UpcomingTurns();
+        if (order.Count == 0) return;
+        controllerPortrait = controllerPortrait < 0 ? 0 : (controllerPortrait + delta + order.Count) % order.Count;
+        if (top) orderScroll.horizontalNormalizedPosition = order.Count <= 1 ? 0 : controllerPortrait / (float)(order.Count - 1);
+        else orderScroll.verticalNormalizedPosition = order.Count <= 1 ? 1 : 1 - controllerPortrait / (float)(order.Count - 1);
+        if (activate)
+        {
+            int index = order[controllerPortrait]; battle.FocusCharacter(index); battle.TargetFocus.Pin(battle.Targetables[index]);
+        }
+    }
+    public void ClearControllerPortrait() { controllerPortrait = -1; }
     public void CloseInspection()
     { if (battle) { if (battle.InspectionOpen) InspectionDismissedFrame = Time.frameCount; battle.InspectionOpen = false; } if (inspectionLayer) inspectionLayer.gameObject.SetActive(false); }
     private void OnDisable() => CloseInspection();
-    private void OnDestroy() { if (battle) battle.ContextRequested -= ShowContext; }
+    private void OnDestroy() { if (battle) { battle.ContextRequested -= ShowContext; battle.TargetContextRequested -= ShowTargetContext; } }
     private void LateUpdate() => Render();
     public void Render()
     {
         if (!battle) return;
         if (battle.InspectionOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) CloseInspection();
         if (battle.InspectionOpen && examinePanel.gameObject.activeSelf) UpdateExamine();
-        DrawDefense(); DrawTargetDetails();
+        DrawDefense(); DrawSignature(); DrawTargetDetails();
         var order = battle.UpcomingTurns();
         if (lastActor != battle.CurrentActorIndex || lastCount != order.Count)
         { ApplyLayout(); lastActor = battle.CurrentActorIndex; lastCount = order.Count; }
@@ -266,7 +371,7 @@ public sealed class BattleHud : MonoBehaviour
             card.Portrait.color = portraits[i] ? Color.white : new Color(0.3f, 0.35f, 0.43f);
             var unit = battle.Combatants[i]; card.Health.text = $"{unit.Health}/{unit.MaxHealth}";
             int hits = battle.AssignedHits(i); card.Hits.text = hits > 0 ? $"x{hits}" : "";
-            card.Border.color = i == battle.CurrentActorIndex ? new Color(1, 0.75f, 0.25f) : Dark;
+            card.Border.color = slot == controllerPortrait ? new Color(0.1f, 0.85f, 1) : i == battle.CurrentActorIndex ? new Color(1, 0.75f, 0.25f) : Dark;
         }
     }
 }

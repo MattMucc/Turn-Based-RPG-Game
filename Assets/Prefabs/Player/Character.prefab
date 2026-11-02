@@ -408,6 +408,10 @@ MonoBehaviour:
   ComboFirstWindup: 1.2
   ComboSecondWindup: 0.9
   ComboThirdWindup: 1.1
+  SingleImpactPosition: 0.75
+  ComboFirstImpactPosition: 0.6
+  ComboSecondImpactPosition: 0.85
+  ComboThirdImpactPosition: 0.7
   SingleDamage: 25
   ComboHitDamage: 10
   CounterDamage: 25
@@ -440,6 +444,9 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 25
     Quantity: 0
+    SignatureQte: 0
+    QteDuration: 1.5
+    QteBonusDamage: 15
   - Name: Piercing Attack
     FavoriteSlot: -1
     Description: Prototype line targeting.
@@ -450,6 +457,9 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 18
     Quantity: 0
+    SignatureQte: 0
+    QteDuration: 1.5
+    QteBonusDamage: 15
   - Name: Area Skill
     FavoriteSlot: -1
     Description: Prototype area targeting.
@@ -460,6 +470,9 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 18
     Quantity: 0
+    SignatureQte: 0
+    QteDuration: 1.5
+    QteBonusDamage: 15
   - Name: Multi-target Skill
     FavoriteSlot: -1
     Description: Prototype independent target selection.
@@ -470,6 +483,9 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 12
     Quantity: 0
+    SignatureQte: 0
+    QteDuration: 1.5
+    QteBonusDamage: 15
   - Name: Blast Flask
     FavoriteSlot: -1
     Description: Prototype offensive throwable.
@@ -480,6 +496,23 @@ MonoBehaviour:
     MaxTargets: 3
     Damage: 20
     Quantity: 3
+    SignatureQte: 0
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Signature Strike
+    FavoriteSlot: -1
+    Description: Prototype cinematic attack. Press when prompted to strengthen the
+      impact.
+    Category: 1
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    MaxTargets: 3
+    Damage: 30
+    Quantity: 0
+    SignatureQte: 1
+    QteDuration: 1.5
+    QteBonusDamage: 15
 --- !u!114 &8802730022444101226
 MonoBehaviour:
   m_ObjectHideFlags: 0

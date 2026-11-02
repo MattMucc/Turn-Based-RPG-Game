@@ -39,6 +39,14 @@ namespace Game.GridPrototype
         public bool AutoCamera { get; private set; } = true;
         public DefensePrototypeSettings DefenseSettings { get; private set; }
         public DefenseImpact CurrentImpact { get; private set; }
+        public bool SignatureActive { get; private set; }
+        public PressQte CurrentQte { get; private set; }
+        public string SignatureName { get; private set; }
+        public int SignatureDamage { get; private set; }
+        private readonly PressQteInput qteInput = new PressQteInput();
+        private DefenseVisual signatureVisual;
+        private float signatureFeedbackElapsed;
+        private int qteOpenedFrame;
         public bool DefenseActive { get; private set; }
         public string DefenseCaption { get; private set; }
         public string DefenseFeedback { get; private set; }
@@ -72,6 +80,9 @@ namespace Game.GridPrototype
         public BattleCharacterInfo Info(int index) => actors[index].GetComponent<BattleCharacterInfo>();
         public event Action<int, Vector2> ContextRequested;
         public bool InspectionOpen;
+        public bool ExternalControllerActive;
+        public bool ControllerInputLocked => busy || closing || playerTurning || SignatureActive || DefenseActive;
+        public event Action<BattleTarget, Vector2> TargetContextRequested;
         public bool ReadyToResolve => ChosenAction != null && targets.Count > 0 &&
             (ChosenAction.Pattern != BattleTargetPattern.Multiple || targets.Count == TargetLimit);
         private void RecordHit(int index, int damage)
@@ -81,7 +92,7 @@ namespace Game.GridPrototype
         public bool GridInputEnabled = true;
         public bool KeyboardGridInputEnabled = true;
         public Func<Vector2, bool> PointerOverUI;
-        public bool PlayerReady => !busy && !closing && !playerTurning && actorIndex == 0;
+        public bool PlayerReady => !busy && !closing && !playerTurning && !SignatureActive && actorIndex == 0;
         public bool ActionReady => PlayerReady && Active.ActionAvailable;
         public int Movement => turnOrder[0].Movement;
         public int TargetCount => targets.Count;
@@ -195,6 +206,16 @@ namespace Game.GridPrototype
                     || (gamepad != null && gamepad.rightShoulder.wasPressedThisFrame);
                 AdvanceDefense(Time.deltaTime, dodge, parry);
             }
+            if (SignatureActive && CurrentQte != null && Application.isFocused && !InspectionOpen)
+            {
+                qteInput.Read(Keyboard.current, Gamepad.current, out bool correct, out bool wrong);
+                AdvanceSignature(Time.unscaledDeltaTime, Time.frameCount > qteOpenedFrame && correct, Time.frameCount > qteOpenedFrame && wrong);
+            }
+            if (ExternalControllerActive)
+            {
+                if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid);
+                return; // Controller navigation supplies its own pointer and consumes gameplay input once.
+            }
             bool click = cameraControls.ConsumeClick(out var pointer);
             UpdateTargetFocus(click);
             if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid);
@@ -235,6 +256,47 @@ namespace Game.GridPrototype
                     else { selected = hovered; Refresh(); }
                 }
             }
+        }
+
+        public void ControllerPoint(Vector2 pointer, bool overUI, bool activate)
+        {
+            if (ControllerInputLocked || InspectionOpen) { TargetFocus.Hover(null); return; }
+            BattleTarget target = null;
+            if (!overUI && TryPickTarget(pointer, out var picked, out var targetCell)
+                && (ChosenAction == null || CanAim(targetCell, ChosenAction))) target = picked;
+            TargetFocus.Hover(target);
+            if (overUI) return;
+            if (!TryPick(pointer, out var cell)) { if (activate) TargetFocus.Dismiss(); return; }
+            if (ChosenAction != null)
+            {
+                selected = cell; Preview();
+                if (activate && PlayerReady) Confirm();
+                return;
+            }
+            if (!activate) return;
+            TargetFocus.Pin(target);
+            if (target != null) { TargetContextRequested?.Invoke(target, pointer); return; }
+            if (!PlayerReady || !GridInputEnabled) return;
+            if (selected == cell) Confirm();
+            else { selected = cell; Refresh(); }
+        }
+
+        public void ControllerGridStep(Vector2Int delta, bool activate = false)
+        {
+            if (!PlayerReady || InspectionOpen) return;
+            selected = new Vector2Int(Mathf.Clamp(selected.x + delta.x, 0, Grid.Board.Width - 1),
+                Mathf.Clamp(selected.y + delta.y, 0, Grid.Board.Depth - 1));
+            Refresh();
+            var target = battleTargets.Find(t => t.Alive && t.Occupies(Grid, selected));
+            TargetFocus.Hover(ChosenAction == null || CanAim(selected, ChosenAction) ? target : null);
+            if (!activate) return;
+            if (ChosenAction != null) Confirm();
+            else if (target != null)
+            {
+                TargetFocus.Pin(target);
+                TargetContextRequested?.Invoke(target, view.WorldToScreenPoint(target.Bounds.center));
+            }
+            else Confirm();
         }
 
         private void UpdateTargetFocus(bool click)
@@ -384,9 +446,73 @@ namespace Game.GridPrototype
             if (!Active.SpendAction()) return false;
             if (action.Category == BattleActionCategory.Item) action.Quantity--;
             busy = true;
-            sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple);
+            if (action.SignatureQte)
+            {
+                SignatureActive = true; InspectionOpen = false; SignatureName = action.Name;
+                cameraControls.KeyboardInputBlocked = true;
+                sequence = ResolveSignature(batches, aimedCells, action);
+            }
+            else sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple);
             return true;
         }
+        public void AdvanceSignature(float deltaTime, bool correct = false, bool wrong = false)
+        {
+            if (!SignatureActive || CurrentQte == null || closing) return;
+            bool wasComplete = CurrentQte.Complete;
+            CurrentQte.Advance(deltaTime, correct, wrong);
+            if (!wasComplete && CurrentQte.Complete)
+                PlayDefenseCue(CurrentQte.Result == PressQteResult.Success ? successCue : failedCue);
+            if (wasComplete) signatureFeedbackElapsed += Mathf.Max(0, deltaTime);
+            if (CurrentQte.Complete) signatureVisual?.Impact(signatureFeedbackElapsed);
+            else signatureVisual?.Windup(0.5f + (1 - CurrentQte.Fraction) * 0.5f);
+        }
+
+        private IEnumerator ResolveSignature(List<List<BattleTarget>> batches, List<Vector2Int> cells, BattleActionOption action)
+        {
+            Transform frameTarget = null;
+            GameObject emptyAnchor = null;
+            try
+            {
+                BeginPlayerFacing(Grid.Point(cells[0]));
+                if (batches[0].Count > 0) frameTarget = batches[0][0].Transform;
+                else
+                {
+                    emptyAnchor = new GameObject("Signature target cell");
+                    emptyAnchor.transform.SetParent(transform);
+                    emptyAnchor.transform.position = Grid.Point(cells[0]);
+                    frameTarget = emptyAnchor.transform;
+                }
+                if (AutoCamera) cameraControls.SmoothDefenseFrame(actors[0], frameTarget);
+                while (playerTurning || (AutoCamera && cameraControls.Transitioning)) yield return null;
+                if (closing) yield break;
+                signatureVisual = new DefenseVisual(actors[0]);
+                EnsureDefenseAudio(); PlayDefenseCue(windupCue);
+                CurrentQte = new PressQte(action.QteDuration);
+                qteInput.Reset(Gamepad.current); qteOpenedFrame = Time.frameCount;
+                signatureFeedbackElapsed = 0;
+                while (!CurrentQte.Complete) yield return null;
+                SignatureDamage = Mathf.Max(0, action.Damage) +
+                    (CurrentQte.Result == PressQteResult.Success ? Mathf.Max(0, action.QteBonusDamage) : 0);
+                while (signatureFeedbackElapsed < 0.45f) yield return null;
+                signatureVisual.Reset();
+                var hits = ResolveHits(batches, cells, SignatureDamage, action.Pattern == BattleTargetPattern.Multiple);
+                while (hits.MoveNext()) yield return hits.Current;
+            }
+            finally
+            {
+                if (!closing && AutoCamera && cameraControls.CharacterFocused) cameraControls.SmoothFocus(actors[0]);
+                ResetSignature();
+                if (emptyAnchor) { if (Application.isPlaying) Destroy(emptyAnchor); else DestroyImmediate(emptyAnchor); }
+            }
+        }
+
+        private void ResetSignature()
+        {
+            signatureVisual?.Reset(); signatureVisual = null;
+            SignatureActive = false; CurrentQte = null; signatureFeedbackElapsed = 0;
+            if (cameraControls) cameraControls.KeyboardInputBlocked = false;
+        }
+
         private IEnumerable<Vector2Int> TargetCells(BattleTarget target)
         {
             if (target.Unit != null) { yield return target.Unit.Position; yield break; }
@@ -532,7 +658,7 @@ namespace Game.GridPrototype
             for (int hit = 0; hit < windups.Length; hit++)
             {
                 attackerVisual.Reset(); defenderVisual.Reset();
-                CurrentImpact = DefenseSettings.CreateImpact(windups[hit]); defenseDamage = hitDamage; cuePlayed = false;
+                CurrentImpact = DefenseSettings.CreateImpact(windups[hit], impactPosition: DefenseSettings.ImpactPositionFor(combo, hit)); defenseDamage = hitDamage; cuePlayed = false;
                 DefenseCaption = $"{DisplayName(index)} > {DisplayName(0)}  |  Hit {hit + 1}/{windups.Length}";
                 DefenseFeedback = turnOrder[0].ReactionsDisabled ? "Cannot dodge or parry" : "Watch the wind-up";
                 PlayDefenseCue(windupCue);
@@ -575,10 +701,12 @@ namespace Game.GridPrototype
             var clip = AudioClip.Create("Prototype defense cue", count, 1, rate, false); clip.SetData(samples, 0); return clip;
         }
         private void PlayDefenseCue(AudioClip clip) { if (defenseAudio && clip) defenseAudio.PlayOneShot(clip, DefenseSettings.CueVolume); }
-        private void OnDisable() { playerTurning = false; ResetDefense(); }
+        private void OnApplicationFocus(bool focused)
+        { if (!focused) qteInput.Reset(Gamepad.current); }
+        private void OnDisable() { playerTurning = false; ResetDefense(); ResetSignature(); }
         private void OnDestroy()
         {
-            ResetDefense();
+            ResetDefense(); ResetSignature();
             foreach (var clip in new[] { windupCue, readyCue, successCue, failedCue })
                 if (clip) { if (Application.isPlaying) Destroy(clip); else DestroyImmediate(clip); }
         }
@@ -634,7 +762,7 @@ namespace Game.GridPrototype
         public void Finish(bool victory)
         {
             if (closing) return;
-            closing = true; playerTurning = false; ResetDefense(); StopAllCoroutines(); finished?.Invoke(victory);
+            closing = true; playerTurning = false; ResetDefense(); ResetSignature(); StopAllCoroutines(); finished?.Invoke(victory);
         }
 
     }

@@ -20,12 +20,16 @@ namespace Game.GridPrototype
         [Min(1)] public int MaxTargets = 3;
         [Min(0)] public int Damage = 25;
         [Min(0)] public int Quantity;
+        public bool SignatureQte;
+        [Min(0.1f)] public float QteDuration = 1.5f;
+        [Min(0)] public int QteBonusDamage = 15;
         public bool Available => Category != BattleActionCategory.Item || Quantity > 0;
         public string Tooltip => $"<b>{Name}</b>\n{Description}\n\n<b>Reach</b>   {Reach} tiles from the user\n<b>Damage</b>   {Damage} per hit\n<b>Cost</b>   1 action\n\n<b>Targets</b>\n"
             + (Pattern == BattleTargetPattern.Area ? $"Everyone within {Radius} tile(s) of the chosen cell. Allies and destructible objects are also hit." :
                Pattern == BattleTargetPattern.Piercing ? "Hits characters and destructible objects in a straight or diagonal line, including allies. Stops at terrain." :
                Pattern == BattleTargetPattern.Multiple ? $"Assign {MaxTargets} hits to start. Repeated cells and allies are allowed. Hits resolve in selection order." : "One cell. One hit. Can hit allies or destructible objects.")
             + (Category == BattleActionCategory.Item ? $"\n\n<b>Carried</b>   {Quantity}\nUses one item when the action starts." : "")
+            + (SignatureQte ? $"\n\n<b>Signature QTE</b>\nPress Space / south face button before {Mathf.Max(0.1f, QteDuration):0.0}s expires.\nSuccess: +{Mathf.Max(0, QteBonusDamage)} damage per hit ({Damage + Mathf.Max(0, QteBonusDamage)} total).\nWrong input or timeout: normal damage." : "")
             + "\nEmpty cells still spend the action.\n\n<color=#80BEFF>Blue tiles</color>: within reach\n<color=#FF9090>Red tiles</color>: affected by this action";
 
     }
@@ -61,12 +65,19 @@ namespace Game.GridPrototype
                 if (other != null && other.Category == option.Category && other.FavoriteSlot == slot) other.FavoriteSlot = -1;
             option.FavoriteSlot = slot; return true;
         }
+        public static BattleActionOption CreatePrototypeSignature() => new BattleActionOption
+        {
+            Name = "Signature Strike", Description = "Prototype cinematic attack. Press when prompted to strengthen the impact.",
+            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
+            Damage = 30, SignatureQte = true, QteDuration = 1.5f, QteBonusDamage = 15
+        };
         public List<BattleActionOption> Options = new List<BattleActionOption>
         {
             new BattleActionOption { Name = "Strike", Description = "Prototype adjacent attack." },
             new BattleActionOption { Name = "Piercing Attack", Description = "Prototype line targeting.", Pattern = BattleTargetPattern.Piercing, Reach = 4, Damage = 18 },
             new BattleActionOption { Name = "Area Skill", Description = "Prototype area targeting.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Area, Reach = 4, Damage = 18 },
             new BattleActionOption { Name = "Multi-target Skill", Description = "Prototype independent target selection.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Multiple, Reach = 4, Damage = 12 },
+            CreatePrototypeSignature(),
             new BattleActionOption { Name = "Blast Flask", Description = "Prototype offensive consumable.", Category = BattleActionCategory.Item, Pattern = BattleTargetPattern.Area, Reach = 3, Damage = 20, Quantity = 3 }
         };
     }

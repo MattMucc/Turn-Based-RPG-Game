@@ -22,6 +22,8 @@ namespace Game.GridPrototype
     [DefaultExecutionOrder(-20)]
     public sealed class GridCameraController : MonoBehaviour
     {
+        public bool KeyboardInputBlocked;
+        public bool ControllerOwnsInput;
         public float FlySpeed = 10f;
         public float LookSensitivity = 0.18f;
         public float ZoomSpeed = 2f;
@@ -190,6 +192,41 @@ namespace Game.GridPrototype
             ReleaseFocus();
         }
 
+        private bool controllerOrbit;
+        public void ControllerCamera(Vector2 move, Vector2 look, bool flight, bool modifier, float seconds)
+        {
+            seconds = Mathf.Clamp(seconds, 0, 0.1f);
+            if (modifier)
+            {
+                controllerOrbit = false;
+                if (flight)
+                {
+                    if (move != Vector2.zero || look.y != 0)
+                        Fly(new Vector3(move.x, look.y, move.y) * FlySpeed * seconds);
+                    if (look.x != 0) Look(new Vector2(look.x, 0) * (100f / LookSensitivity) * seconds);
+                }
+                else
+                {
+                    if (look != Vector2.zero)
+                    {
+                        transform.position += (transform.right * look.x + transform.up * look.y) * FlySpeed * seconds;
+                        ReleaseFocus();
+                    }
+                    if (move.y != 0) Dolly(move.y * FlySpeed * seconds);
+                }
+                return;
+            }
+            if (flight && move != Vector2.zero) Fly(new Vector3(move.x, 0, move.y) * FlySpeed * seconds);
+            if (look == Vector2.zero) { controllerOrbit = false; return; }
+            var pixels = look * (100f / Mathf.Max(0.01f, LookSensitivity)) * seconds;
+            if (!flight || CharacterFocused)
+            {
+                if (!controllerOrbit || Transitioning) BeginOrbit();
+                controllerOrbit = true; Orbit(pixels);
+            }
+            else { controllerOrbit = false; Look(pixels); }
+        }
+
         public void Fly(Vector3 localDisplacement)
         {
             transform.position += transform.rotation * localDisplacement;
@@ -241,7 +278,8 @@ namespace Game.GridPrototype
         private void Update()
         {
             clickPending = false;
-            var keyboard = Keyboard.current;
+            if (ControllerOwnsInput) return;
+            var keyboard = KeyboardInputBlocked ? null : Keyboard.current;
             var mouse = Mouse.current;
             if (keyboard != null && keyboard.fKey.wasPressedThisFrame) FocusActive();
             if (mouse == null) return;

@@ -4,6 +4,24 @@ using Game.GridPrototype;
 
 public class DefenseImpactTests
 {
+    [TestCase(0.60f, 1.2f)]
+    [TestCase(0.85f, 0.9f)]
+    [TestCase(0.70f, 1.1f)]
+    public void AuthoredBarPositionMatchesActualParryWindow(float position, float windup)
+    {
+        var hit = new DefenseImpact(windup, 0.3f, 0.12f, impactPosition: position);
+        Assert.AreEqual(position, hit.BarPosition(windup), 0.00001f);
+        float inside = windup - 0.06f;
+        Assert.Greater(hit.BarPosition(inside), hit.BarPosition(windup - hit.ParryWindow));
+        Assert.Less(hit.BarPosition(inside), position);
+        hit.Advance(inside); hit.Attempt(DefenseChoice.Parry);
+        Assert.AreEqual(DefenseResult.Parried, hit.Result);
+        var late = new DefenseImpact(windup, 0.3f, 0.12f, impactPosition: position);
+        late.Advance(windup + 0.02f); late.Attempt(DefenseChoice.Parry);
+        Assert.Greater(late.BarPosition(late.AttemptTime), position);
+        Assert.AreEqual(DefenseResult.TooLate, late.Result);
+    }
+
     [TestCase(DefenseChoice.Dodge, 1.2f, DefenseResult.Dodged)]
     [TestCase(DefenseChoice.Parry, 1.2f, DefenseResult.TooEarly)]
     [TestCase(DefenseChoice.Parry, 1.35f, DefenseResult.Parried)]

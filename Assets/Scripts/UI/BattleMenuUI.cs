@@ -15,11 +15,13 @@ public class BattleMenuUI : MonoBehaviour
     [SerializeField] private BattleMenuButton itemsButton;
     [SerializeField] private BattleMenuButton runButton;
     [SerializeField] private Sprite blockKeyboardIcon, blockControllerIcon, runKeyboardIcon;
+    [SerializeField] private Sprite endTurnKeyboardIcon, endTurnControllerIcon;
     private Sprite runControllerIcon;
     private readonly Sprite[] rootKeyboardIcons = new Sprite[3], rootControllerIcons = new Sprite[3];
     [SerializeField] private Sprite[] favoriteKeyboardIcons = new Sprite[4];
     [SerializeField] private Sprite[] favoriteControllerIcons = new Sprite[4];
     [SerializeField] private Sprite backKeyboardIcon;
+    [SerializeField] private Sprite qteKeyboardIcon, qteControllerIcon;
     private bool editingFavorites;
     private BattleActionOption assigningFavorite;
     private readonly List<BattleMenuButton> pool = new();
@@ -27,6 +29,7 @@ public class BattleMenuUI : MonoBehaviour
     private readonly List<string> descriptions = new();
     private readonly List<BattleActionOption> previewOptions = new();
     private BattleHud hud;
+    private BattleControllerNavigation controllerNavigation;
     private BattleMenuButton remainingTurnButton;
     private readonly List<RaycastResult> raycasts = new();
     private InSceneGridBattle battle;
@@ -83,7 +86,8 @@ public class BattleMenuUI : MonoBehaviour
         hud = hudRoot.AddComponent<BattleHud>();
         remainingTurnButton = Instantiate(attackButton, transform);
         remainingTurnButton.name = "Remaining turn";
-        remainingTurnButton.Configure("End Turn", () => battle.EndTurn(), false);
+        remainingTurnButton.Configure("End Turn", () => battle.EndTurn(), true);
+        remainingTurnButton.SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
         var endRect = (RectTransform)remainingTurnButton.transform;
         endRect.anchorMin = endRect.anchorMax = endRect.pivot = Vector2.zero;
         endRect.anchoredPosition = new Vector2(12, 12); endRect.sizeDelta = new Vector2(180, 28);
@@ -108,11 +112,15 @@ public class BattleMenuUI : MonoBehaviour
     {
         Ensure(); Unbind(); battle = encounter; input = GameManager.Instance ? GameManager.Instance.Input : null;
         battle.PointerOverUI = IsOverUI; battle.ActionResolved += Root;
-        Show(); Root(); hud.Bind(battle, attackButton.Label.font);
+        Show(); Root(); hud.SetQteIcons(qteKeyboardIcon, qteControllerIcon); hud.Bind(battle, attackButton.Label.font);
+        if (!controllerNavigation) controllerNavigation = GetComponent<BattleControllerNavigation>();
+        if (!controllerNavigation) controllerNavigation = gameObject.AddComponent<BattleControllerNavigation>();
+        controllerNavigation.Bind(battle, this, hud);
     }
     public void Unbind()
     {
         if (battle) { battle.PointerOverUI = null; battle.ActionResolved -= Root; }
+        if (controllerNavigation) controllerNavigation.Unbind();
         battle = null; Hide();
     }
     public void Show() { Ensure(); gameObject.SetActive(true); }
@@ -155,12 +163,13 @@ public class BattleMenuUI : MonoBehaviour
         Row("Attack", () => Open(BattleActionCategory.Attack), "Choose an attack available to this character. Movement is free on green tiles. Tab / controller LB switches grid navigation on or off.", () => battle.ActionReady, true);
         Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a skill available to this character.", () => battle.ActionReady, true);
         Row("Items", () => Open(BattleActionCategory.Item), "Use a carried item. Costs one action and one item.", () => battle.ActionReady, true);
-        for (int i = 0; i < 3; i++) pool[i].SetIcons(rootKeyboardIcons[i], rootControllerIcons[i]);
-        Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Keyboard 4 / controller RB.", () => battle.ActionReady, true);
-        pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon);
-        Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller B.", () => battle.PlayerReady, true);
-        pool[4].SetIcons(runKeyboardIcon, runControllerIcon);
-        Row("End Turn", () => battle.EndTurn(), "T / controller right-stick click (R3): end this turn. Unspent movement carries over; your next turn grants three more points.", () => battle.PlayerReady);
+        for (int i = 0; i < 3; i++) pool[i].SetIcons(rootKeyboardIcons[i], rootControllerIcons[i], true);
+        Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Keyboard 4 / controller LT + RB.", () => battle.ActionReady, true);
+        pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon, true);
+        Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller LT + B.", () => battle.PlayerReady, true);
+        pool[4].SetIcons(runKeyboardIcon, runControllerIcon, true);
+        Row("End Turn", () => battle.EndTurn(), "T / controller right-stick click (R3): end this turn. Unspent movement carries over; your next turn grants three more points.", () => battle.PlayerReady, true);
+        pool[5].SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
         FinishList();
     }
     private void Open(BattleActionCategory selectedCategory)
@@ -309,6 +318,43 @@ public class BattleMenuUI : MonoBehaviour
             ((RectTransform)targetCounter.transform.parent).anchoredPosition = new Vector2(12, 16 + viewport.sizeDelta.y);
         }
     }
+    public void ControllerRootShortcut(int index)
+    {
+        if (!battle || !battle.PlayerReady || battle.InspectionOpen || browsing || battle.ChosenAction != null) return;
+        if (index >= 0 && index < 5) pool[index].Invoke();
+    }
+    public bool ControllerBrowsing => browsing;
+    public void ControllerEndTurn() { if (CanUseEndTurnShortcut()) battle.EndTurn(); }
+    public void ControllerBack()
+    {
+        if (battle.ChosenAction != null) CancelSelection();
+        else if (browsing || moving) Back();
+        else battle.TargetFocus.Dismiss();
+    }
+    public void ClearControllerCommands()
+    {
+        if (highlighted >= 0 && highlighted < pool.Count) pool[highlighted].SetHighlighted(false);
+        highlighted = -1; tooltipPanel.SetActive(false);
+        if (remainingTurnButton) remainingTurnButton.SetHighlighted(false);
+        if (battle) battle.HoverAction(null);
+    }
+    public void ControllerCommands(int delta, bool activate)
+    {
+        if (!battle.PlayerReady) return;
+        if (!battle.Combatants[0].ActionAvailable)
+        {
+            remainingTurnButton.SetHighlighted(true);
+            if (activate) ControllerEndTurn();
+            return;
+        }
+        if (!viewport.gameObject.activeInHierarchy || rows == 0) return;
+        if (highlighted >= 0 && delta == 0 && !activate) return;
+        if (highlighted >= 0) pool[highlighted].SetHighlighted(false);
+        highlighted = highlighted < 0 ? 0 : (highlighted + delta + rows) % rows;
+        pool[highlighted].SetHighlighted(true); ShowTooltip(highlighted);
+        scroll.verticalNormalizedPosition = rows <= 1 ? 1 : 1 - highlighted / (float)(rows - 1);
+        if (activate) pool[highlighted].Invoke();
+    }
     private bool CanUseEndTurnShortcut()
         => battle && battle.PlayerReady && !battle.InspectionOpen && !browsing && !editingFavorites
             && battle.ChosenAction == null
@@ -326,6 +372,7 @@ public class BattleMenuUI : MonoBehaviour
         FitTooltip();
         if (battle.InspectionOpen || (hud && hud.InspectionDismissedFrame == Time.frameCount)) return;
         if (!battle.PlayerReady) return;
+        if (controllerNavigation && controllerNavigation.ControllerActive) return;
         var k = Keyboard.current; var pad = Gamepad.current;
         // Match the visible main-menu End Turn control, never an ability submenu or target selection.
         if (CanUseEndTurnShortcut() && PressedEndTurn(k, pad)) { battle.EndTurn(); return; }

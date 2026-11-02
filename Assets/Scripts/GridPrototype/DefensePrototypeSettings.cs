@@ -15,6 +15,14 @@ namespace Game.GridPrototype
         [Min(0.5f)] public float ComboFirstWindup = 1.2f;
         [Min(0.5f)] public float ComboSecondWindup = 0.9f;
         [Min(0.5f)] public float ComboThirdWindup = 1.1f;
+        [Header("Authored impact positions on timing bar")]
+        [Tooltip("Normalized bar position of impact. Windup remains the time in seconds until impact; windows use that same clock.")]
+        [Range(0.2f, 0.95f)] public float SingleImpactPosition = 0.75f;
+        [Range(0.2f, 0.95f)] public float ComboFirstImpactPosition = 0.60f;
+        [Range(0.2f, 0.95f)] public float ComboSecondImpactPosition = 0.85f;
+        [Range(0.2f, 0.95f)] public float ComboThirdImpactPosition = 0.70f;
+        public float ImpactPositionFor(bool combo, int hit) => !combo ? SingleImpactPosition
+            : hit == 0 ? ComboFirstImpactPosition : hit == 1 ? ComboSecondImpactPosition : ComboThirdImpactPosition;
         [Min(0)] public int SingleDamage = 25;
         [Min(0)] public int ComboHitDamage = 10;
         [Min(0)] public int CounterDamage = 25;
@@ -24,11 +32,11 @@ namespace Game.GridPrototype
         public bool DodgeSlowMotion = true;
         [Range(0, 0.4f)] public float DodgeSlowMotionDuration = 0.18f;
         [Range(0.05f, 1)] public float DodgeSlowMotionSpeed = 0.15f;
-        public DefenseImpact CreateImpact(float windup, bool parryable = true)
+        public DefenseImpact CreateImpact(float windup, bool parryable = true, float impactPosition = DefenseImpact.ImpactBarPosition)
         {
             float multiplier = Assisted ? Mathf.Max(1, AssistanceMultiplier) : 1;
             return new DefenseImpact(Mathf.Max(0.5f, windup), Mathf.Max(0.02f, DodgeWindow) * multiplier,
-                Mathf.Max(0.02f, ParryWindow) * multiplier, parryable, InputLatencyCompensation);
+                Mathf.Max(0.02f, ParryWindow) * multiplier, parryable, InputLatencyCompensation, impactPosition);
         }
     }
 }
