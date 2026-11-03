@@ -24,7 +24,7 @@ public sealed class BattlePortraitCapture : MonoBehaviour
         var stage = new GameObject("Portrait model"); owned.Add(stage);
         stage.transform.position = new Vector3(50000 + slot * 100, 10000, 50000);
         bool found = false; Bounds bounds = default;
-        foreach (var source in actor.GetComponentsInChildren<Renderer>())
+        foreach (var source in actor.GetComponentsInChildren<Renderer>(true))
         {
             if (!source.enabled) continue;
             Mesh mesh = null;

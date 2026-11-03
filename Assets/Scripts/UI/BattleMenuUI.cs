@@ -29,6 +29,8 @@ public class BattleMenuUI : MonoBehaviour
     private readonly List<string> descriptions = new();
     private readonly List<BattleActionOption> previewOptions = new();
     private BattleHud hud;
+    private BattleSwapPanel swapPanel;
+    public bool SwapOpen => swapPanel && swapPanel.IsOpen;
     private BattleControllerNavigation controllerNavigation;
     private BattleMenuButton remainingTurnButton;
     private readonly List<RaycastResult> raycasts = new();
@@ -119,7 +121,7 @@ public class BattleMenuUI : MonoBehaviour
     public void Bind(InSceneGridBattle encounter)
     {
         Ensure(); Unbind(); battle = encounter; input = GameManager.Instance ? GameManager.Instance.Input : null;
-        battle.PointerOverUI = IsOverUI; battle.ActionResolved += Root;
+        battle.PointerOverUI = IsOverUI; battle.ActionResolved += Root; battle.TurnStarted += Root; battle.PartyChanged += RefreshParty;
         Show(); Root(); hud.SetQteIcons(qteKeyboardIcon, qteControllerIcon); hud.Bind(battle, attackButton.Label.font);
         if (!controllerNavigation) controllerNavigation = GetComponent<BattleControllerNavigation>();
         if (!controllerNavigation) controllerNavigation = gameObject.AddComponent<BattleControllerNavigation>();
@@ -127,11 +129,20 @@ public class BattleMenuUI : MonoBehaviour
     }
     public void Unbind()
     {
-        if (battle) { battle.PointerOverUI = null; battle.ActionResolved -= Root; }
+        if (swapPanel) swapPanel.Close();
+        if (battle) { battle.PointerOverUI = null; battle.ActionResolved -= Root; battle.TurnStarted -= Root; battle.PartyChanged -= RefreshParty; }
         if (controllerNavigation) controllerNavigation.Unbind();
         battle = null; Hide();
     }
     public void Show() { Ensure(); gameObject.SetActive(true); }
+    private void RefreshParty() => hud.Bind(battle, attackButton.Label.font);
+    private void OpenSwap()
+    {
+        if (!battle.CanSwap) return;
+        if (!swapPanel) swapPanel = gameObject.AddComponent<BattleSwapPanel>();
+        tooltipPanel.SetActive(false); battle.HoverAction(null);
+        swapPanel.Open(battle, attackButton.Label.font);
+    }
     public void Hide() => gameObject.SetActive(false);
     private bool IsOverUI(Vector2 point)
     {
@@ -170,15 +181,17 @@ public class BattleMenuUI : MonoBehaviour
         BeginList();
         Row("Attack", () => Open(BattleActionCategory.Attack), "Choose an attack available to this character. Movement is free on green tiles. Tab / controller LB switches grid navigation on or off.", () => battle.ActionReady, true);
         Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a skill available to this character.", () => battle.ActionReady, true);
+        Row("Magic", () => Open(BattleActionCategory.Magic), "Cast a learned spell. Spells are available to every character; MP costs are not implemented yet.", () => battle.ActionReady);
         Row("Items", () => Open(BattleActionCategory.Item), "Use a carried item. Costs one action and one item.", () => battle.ActionReady, true);
-        for (int i = 0; i < 3; i++) pool[i].SetIcons(rootKeyboardIcons[i], rootControllerIcons[i], true);
-        Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Paralyzed prevents Block. Keyboard 4 / controller LT + RB.", () => battle.ActionReady && battle.Combatants[0].CanBlock, true);
-        pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon, true);
+        for (int i = 0; i < 3; i++) pool[i == 2 ? 3 : i].SetIcons(rootKeyboardIcons[i], rootControllerIcons[i], true);
+        Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Paralyzed prevents Block. Keyboard 4 / controller LT + RB.", () => battle.ActionReady && battle.Combatants[battle.CurrentActorIndex].CanBlock, true);
+        pool[4].SetIcons(blockKeyboardIcon, blockControllerIcon, true);
         Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller LT + B.", () => battle.PlayerReady, true);
-        pool[4].SetIcons(runKeyboardIcon, runControllerIcon, true);
+        pool[5].SetIcons(runKeyboardIcon, runControllerIcon, true);
         Row("Dash", () => battle.Dash(), "Spend your action to gain 3 movement points. Move normally afterward; unused points carry over.", () => battle.ActionReady);
         Row("End Turn", () => battle.EndTurn(), "T / controller right-stick click (R3): end this turn. Unspent movement carries over; your next turn grants three more points.", () => battle.PlayerReady, true);
-        pool[6].SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
+        pool[7].SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
+        Row("Swap", OpenSwap, "Swap this living character with a living reserve. Costs your action; remaining movement transfers. Your default party returns after battle.", () => battle.CanSwap);
         FinishList();
     }
     private void Open(BattleActionCategory selectedCategory)
@@ -309,9 +322,9 @@ public class BattleMenuUI : MonoBehaviour
     private void UpdateAvailability()
     {
         for (int i = 0; i < rows; i++) pool[i].SetAvailable(availability[i]());
-        bool commandsVisible = battle.CurrentActorIndex == 0 && battle.Combatants[0].ActionAvailable && !battle.DefenseActive;
+        bool commandsVisible = battle.IsAlly(battle.CurrentActorIndex) && battle.Combatants[battle.CurrentActorIndex].ActionAvailable && !battle.DefenseActive;
         viewport.gameObject.SetActive(commandsVisible);
-        remainingTurnButton.gameObject.SetActive(battle.PlayerReady && !battle.Combatants[0].ActionAvailable);
+        remainingTurnButton.gameObject.SetActive(battle.PlayerReady && !battle.Combatants[battle.CurrentActorIndex].ActionAvailable);
         remainingTurnButton.SetAvailable(battle.PlayerReady);
         if (!commandsVisible)
         {
@@ -329,8 +342,8 @@ public class BattleMenuUI : MonoBehaviour
     }
     public void ControllerRootShortcut(int index)
     {
-        if (!battle || !battle.PlayerReady || battle.InspectionOpen || browsing || battle.ChosenAction != null) return;
-        if (index >= 0 && index < 5) pool[index].Invoke();
+        if (!battle || !battle.PlayerReady || battle.InteractionBlocked || browsing || battle.ChosenAction != null) return;
+        if (index >= 0 && index < 5) pool[index >= 2 ? index + 1 : index].Invoke();
     }
     public bool ControllerBrowsing => browsing;
     public void ControllerEndTurn() { if (CanUseEndTurnShortcut()) battle.EndTurn(); }
@@ -350,7 +363,7 @@ public class BattleMenuUI : MonoBehaviour
     public void ControllerCommands(int delta, bool activate)
     {
         if (!battle.PlayerReady) return;
-        if (!battle.Combatants[0].ActionAvailable)
+        if (!battle.Combatants[battle.CurrentActorIndex].ActionAvailable)
         {
             remainingTurnButton.SetHighlighted(true);
             if (activate) ControllerEndTurn();
@@ -365,7 +378,7 @@ public class BattleMenuUI : MonoBehaviour
         if (activate) pool[highlighted].Invoke();
     }
     private bool CanUseEndTurnShortcut()
-        => battle && battle.PlayerReady && !battle.InspectionOpen && !browsing && !editingFavorites
+        => battle && battle.PlayerReady && !battle.InteractionBlocked && !browsing && !editingFavorites
             && battle.ChosenAction == null
             && (viewport.gameObject.activeInHierarchy || remainingTurnButton.gameObject.activeInHierarchy);
 
@@ -375,7 +388,7 @@ public class BattleMenuUI : MonoBehaviour
 
     public bool ShouldShowShortcutFocus(bool applicationFocused)
     {
-        return battle && battle.PlayerReady && battle.ActionReady && !battle.InspectionOpen
+        return battle && battle.PlayerReady && battle.ActionReady && !battle.InteractionBlocked
             && battle.ChosenAction == null && !battle.ControllerInputLocked && viewport.gameObject.activeInHierarchy
             && controllerNavigation && controllerNavigation.ControllerActive && Gamepad.current != null
             && Gamepad.current.leftTrigger.isPressed && !Gamepad.current.rightTrigger.isPressed
@@ -389,16 +402,17 @@ public class BattleMenuUI : MonoBehaviour
     {
         UpdateShortcutFocus();
         if (!battle) return;
+        if (battle.PartyInputBlocked) return;
         UpdateAvailability();
         bool targeting = battle.ChosenAction != null;
         FitTooltip();
-        if (battle.InspectionOpen || (hud && hud.InspectionDismissedFrame == Time.frameCount)) return;
+        if (battle.InteractionBlocked || (hud && hud.InspectionDismissedFrame == Time.frameCount)) return;
         if (!battle.PlayerReady) return;
         if (controllerNavigation && controllerNavigation.ControllerActive) return;
         var k = Keyboard.current; var pad = Gamepad.current;
         // Match the visible main-menu End Turn control, never an ability submenu or target selection.
         if (CanUseEndTurnShortcut() && PressedEndTurn(k, pad)) { battle.EndTurn(); return; }
-        if (!battle.Combatants[0].ActionAvailable)
+        if (!battle.Combatants[battle.CurrentActorIndex].ActionAvailable)
         {
             if ((k != null && k.tabKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame))
             { moving = !moving; battle.KeyboardGridInputEnabled = moving; }

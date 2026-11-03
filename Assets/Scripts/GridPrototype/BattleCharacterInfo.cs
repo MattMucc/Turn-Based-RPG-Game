@@ -12,6 +12,17 @@ namespace Game.GridPrototype
         [SerializeField] private int unspentPoints;
         [SerializeField] private int rewardedLevel = 1;
         public int UnspentPoints => unspentPoints;
+        [SerializeField] private int storedHealth = -1;
+        public int StoredHealth => storedHealth;
+        public void StoreHealth(GridUnit unit) => storedHealth = Mathf.Clamp(unit.Health, 0, unit.MaxHealth);
+        public void RestoreBattleHealth(GridUnit unit)
+        { if (storedHealth >= 0) unit.Health = Mathf.Clamp(storedHealth, 1, unit.MaxHealth); }
+        public void HealOutsideCombat(int amount)
+        {
+            if (amount <= 0) return;
+            int maximum = Mathf.Max(1, BaseHealth + Stat(CharacterStat.Vitality) * HealthPerVitality);
+            storedHealth = (int)System.Math.Min(maximum, (long)(storedHealth < 0 ? maximum : storedHealth) + amount);
+        }
         public int BaseStat(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : Initiative;
         public int Stat(CharacterStat stat) => (int)System.Math.Min(int.MaxValue, (long)Mathf.Max(0, BaseStat(stat)) + Mathf.Max(0, AutomaticGrowth.Get(stat)) * (long)Mathf.Max(0, Level - 1) + AllocatedPoints.Get(stat));
         public void GrantLevel(int level, int pointsPerLevel)

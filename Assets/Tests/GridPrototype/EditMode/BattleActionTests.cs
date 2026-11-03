@@ -169,7 +169,7 @@ public class BattleActionTests
         Assert.AreSame(endPad, buttonType.GetProperty("ControllerIcon").GetValue(root.transform.Find("Remaining turn").GetComponent(buttonType)));
         Assert.AreEqual("4", ((Sprite)buttonType.GetProperty("KeyboardIcon").GetValue(Find("Block").GetComponent(buttonType))).name);
         Assert.AreEqual("5", ((Sprite)buttonType.GetProperty("KeyboardIcon").GetValue(Find("Run").GetComponent(buttonType))).name);
-        Assert.AreEqual(7, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(9, container.GetComponentsInChildren<Button>().Length);
         Assert.IsNull(root.transform.Find("Battle targeting"));
         var hudType = Type.GetType("BattleHud, Assembly-CSharp");
         var hud = root.GetComponentInChildren(hudType);
@@ -237,12 +237,12 @@ public class BattleActionTests
         Assert.IsNull(battle.ChosenAction); Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
         Assert.IsTrue(Find("Area Skill").interactable); Assert.IsFalse(counter.gameObject.activeInHierarchy);
         Find("Multi-target Skill").onClick.Invoke(); battle.ToggleTarget(cells[1]);
-        Find("Back").onClick.Invoke(); Assert.AreEqual(7, container.GetComponentsInChildren<Button>().Length);
+        Find("Back").onClick.Invoke(); Assert.AreEqual(9, container.GetComponentsInChildren<Button>().Length);
         Assert.IsNull(battle.ChosenAction); Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
-        Assert.AreEqual(3, Find("Block").transform.GetSiblingIndex()); Assert.AreEqual(4, Find("Run").transform.GetSiblingIndex());
+        Assert.AreEqual(4, Find("Block").transform.GetSiblingIndex()); Assert.AreEqual(5, Find("Run").transform.GetSiblingIndex());
         menuType.GetMethod("Unbind").Invoke(menu, null); Assert.IsFalse(root.activeSelf);
         menuType.GetMethod("Bind").Invoke(menu, new object[] { battle }); Assert.IsTrue(root.activeSelf);
-        Assert.AreEqual(7, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(9, container.GetComponentsInChildren<Button>().Length);
         battle.Block();
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);

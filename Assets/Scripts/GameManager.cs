@@ -1,8 +1,21 @@
 using UnityEngine;
+using System.Collections.Generic;
 using Game.GridPrototype;
 
 public class GameManager : MonoBehaviour
 {
+    [Tooltip("Default active team (up to three). First entry is its captain. Temporary battle swaps do not modify this list.")]
+    public List<BattleCharacterInfo> BattleParty = new List<BattleCharacterInfo>();
+    [Tooltip("The other three cast members, in reserve captain order.")]
+    public List<BattleCharacterInfo> ReserveParty = new List<BattleCharacterInfo>();
+    public List<BattleCharacterInfo> GetBattleParty()
+    {
+        var result = new List<BattleCharacterInfo>();
+        foreach (var member in BattleParty)
+            if (member && !result.Contains(member) && result.Count < 3) result.Add(member);
+        if (result.Count == 0 && PossessedCharacter) result.Add(PossessedCharacter.GetComponent<BattleCharacterInfo>());
+        return result;
+    }
     public PartyProgression Progression = new PartyProgression();
     public ProgressionMenu ProgressionMenu { get; private set; }
     public bool WorldInputBlocked => ProgressionMenu && ProgressionMenu.BlocksWorldInput;
@@ -22,6 +35,8 @@ public class GameManager : MonoBehaviour
 
         ProgressionMenu = GetComponent<ProgressionMenu>();
         if (!ProgressionMenu) ProgressionMenu = gameObject.AddComponent<ProgressionMenu>();
+        foreach (var member in BattleParty) Progression.Register(member);
+        foreach (var member in ReserveParty) Progression.Register(member);
         foreach (var member in Progression.Members.ToArray()) Progression.Register(member);
         if (!Input) Input = GetComponent<PlayerInputReader>();
         if (!PlayerRotation) PlayerRotation = Camera.main.transform.root.GetComponent<PlayerRotation>();

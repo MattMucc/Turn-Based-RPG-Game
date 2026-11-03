@@ -88,7 +88,7 @@ public sealed class ProgressionMenu : MonoBehaviour
         var member = Member(); var party = GameManager.Instance.Progression;
         heading.text = member ? (string.IsNullOrWhiteSpace(member.DisplayName) ? member.name.Replace("(Clone)", "") : member.DisplayName) : "No character";
         summary.text = member ? $"Level {member.Level}   •   {member.UnspentPoints} points available\n" +
-            (party.Level >= party.LevelCap ? "Party XP: level cap reached" : $"Party XP: {party.Progress} / {party.Cost(party.Level)}") : "Register a party member.";
+            (member.Level >= party.LevelCap ? "XP: level cap reached" : $"XP: {party.ProgressFor(member)} / {party.Cost(Mathf.Max(1, member.Level))}") : "Register a party member.";
         for (int i = 0; i < 6; i++)
         {
             statLabels[i].text = names[i] + "   " + (member ? member.Stat((CharacterStat)i).ToString() : "—");

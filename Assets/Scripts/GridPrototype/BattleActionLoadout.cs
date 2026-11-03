@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Game.GridPrototype
 {
-    public enum BattleActionCategory { Attack, Skill, Item }
+    public enum BattleActionCategory { Attack, Skill, Item, Magic }
     public enum BattleTargetPattern { Single, Area, Piercing, Multiple }
 
     [Serializable]
@@ -100,6 +100,14 @@ namespace Game.GridPrototype
                 if (other != null && other.Category == option.Category && other.FavoriteSlot == slot) other.FavoriteSlot = -1;
             option.FavoriteSlot = slot; return true;
         }
+        public void EnsureUniversalAttacks()
+        {
+            if (!Options.Exists(o => o != null && o.Effect == ActionEffect.Push))
+                Options.Add(new BattleActionOption { Name = "Push", Effect = ActionEffect.Push, Damage = 0, Description = "Push one cell on clear, level ground. Requires strictly greater Strength." });
+            int basics = Options.FindAll(o => o != null && o.Category == BattleActionCategory.Attack && o.Effect == ActionEffect.Damage).Count;
+            if (basics == 0) Options.Add(new BattleActionOption { Name = "Strike", Damage = 12, Scaling = ScalingStat.Strength, StatScaling = 1, Description = "A simple adjacent physical attack." });
+            if (basics < 2) Options.Add(new BattleActionOption { Name = "Quick Strike", Damage = 8, Scaling = ScalingStat.Strength, StatScaling = .75f, Description = "A lighter adjacent physical attack." });
+        }
         public static BattleActionOption CreatePrototypeSignature() => new BattleActionOption
         {
             Name = "Signature Strike", Description = "Prototype cinematic attack. Press when prompted to strengthen the impact.",
@@ -149,10 +157,10 @@ namespace Game.GridPrototype
         };
         public static BattleActionOption[] CreateStatusPrototypes() => new[]
         {
-            new BattleActionOption { Name = "Ember Volley", Description = "Three separately rolled hits. Each successful burn roll adds two remaining ticks.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Multiple, Reach = 4, MaxTargets = 3, Damage = 5, DamageType = DamageKind.Magical, Element = CombatElement.Fire, Scaling = ScalingStat.Magic, StatScaling = .5f, InflictedStatus = CombatStatus.Burning, StatusChance = 50, StatusStacks = 2 },
-            new BattleActionOption { Name = "Renew", Description = "Three start-of-turn healing ticks. Select yourself or another character.", Category = BattleActionCategory.Skill, Reach = 4, Effect = ActionEffect.Support, Damage = 0, InflictedStatus = CombatStatus.Regeneration, StatusStacks = 3 },
-            new BattleActionOption { Name = "Ward", Description = "Grant a blue shield that absorbs 30 damage before health.", Category = BattleActionCategory.Skill, Reach = 4, Effect = ActionEffect.Support, Damage = 0, BarrierGranted = 30 },
-            new BattleActionOption { Name = "Paralyzing Spark", Description = "Prevents dodge, parry and Block through the target's next turn. Does not skip their turn.", Category = BattleActionCategory.Skill, Reach = 4, Damage = 0, DamageType = DamageKind.Magical, Element = CombatElement.Lightning, InflictedStatus = CombatStatus.Paralyzed },
+            new BattleActionOption { Name = "Ember Volley", Description = "Three separately rolled hits. Each successful burn roll adds two remaining ticks.", Category = BattleActionCategory.Magic, Pattern = BattleTargetPattern.Multiple, Reach = 4, MaxTargets = 3, Damage = 5, DamageType = DamageKind.Magical, Element = CombatElement.Fire, Scaling = ScalingStat.Magic, StatScaling = .5f, InflictedStatus = CombatStatus.Burning, StatusChance = 50, StatusStacks = 2 },
+            new BattleActionOption { Name = "Renew", Description = "Three start-of-turn healing ticks. Select yourself or another character.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, InflictedStatus = CombatStatus.Regeneration, StatusStacks = 3 },
+            new BattleActionOption { Name = "Ward", Description = "Grant a blue shield that absorbs 30 damage before health.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, BarrierGranted = 30 },
+            new BattleActionOption { Name = "Paralyzing Spark", Description = "Prevents dodge, parry and Block through the target's next turn. Does not skip their turn.", Category = BattleActionCategory.Magic, Reach = 4, Damage = 0, DamageType = DamageKind.Magical, Element = CombatElement.Lightning, InflictedStatus = CombatStatus.Paralyzed },
             new BattleActionOption { Name = "Push", Description = "Push one cell forward on level, clear ground. Your Strength must exceed the target's Strength or object's push resistance. Rivers, falls and traps are not supported yet.", Category = BattleActionCategory.Attack, Effect = ActionEffect.Push, Damage = 0 }
         };
         public List<BattleActionOption> Options = CreateDefaultOptions();

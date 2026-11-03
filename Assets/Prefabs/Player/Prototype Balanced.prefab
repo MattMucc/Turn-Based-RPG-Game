@@ -275,7 +275,7 @@ GameObject:
   - component: {fileID: 6714576581853998703}
   - component: {fileID: 8802730022444101226}
   m_Layer: 6
-  m_Name: Character
+  m_Name: Prototype Balanced
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -356,7 +356,7 @@ MonoBehaviour:
   BurningDamagePerTick: 5
   RegenerationHealingPerTick: 5
   Portrait: {fileID: 0}
-  DisplayName: 
+  DisplayName: Prototype Balanced
   Level: 0
   Race: 
   Role: 
@@ -789,7 +789,7 @@ MonoBehaviour:
     FavoriteSlot: -1
     Description: Three separately rolled hits. Each successful burn roll adds two
       remaining ticks.
-    Category: 1
+    Category: 3
     Pattern: 3
     Reach: 4
     Radius: 1
@@ -818,7 +818,7 @@ MonoBehaviour:
   - Name: Renew
     FavoriteSlot: -1
     Description: Three start-of-turn healing ticks. Select yourself or another character.
-    Category: 1
+    Category: 3
     Pattern: 0
     Reach: 4
     Radius: 1
@@ -847,7 +847,7 @@ MonoBehaviour:
   - Name: Ward
     FavoriteSlot: -1
     Description: Grant a blue shield that absorbs 30 damage before health.
-    Category: 1
+    Category: 3
     Pattern: 0
     Reach: 4
     Radius: 1
@@ -877,7 +877,7 @@ MonoBehaviour:
     FavoriteSlot: -1
     Description: Prevents dodge, parry and Block through the target's next turn.
       Does not skip their turn.
-    Category: 1
+    Category: 3
     Pattern: 0
     Reach: 4
     Radius: 1

@@ -8,9 +8,10 @@ namespace Game.GridPrototype
         public readonly GridUnit Unit;
         public readonly BattleDestructible Destructible;
         public readonly int ActorIndex;
+        public readonly bool Allied;
         public readonly Renderer[] Renderers;
-        public BattleTarget(Transform actor, GridUnit unit, int index)
-        { Transform = actor; Unit = unit; ActorIndex = index; Renderers = actor.GetComponentsInChildren<Renderer>(); }
+        public BattleTarget(Transform actor, GridUnit unit, int index, bool? allied = null)
+        { Transform = actor; Unit = unit; ActorIndex = index; Allied = allied ?? index == 0; Renderers = actor.GetComponentsInChildren<Renderer>(); }
         public BattleTarget(BattleDestructible prop)
         { Transform = prop.transform; Destructible = prop; ActorIndex = -1; Renderers = prop.GetComponentsInChildren<Renderer>(); }
         public BattleTarget(BattleHoverInfo info)
@@ -21,7 +22,7 @@ namespace Game.GridPrototype
             var info = Transform ? Transform.GetComponent<BattleHoverInfo>() : null;
             var kind = info ? info.Kind : BattleHoverKind.Automatic;
             if ((Destructible && Destructible.DangerousWhenDestroyed) || kind == BattleHoverKind.Dangerous || kind == BattleHoverKind.Hostile) return Color.red;
-            if (kind == BattleHoverKind.Automatic) kind = Unit != null ? (ActorIndex == 0 ? BattleHoverKind.Ally : BattleHoverKind.Hostile) : BattleHoverKind.Interactable;
+            if (kind == BattleHoverKind.Automatic) kind = Unit != null ? (Allied ? BattleHoverKind.Ally : BattleHoverKind.Hostile) : BattleHoverKind.Interactable;
             if (kind == BattleHoverKind.Ally) return Unit != null && ActorIndex == activeActor ? new Color(.5f, 1f, 0f) : Color.cyan;
             return kind == BattleHoverKind.Hostile ? Color.red : Color.yellow;
         }

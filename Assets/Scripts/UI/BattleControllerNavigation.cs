@@ -130,6 +130,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
     public void ProcessController(Gamepad pad, float deltaTime)
     {
         if (!battle) return;
+        if (battle.PartyInputBlocked) { ClearHover(); if (cursor) cursor.gameObject.SetActive(false); return; }
         if (pad == null) { SetActiveController(false); return; }
         var left = BattleNavigationState.FilterStick(pad.leftStick.ReadValue());
         var right = BattleNavigationState.FilterStick(pad.rightStick.ReadValue());

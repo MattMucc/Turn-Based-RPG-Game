@@ -30,6 +30,18 @@ namespace Game.GridPrototype
         public bool Blocking;
         // Hook for Paralyzed and other future effects; does not skip the turn.
         public bool ReactionsDisabled;
+        private int deferredMovement;
+
+        // The slot transfers its remainder; the incoming character's bank waits for a normal turn.
+        public bool HandOffTurnTo(GridUnit incoming)
+        {
+            if (incoming == null || incoming == this || Health <= 0 || incoming.Health <= 0 || incoming.TurnOpen || !SpendAction()) return false;
+            incoming.deferredMovement = checked(incoming.deferredMovement + incoming.Movement);
+            incoming.Movement = Movement; Movement = 0;
+            EndTurn();
+            incoming.TurnOpen = true; incoming.ActionAvailable = false; incoming.Blocking = false;
+            return true;
+        }
 
         public GridUnit(string name, Vector2Int position) { Name = name; Position = position; }
 
@@ -40,7 +52,7 @@ namespace Game.GridPrototype
             if (movementGrant < 0) throw new ArgumentOutOfRangeException(nameof(movementGrant));
             TickStartEffects();
             if (Health <= 0) return;
-            Movement = checked(Movement + movementGrant);
+            Movement = checked(Movement + deferredMovement + movementGrant); deferredMovement = 0;
             ActionAvailable = true;
             Blocking = false;
             TurnOpen = true;

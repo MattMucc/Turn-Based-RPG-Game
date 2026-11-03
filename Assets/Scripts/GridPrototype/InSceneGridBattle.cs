@@ -8,7 +8,7 @@ namespace Game.GridPrototype
 {
     // Prototype encounter controller. Unit zero is the currently possessed world
     // character; the rest are the actual spawned members of the triggering group.
-    public sealed class InSceneGridBattle : MonoBehaviour
+    public sealed partial class InSceneGridBattle : MonoBehaviour
     {
         public TerrainBattleGrid Grid { get; private set; }
         private readonly List<Transform> actors = new List<Transform>();
@@ -33,7 +33,12 @@ namespace Game.GridPrototype
         private float playerTurnElapsed;
         private const float PlayerTurnDuration = 0.3f;
         private string message;
-        public BattleActionLoadout Loadout { get; private set; }
+        private int allyCount = 1, defenderIndex, facingIndex;
+        private readonly List<BattleActionLoadout> allyLoadouts = new();
+        private readonly List<DefensePrototypeSettings> allyDefense = new();
+        public int AllyCount => allyCount;
+        public bool IsAlly(int index) => index >= 0 && index < allyCount;
+        public BattleActionLoadout Loadout => allyLoadouts[IsAlly(actorIndex) ? actorIndex : 0];
         public IReadOnlyList<GridUnit> Combatants => turnOrder;
         public Camera BattleCamera => view;
         public int CurrentActorIndex => actorIndex;
@@ -62,7 +67,7 @@ namespace Game.GridPrototype
         private readonly Dictionary<int, int> hitDamage = new();
         private readonly Dictionary<int, float> hitTime = new();
         public Vector3 HealthBarPosition(int index) => actors[index].position + Vector3.up * (offsets[index] + 0.7f);
-        public string DisplayName(int index) => (index == 0 ? "" : $"Enemy {index}: ") + turnOrder[index].Name.Replace("(Clone)", "").Trim();
+        public string DisplayName(int index) => battleTargets[index].Name;
         public int AssignedHits(int index) => targets.FindAll(t => t == turnOrder[index].Position).Count;
         public int RecentDamage(int index) => hitTime.TryGetValue(index, out float time) && Time.time - time < 1.2f ? hitDamage[index] : 0;
         public List<int> UpcomingTurns()
@@ -79,6 +84,10 @@ namespace Game.GridPrototype
         public BattleCharacterInfo Info(int index) => actors[index].GetComponent<BattleCharacterInfo>();
         public event Action<int, Vector2> ContextRequested;
         public bool InspectionOpen;
+        public bool PartySelectionOpen;
+        public int PartySelectionClosedFrame = -1;
+        public bool PartyInputBlocked => PartySelectionOpen || PartySelectionClosedFrame == Time.frameCount;
+        public bool InteractionBlocked => InspectionOpen || PartyInputBlocked;
         public bool ExternalControllerActive;
         public bool ControllerInputLocked => busy || closing || playerTurning || SignatureActive || DefenseActive;
         public event Action<BattleTarget, Vector2> TargetContextRequested;
@@ -91,23 +100,25 @@ namespace Game.GridPrototype
         public bool GridInputEnabled = true;
         public bool KeyboardGridInputEnabled = true;
         public Func<Vector2, bool> PointerOverUI;
-        public bool PlayerReady => !busy && !closing && !playerTurning && !SignatureActive && actorIndex == 0;
+        public bool PlayerReady => turnOrder.Count > 0 && !busy && !closing && !playerTurning && !SignatureActive && IsAlly(actorIndex) && Active.Health > 0;
         public bool ActionReady => PlayerReady && Active.ActionAvailable;
-        public int Movement => turnOrder[0].Movement;
+        public int Movement => Active.Movement;
         public int TargetCount => targets.Count;
         public int TargetLimit => ChosenAction?.Pattern == BattleTargetPattern.Multiple ? ChosenAction.MaxTargets : 1;
         public string Message => message;
         public event Action ActionResolved;
+        public event Action TurnStarted;
         private GridUnit Active => turnOrder[actorIndex];
 
 
         public void Initialize(TerrainBattleGrid grid, IReadOnlyList<Transform> figures, IReadOnlyList<float> footOffsets,
-            IReadOnlyList<Vector2Int> positions, Camera sourceCamera, Shader shader, Action<bool> onFinished, bool preemptive = false)
+            IReadOnlyList<Vector2Int> positions, Camera sourceCamera, Shader shader, Action<bool> onFinished, bool preemptive = false, int partySize = 1)
         {
+            allyCount = Mathf.Clamp(partySize, 1, figures.Count - 1);
             Grid = grid; finished = onFinished; overlayShader = shader;
             // Pick the closest encounter enemy before grid placement moves either actor.
             int nearestEnemy = -1; float nearestDistance = float.PositiveInfinity;
-            for (int i = 1; i < figures.Count; i++)
+            for (int i = allyCount; i < figures.Count; i++)
             {
                 Vector3 separation = figures[i].position - figures[0].position; separation.y = 0;
                 if (separation.sqrMagnitude < nearestDistance)
@@ -118,25 +129,35 @@ namespace Game.GridPrototype
                 actors.Add(figures[i]); offsets.Add(footOffsets[i]);
                 if (!figures[i].GetComponent<BattleCharacterInfo>()) figures[i].gameObject.AddComponent<BattleCharacterInfo>();
                 var unit = new GridUnit(figures[i].name, positions[i]); figures[i].GetComponent<BattleCharacterInfo>().Configure(unit); turnOrder.Add(unit); Grid.Board.Units.Add(unit);
-                battleTargets.Add(new BattleTarget(figures[i], unit, i));
+                if (i < allyCount) { figures[i].GetComponent<BattleCharacterInfo>().RestoreBattleHealth(unit); participants.Add(figures[i].GetComponent<BattleCharacterInfo>()); }
+                battleTargets.Add(new BattleTarget(figures[i], unit, i, i < allyCount));
                 figures[i].position = Grid.Point(positions[i]) + Vector3.up * footOffsets[i];
             }
-            for (int i = 1; i < actors.Count; i++)
+            for (int i = allyCount; i < actors.Count; i++)
                 actors[i].rotation = GridTargeting.Facing(Grid.Point(positions[0]) - Grid.Point(positions[i]));
+            for (int i = 1; i < allyCount; i++)
+                if (nearestEnemy >= 0) actors[i].rotation = GridTargeting.Facing(actors[nearestEnemy].position - actors[i].position);
             if (nearestEnemy >= 0)
             {
                 BeginPlayerFacing(actors[nearestEnemy].position);
             }
-            DefenseSettings = figures[0].GetComponent<DefensePrototypeSettings>();
-            if (!DefenseSettings) DefenseSettings = figures[0].gameObject.AddComponent<DefensePrototypeSettings>();
-            Loadout = figures[0].GetComponent<BattleActionLoadout>();
-            if (!Loadout) Loadout = figures[0].gameObject.AddComponent<BattleActionLoadout>();
+            for (int i = 0; i < allyCount; i++)
+            {
+                var defense = figures[i].GetComponent<DefensePrototypeSettings>();
+                if (!defense) defense = figures[i].gameObject.AddComponent<DefensePrototypeSettings>();
+                allyDefense.Add(defense);
+                var loadout = figures[i].GetComponent<BattleActionLoadout>();
+                if (!loadout) loadout = figures[i].gameObject.AddComponent<BattleActionLoadout>();
+                loadout.EnsureUniversalAttacks();
+                allyLoadouts.Add(loadout);
+            }
+            DefenseSettings = allyDefense[0];
             var cameraObject = new GameObject("Encounter camera", typeof(Camera)); cameraObject.transform.SetParent(transform);
             view = cameraObject.GetComponent<Camera>(); view.CopyFrom(sourceCamera); view.enabled = true; view.rect = new Rect(0, 0, 1, 1);
             Vector3 center = Grid.Point(positions[0]);
             view.transform.position = center + new Vector3(0, 15, -14); view.transform.LookAt(center);
             cameraControls = cameraObject.AddComponent<GridCameraController>(); cameraControls.FocusTarget = actors[0];
-            cameraControls.PointerOverUI = p => InspectionOpen || (PointerOverUI?.Invoke(p) ?? false);
+            cameraControls.PointerOverUI = p => InteractionBlocked || (PointerOverUI?.Invoke(p) ?? false);
             cameraControls.ContextClick = p => { if (TryPickActor(p, out int i)) ContextRequested?.Invoke(i, p); };
             foreach (var prop in FindObjectsByType<BattleDestructible>(FindObjectsSortMode.None)) RegisterDestructible(prop);
             foreach (var info in FindObjectsByType<BattleHoverInfo>(FindObjectsSortMode.None))
@@ -149,8 +170,9 @@ namespace Game.GridPrototype
             foreach (var figure in actors) initiatives.Add(figure.GetComponent<BattleCharacterInfo>().EffectiveInitiative);
             initiativeOrder = new InitiativeOrder(initiatives, preemptive ? 0 : -1);
             actorIndex = initiativeOrder.First;
+            if (IsAlly(actorIndex)) DefenseSettings = allyDefense[actorIndex];
             Active.BeginTurn(); selected = Active.Position;
-            openingEnemyTurnPending = actorIndex != 0;
+            openingEnemyTurnPending = !IsAlly(actorIndex);
             busy = openingEnemyTurnPending;
             FocusActor(actorIndex);
             message = "Choose a command or move to a green tile."; Refresh();
@@ -182,14 +204,15 @@ namespace Game.GridPrototype
             if (ChosenAction != null) { Preview(); return; }
             if (HoveredAction != null && ActionReady) { PreviewReach(HoveredAction); return; }
             reachable = Grid.Board.Reachable(Active, Active.Movement);
-            overlay.Show(actorIndex == 0 ? reachable : new Dictionary<Vector2Int, GridRoute>(), selected);
+            overlay.Show(IsAlly(actorIndex) ? reachable : new Dictionary<Vector2Int, GridRoute>(), selected);
         }
 
-        private void BeginPlayerFacing(Vector3 target)
+        private void BeginPlayerFacing(Vector3 target, int index = -1)
         {
-            Vector3 direction = target - actors[0].position; direction.y = 0;
+            facingIndex = index >= 0 ? index : actorIndex;
+            Vector3 direction = target - actors[facingIndex].position; direction.y = 0;
             if (direction.sqrMagnitude <= 0.0001f) return;
-            playerTurnStart = actors[0].rotation; playerTurnEnd = Quaternion.LookRotation(direction, Vector3.up);
+            playerTurnStart = actors[facingIndex].rotation; playerTurnEnd = Quaternion.LookRotation(direction, Vector3.up);
             playerTurnElapsed = 0;
             playerTurning = Quaternion.Angle(playerTurnStart, playerTurnEnd) > 0.1f;
         }
@@ -198,7 +221,7 @@ namespace Game.GridPrototype
             if (!playerTurning || closing) return;
             playerTurnElapsed += Mathf.Max(0, deltaTime);
             float t = Mathf.Clamp01(playerTurnElapsed / PlayerTurnDuration);
-            actors[0].rotation = Quaternion.Slerp(playerTurnStart, playerTurnEnd, t * t * (3 - 2 * t));
+            actors[facingIndex].rotation = Quaternion.Slerp(playerTurnStart, playerTurnEnd, t * t * (3 - 2 * t));
             if (t >= 1) playerTurning = false;
         }
 
@@ -208,7 +231,7 @@ namespace Game.GridPrototype
             if (Application.isFocused) AdvanceFacing(Time.deltaTime);
             if (openingEnemyTurnPending && !playerTurning && Application.isFocused)
             { openingEnemyTurnPending = false; StartCoroutine(EnemyRound(false)); }
-            if (DefenseActive && Application.isFocused && !InspectionOpen)
+            if (DefenseActive && Application.isFocused && !InteractionBlocked)
             {
                 var keyboard = Keyboard.current; var gamepad = Gamepad.current;
                 bool dodge = (keyboard != null && keyboard.spaceKey.wasPressedThisFrame)
@@ -217,7 +240,7 @@ namespace Game.GridPrototype
                     || (gamepad != null && gamepad.rightShoulder.wasPressedThisFrame);
                 AdvanceDefense(Time.deltaTime, dodge, parry);
             }
-            if (SignatureActive && CurrentQte != null && Application.isFocused && !InspectionOpen)
+            if (SignatureActive && CurrentQte != null && Application.isFocused && !InteractionBlocked)
             {
                 qteInput.Read(Keyboard.current, Gamepad.current, out bool correct, out bool wrong, CurrentQte.Expected, CurrentQte.Mode == QteMode.DualInput ? CurrentQte.Secondary : (QteButton?)null);
                 AdvanceSignature(Time.unscaledDeltaTime, Time.frameCount > qteOpenedFrame && correct, Time.frameCount > qteOpenedFrame && wrong, PressQteInput.IsHeld(Keyboard.current, Gamepad.current, CurrentQte.Expected), CurrentQte.Mode == QteMode.DualInput && PressQteInput.IsHeld(Keyboard.current, Gamepad.current, CurrentQte.Secondary));
@@ -230,7 +253,7 @@ namespace Game.GridPrototype
             bool click = cameraControls.ConsumeClick(out var pointer);
             UpdateTargetFocus(click);
             if (targetHighlight) targetHighlight.Show(TargetFocus.Hovered, Grid, actorIndex);
-            if (!PlayerReady || !GridInputEnabled || InspectionOpen) return;
+            if (!PlayerReady || !GridInputEnabled || InteractionBlocked) return;
             var k = Keyboard.current; var pad = Gamepad.current; Vector2Int step = Vector2Int.zero;
             if (k != null && KeyboardGridInputEnabled)
             {
@@ -271,7 +294,7 @@ namespace Game.GridPrototype
 
         public void ControllerPoint(Vector2 pointer, bool overUI, bool activate)
         {
-            if (ControllerInputLocked || InspectionOpen) { TargetFocus.Hover(null); return; }
+            if (ControllerInputLocked || InteractionBlocked) { TargetFocus.Hover(null); return; }
             BattleTarget target = null;
             if (!overUI && TryPickTarget(pointer, out var picked, out var targetCell)
                 && (ChosenAction == null || CanAim(targetCell, ChosenAction))) target = picked;
@@ -294,7 +317,7 @@ namespace Game.GridPrototype
 
         public void ControllerGridStep(Vector2Int delta, bool activate = false)
         {
-            if (!PlayerReady || InspectionOpen) return;
+            if (!PlayerReady || InteractionBlocked) return;
             selected = new Vector2Int(Mathf.Clamp(selected.x + delta.x, 0, Grid.Board.Width - 1),
                 Mathf.Clamp(selected.y + delta.y, 0, Grid.Board.Depth - 1));
             Refresh();
@@ -313,7 +336,7 @@ namespace Game.GridPrototype
         private void UpdateTargetFocus(bool click)
         {
             var mouse = Mouse.current;
-            if (InspectionOpen || mouse == null) { TargetFocus.Hover(null); return; }
+            if (InteractionBlocked || mouse == null) { TargetFocus.Hover(null); return; }
             Vector2 pointer = mouse.position.ReadValue();
             bool overUI = PointerOverUI?.Invoke(pointer) ?? false;
             BattleTarget hovered = null;
@@ -379,7 +402,7 @@ namespace Game.GridPrototype
         }
 
         public void CancelAction()
-        { if (busy && actorIndex == 0 && !Active.ActionAvailable) return; HoveredAction = null; ChosenAction = null; targets.Clear(); if (Grid != null && !closing) Refresh(); }
+        { if (busy && IsAlly(actorIndex) && !Active.ActionAvailable) return; HoveredAction = null; ChosenAction = null; targets.Clear(); if (Grid != null && !closing) Refresh(); }
 
         public void HoverAction(BattleActionOption option)
         {
@@ -493,10 +516,10 @@ namespace Game.GridPrototype
                     emptyAnchor.transform.position = Grid.Point(cells[0]);
                     frameTarget = emptyAnchor.transform;
                 }
-                if (AutoCamera) cameraControls.SmoothDefenseFrame(actors[0], frameTarget);
+                if (AutoCamera) cameraControls.SmoothDefenseFrame(actors[actorIndex], frameTarget);
                 while (playerTurning || (AutoCamera && cameraControls.Transitioning)) yield return null;
                 if (closing) yield break;
-                signatureVisual = new DefenseVisual(actors[0]);
+                signatureVisual = new DefenseVisual(actors[actorIndex]);
                 EnsureDefenseAudio(); PlayDefenseCue(windupCue);
                 CurrentQte = new PressQte(action.QteDuration, inputs: action.QteSequence, mode: action.QteType, requiredTaps: action.QteRequiredTaps, holdDuration: action.QteHoldDuration, progressDrainPerSecond: action.QteProgressDrainPerSecond, tapDrainDelay: action.QteTapDrainDelay);
                 qteInput.Reset(Gamepad.current); qteOpenedFrame = Time.frameCount;
@@ -511,7 +534,7 @@ namespace Game.GridPrototype
             }
             finally
             {
-                if (!closing && AutoCamera && cameraControls.CharacterFocused) cameraControls.SmoothFocus(actors[0]);
+                if (!closing && AutoCamera && cameraControls.CharacterFocused) cameraControls.SmoothFocus(actors[actorIndex]);
                 ResetSignature();
                 if (emptyAnchor) { if (Application.isPlaying) Destroy(emptyAnchor); else DestroyImmediate(emptyAnchor); }
             }
@@ -535,8 +558,8 @@ namespace Game.GridPrototype
             for (int i = 0; i < batches.Count; i++)
             {
                 if (closing) yield break;
-                Vector3 direction = Grid.Point(cells[i]) - Grid.Point(turnOrder[0].Position);
-                if (direction.sqrMagnitude > 0.001f) actors[0].rotation = GridTargeting.Facing(direction);
+                Vector3 direction = Grid.Point(cells[i]) - Grid.Point(Active.Position);
+                if (direction.sqrMagnitude > 0.001f) actors[actorIndex].rotation = GridTargeting.Facing(direction);
                 bool broken = false;
                 foreach (var target in batches[i])
                 {
@@ -545,7 +568,7 @@ namespace Game.GridPrototype
                     {
                         var victim = target.Unit;
                         if (action.Effect == ActionEffect.Push) { TryPush(target); continue; }
-                        action.ApplyHit(turnOrder[0], victim, damage, UnityEngine.Random.value, UnityEngine.Random.value, out int dealt);
+                        action.ApplyHit(Active, victim, damage, UnityEngine.Random.value, UnityEngine.Random.value, out int dealt);
                         RecordHit(target.ActorIndex, dealt);
                         if (victim.Health == 0) { Grid.Board.Units.Remove(victim); target.Transform.gameObject.SetActive(false); }
                     }
@@ -559,18 +582,18 @@ namespace Game.GridPrototype
             }
             if (!sequential) yield return new WaitForSeconds(0.4f);
             busy = false; CancelAction();
-            if (turnOrder[0].Health <= 0) { Finish(false); yield break; }
             ActionResolved?.Invoke();
-            if (!turnOrder.Exists(u => u != turnOrder[0] && u.Health > 0)) Finish(true);
+            if (ResolveOutcome()) yield break;
+            if (Active.Health <= 0) yield return EnemyRound();
         }
 
         public bool TryPush(BattleTarget target)
         {
-            if (target == null || !target.Alive || !target.HasHealth || target.Unit == turnOrder[0]) return false;
+            if (target == null || !target.Alive || !target.HasHealth || target.Unit == Active) return false;
             int resistance = target.Unit != null ? target.Unit.Strength : target.Destructible.PushResistance;
             if (target.Unit == null && !target.Destructible.Pushable) return false;
-            if (!CombatMath.CanPush(turnOrder[0].Strength, resistance)) return false;
-            Vector3 forward = actors[0].forward;
+            if (!CombatMath.CanPush(Active.Strength, resistance)) return false;
+            Vector3 forward = actors[actorIndex].forward;
             var step = new Vector2Int(Mathf.RoundToInt(forward.x), Mathf.RoundToInt(forward.z));
             if (step == Vector2Int.zero || !Grid.TryCell(target.Transform.position, out var start)) return false;
             var end = start + step;
@@ -635,7 +658,7 @@ namespace Game.GridPrototype
             { cuePlayed = true; PlayDefenseCue(readyCue); }
             if (impact.Resolve())
             {
-                var defender = turnOrder[0]; bool eligible = defender.CanReact && defender.Health > 0;
+                var defender = turnOrder[defenderIndex]; bool eligible = defender.CanReact && defender.Health > 0;
                 int rawDamage = CombatMath.Damage(Active, defender, defenseDamage, DamageKind.Physical, ScalingStat.Strength, 1);
                 int damage = impact.Damage(rawDamage, false, eligible);
                 var result = impact.ForTarget(eligible);
@@ -643,14 +666,14 @@ namespace Game.GridPrototype
                 damage = defender.TakeDamage(damage);
                 if (result != DefenseResult.Dodged && result != DefenseResult.Parried && CombatMath.Roll(DefenseSettings.EnemyStatusChance, UnityEngine.Random.value))
                     defender.ApplyStatus(DefenseSettings.EnemyStatus, DefenseSettings.EnemyStatusStacks);
-                if (damage > 0) RecordHit(0, damage);
+                if (damage > 0) RecordHit(defenderIndex, damage);
                 DefenseFeedback = ResultLabel(result) + (damage > 0 ? $"  -{damage} HP" + (defender.Blocking ? " (Block)" : "") : "");
                 PlayDefenseCue(damage == 0 ? successCue : failedCue);
                 if (result == DefenseResult.Dodged && DefenseSettings.DodgeSlowMotion)
                     defenseSlowMotion.Begin(DefenseSettings.DodgeSlowMotionDuration, DefenseSettings.DodgeSlowMotionSpeed);
                 if (result == DefenseResult.Parried && DefenseSettings.ParrySparks && Application.isPlaying)
                 {
-                    Vector3 contact = battleTargets[0].Bounds.center + actors[0].forward * 0.65f;
+                    Vector3 contact = battleTargets[defenderIndex].Bounds.center + actors[defenderIndex].forward * 0.65f;
                     Vector3 towardCamera = (BattleCamera.transform.position - contact).normalized;
                     contact += towardCamera * 0.3f;
                     var burst = new GameObject("Successful parry sparks").AddComponent<ParryBurst>();
@@ -662,12 +685,12 @@ namespace Game.GridPrototype
                 attackerVisual?.Windup(impact.Elapsed / impact.Duration);
                 if (impact.Attempted)
                 {
-                    var result = impact.ForTarget(turnOrder[0].CanReact);
+                    var result = impact.ForTarget(turnOrder[defenderIndex].CanReact);
                     DefenseFeedback = result == DefenseResult.Dodged ? "Dodge committed" : result == DefenseResult.Parried ? "Parry committed" : ResultLabel(result);
                 }
             }
             else attackerVisual?.Impact(impact.Elapsed - impact.ResolutionTime);
-            if (impact.Attempted && turnOrder[0].CanReact && impact.Choice != DefenseChoice.Both)
+            if (impact.Attempted && turnOrder[defenderIndex].CanReact && impact.Choice != DefenseChoice.Both)
                 defenderVisual?.React(impact.Choice, impact.Elapsed - impact.AttemptTime);
         }
         private static string ResultLabel(DefenseResult result)
@@ -686,14 +709,15 @@ namespace Game.GridPrototype
         }
         private IEnumerator EnemyAttack(int index, bool combo)
         {
+            DefenseSettings = allyDefense[defenderIndex];
             busy = true; perfectParries = true; InspectionOpen = false;
-            actors[index].rotation = GridTargeting.Facing(Grid.Point(turnOrder[0].Position) - Grid.Point(turnOrder[index].Position));
-            BeginPlayerFacing(actors[index].position);
-            if (AutoCamera) cameraControls.SmoothDefenseFrame(actors[0], actors[index]);
+            actors[index].rotation = GridTargeting.Facing(Grid.Point(turnOrder[defenderIndex].Position) - Grid.Point(turnOrder[index].Position));
+            BeginPlayerFacing(actors[index].position, defenderIndex);
+            if (AutoCamera) cameraControls.SmoothDefenseFrame(actors[defenderIndex], actors[index]);
             // No defense clock runs while either character facing or camera framing is settling.
             while (playerTurning || (AutoCamera && cameraControls.Transitioning)) yield return null;
             DefenseActive = true; InspectionOpen = false;
-            attackerVisual = new DefenseVisual(actors[index]); defenderVisual = new DefenseVisual(actors[0]);
+            attackerVisual = new DefenseVisual(actors[index]); defenderVisual = new DefenseVisual(actors[defenderIndex]);
             EnsureDefenseAudio();
             float[] windups = combo ? new[] { DefenseSettings.ComboFirstWindup, DefenseSettings.ComboSecondWindup, DefenseSettings.ComboThirdWindup }
                 : new[] { DefenseSettings.SingleWindup };
@@ -702,18 +726,18 @@ namespace Game.GridPrototype
             {
                 attackerVisual.Reset(); defenderVisual.Reset();
                 CurrentImpact = DefenseSettings.CreateImpact(windups[hit], impactPosition: DefenseSettings.ImpactPositionFor(combo, hit)); defenseDamage = hitDamage; cuePlayed = false;
-                DefenseCaption = $"{DisplayName(index)} > {DisplayName(0)}  |  Hit {hit + 1} / {windups.Length}";
-                DefenseFeedback = !turnOrder[0].CanReact ? "Cannot dodge or parry" : "Watch the wind-up";
+                DefenseCaption = $"{DisplayName(index)} > {DisplayName(defenderIndex)}  |  Hit {hit + 1} / {windups.Length}";
+                DefenseFeedback = !turnOrder[defenderIndex].CanReact ? "Cannot dodge or parry" : "Watch the wind-up";
                 PlayDefenseCue(windupCue);
                 while (!CurrentImpact.Resolved) yield return null;
                 while (CurrentImpact.Elapsed < CurrentImpact.ResolutionTime + 0.4f) yield return null;
-                if (turnOrder[0].Health <= 0) { ResetDefense(); Finish(false); yield break; }
+                if (turnOrder[defenderIndex].Health <= 0) { RemoveDefeated(defenderIndex); ResetDefense(); ResolveOutcome(); yield break; }
             }
             attackerVisual.Reset(); defenderVisual.Reset(); CurrentImpact = null;
-            if (perfectParries && CanStrike(turnOrder[0], turnOrder[index]) && turnOrder[index].Health > 0)
+            if (perfectParries && CanStrike(turnOrder[defenderIndex], turnOrder[index]) && turnOrder[index].Health > 0)
             {
-                int damage = CombatMath.Damage(turnOrder[0], turnOrder[index], DefenseSettings.CounterDamage, DamageKind.Physical, ScalingStat.Strength, 1);
-                actors[0].rotation = GridTargeting.Facing(Grid.Point(turnOrder[index].Position) - Grid.Point(turnOrder[0].Position));
+                int damage = CombatMath.Damage(turnOrder[defenderIndex], turnOrder[index], DefenseSettings.CounterDamage, DamageKind.Physical, ScalingStat.Strength, 1);
+                actors[defenderIndex].rotation = GridTargeting.Facing(Grid.Point(turnOrder[index].Position) - Grid.Point(turnOrder[defenderIndex].Position));
                 damage = turnOrder[index].TakeDamage(damage); RecordHit(index, damage);
                 DefenseFeedback = $"Counterattack!  {damage} damage"; PlayDefenseCue(successCue);
                 if (turnOrder[index].Health == 0) { Grid.Board.Units.Remove(turnOrder[index]); actors[index].gameObject.SetActive(false); }
@@ -722,7 +746,7 @@ namespace Game.GridPrototype
             else if (perfectParries)
             { DefenseFeedback = "Perfect parry - counter out of reach"; yield return new WaitForSeconds(0.5f); }
             ResetDefense();
-            if (!turnOrder.Exists(u => u != turnOrder[0] && u.Health > 0)) Finish(true);
+            ResolveOutcome();
         }
         private void ResetDefense()
         {
@@ -756,7 +780,7 @@ namespace Game.GridPrototype
 
         public void Dash()
         {
-            if (PlayerReady && !InspectionOpen && ChosenAction == null && Active.Dash())
+            if (PlayerReady && !InteractionBlocked && ChosenAction == null && Active.Dash())
             { CancelAction(); ActionResolved?.Invoke(); message = "Dash: +3 movement points. Choose where to move, then End Turn."; Refresh(); }
         }
         public void Block()
@@ -776,11 +800,13 @@ namespace Game.GridPrototype
             busy = true;
             if (advance) AdvanceTurn();
             if (closing) yield break;
-            while (actorIndex != 0 && !closing)
+            while (!IsAlly(actorIndex) && !closing)
             {
                 int i = actorIndex;
+                defenderIndex = SelectEnemyTarget(i);
+                if (defenderIndex < 0) { ResolveOutcome(); yield break; }
                 yield return new WaitForSeconds(0.6f);
-                if (!CanStrike(Active, turnOrder[0]))
+                if (!CanStrike(Active, turnOrder[defenderIndex]))
                 {
                     var choices = Grid.Board.Reachable(Active, Active.Movement);
                     Vector2Int destination = Active.Position;
@@ -790,7 +816,7 @@ namespace Game.GridPrototype
                     foreach (var option in all)
                     {
                         var old = Active.Position; Active.Position = option.Key;
-                        bool adjacent = CanStrike(Active, turnOrder[0]); Active.Position = old;
+                        bool adjacent = CanStrike(Active, turnOrder[defenderIndex]); Active.Position = old;
                         if (adjacent && (approach == null || option.Value.Cost < approach.Cost)) approach = option.Value;
                     }
                     if (approach != null)
@@ -799,7 +825,7 @@ namespace Game.GridPrototype
                         yield return Move(path, actorIndex);
                 }
                 busy = true;
-                if (CanStrike(Active, turnOrder[0]) && Active.SpendAction())
+                if (CanStrike(Active, turnOrder[defenderIndex]) && Active.SpendAction())
                     yield return EnemyAttack(i, (i + round) % 2 != 0);
                 if (closing) yield break;
                 yield return new WaitForSeconds(0.9f);
@@ -823,12 +849,36 @@ namespace Game.GridPrototype
                 if (Active.Health <= 0)
                 {
                     Grid.Board.Units.Remove(Active); actors[actorIndex].gameObject.SetActive(false);
-                    if (actorIndex == 0) { Finish(false); return; }
-                    if (!turnOrder.Exists(u => u != turnOrder[0] && u.Health > 0)) { Finish(true); return; }
+                    if (ResolveOutcome()) return;
                     continue;
                 }
-                selected = Active.Position; FocusActor(actorIndex); Refresh(); return;
+                if (IsAlly(actorIndex)) DefenseSettings = allyDefense[actorIndex];
+                selected = Active.Position; FocusActor(actorIndex); Refresh(); TurnStarted?.Invoke(); return;
             }
+        }
+
+        public int SelectEnemyTarget(int enemyIndex)
+        {
+            int best = -1, distance = int.MaxValue;
+            for (int i = 0; i < allyCount; i++)
+            {
+                if (turnOrder[i].Health <= 0) continue;
+                int candidate = GridTargeting.Distance(turnOrder[enemyIndex].Position, turnOrder[i].Position);
+                if (candidate < distance) { best = i; distance = candidate; }
+            }
+            return best;
+        }
+        private void RemoveDefeated(int index)
+        { Grid.Board.Units.Remove(turnOrder[index]); actors[index].gameObject.SetActive(false); }
+        private bool ResolveOutcome()
+        {
+            bool allies = false, enemies = false;
+            for (int i = 0; i < turnOrder.Count; i++)
+                if (turnOrder[i].Health > 0) { if (IsAlly(i)) allies = true; else enemies = true; }
+            if (!allies && DeployReserves()) allies = true;
+            if (!allies) { TotalDefeat = true; Finish(false); return true; }
+            if (!enemies) { Finish(true); return true; }
+            return false;
         }
 
         public void Finish(bool victory)

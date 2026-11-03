@@ -14,6 +14,7 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Min(1)] private float cellSize = 2;
     [SerializeField] private Shader gridOverlayShader;
     private readonly List<ActorSnapshot> actors = new();
+    private readonly List<ActorSnapshot> reserveActors = new();
     private readonly Dictionary<Behaviour, bool> behaviours = new();
     private BattleGroup group;
     private GameObject encounterRoot;
@@ -44,7 +45,8 @@ public class BattleManager : MonoBehaviour
                 if (collider.enabled && !collider.isTrigger && collider.gameObject.activeInHierarchy)
                     lowest = Mathf.Min(lowest, collider.bounds.min.y);
             }
-            FootOffset = float.IsPositiveInfinity(lowest) ? 1 : Mathf.Max(0, Position.y - lowest);
+            var shape = actor.GetComponent<CharacterController>();
+            FootOffset = float.IsPositiveInfinity(lowest) ? (shape ? Mathf.Max(0, (shape.height * .5f - shape.center.y) * Mathf.Abs(actor.lossyScale.y)) : 1) : Mathf.Max(0, Position.y - lowest);
             foreach (var body in actor.GetComponentsInChildren<Rigidbody>(true))
                 bodies.Add((body, body.isKinematic, body.linearVelocity, body.angularVelocity));
         }
@@ -80,22 +82,33 @@ public class BattleManager : MonoBehaviour
         input = GameManager.Instance.Input; worldCamera = Camera.main;
         Shader shader = gridOverlayShader ? gridOverlayShader : Shader.Find("Game/GridOverlay");
         if (!worldCamera || !input || !shader) { Notify("Battle cannot start: missing camera, input or grid shader."); return false; }
-        actors.Clear(); actors.Add(new ActorSnapshot(player.transform));
-        var seen = new HashSet<GameObject> { player.gameObject };
+        actors.Clear(); reserveActors.Clear();
+        var party = GameManager.Instance.GetBattleParty();
+        foreach (var member in party) actors.Add(new ActorSnapshot(member.transform));
+        int partySize = actors.Count;
+        foreach (var member in GameManager.Instance.ReserveParty)
+            if (member && !party.Contains(member) && reserveActors.Count < 3 && reserveActors.Count + partySize < 6 && !reserveActors.Exists(a => a.Transform == member.transform))
+                reserveActors.Add(new ActorSnapshot(member.transform));
+        var seen = new HashSet<GameObject>();
+        foreach (var member in party) seen.Add(member.gameObject);
         foreach (var enemy in enemies)
             if (enemy && enemy.activeInHierarchy && seen.Add(enemy)) actors.Add(new ActorSnapshot(enemy.transform));
-        if (actors.Count < 2) { actors.Clear(); return false; }
+        if (actors.Count <= partySize) { actors.Clear(); return false; }
         var ignored = new List<Collider>(); var desired = new List<Vector3>();
         float radius = 0.5f, height = 2;
+        foreach (var reserve in reserveActors) ignored.AddRange(reserve.Colliders);
         foreach (var actor in actors)
         {
             ignored.AddRange(actor.Colliders); desired.Add(actor.Position);
-            foreach (var controller in actor.Transform.GetComponentsInChildren<CharacterController>())
+            foreach (var controller in actor.Transform.GetComponentsInChildren<CharacterController>(true))
             {
                 radius = Mathf.Max(radius, controller.radius * Mathf.Max(Mathf.Abs(controller.transform.lossyScale.x), Mathf.Abs(controller.transform.lossyScale.z)));
                 height = Mathf.Max(height, controller.height * Mathf.Abs(controller.transform.lossyScale.y));
             }
         }
+        desired[0] = player.transform.position;
+        for (int i = 1; i < partySize; i++)
+            desired[i] = player.transform.position + player.transform.right * (i == 1 ? -cellSize : cellSize) - player.transform.forward * cellSize;
         Physics.SyncTransforms();
         Vector3 center = source.GridCenter ? source.GridCenter.position : player.transform.position;
         // Stable world-aligned cells let authored scenery occupy the same tiles from any approach.
@@ -123,9 +136,21 @@ public class BattleManager : MonoBehaviour
         cameraWasEnabled = worldCamera.enabled; inputWasEnabled = input.enabled;
         try
         {
-            Suspend(player); if (GameManager.Instance.PlayerRotation) Suspend(GameManager.Instance.PlayerRotation);
+            foreach (var member in party)
+            {
+                var movement = member.GetComponent<PlayerMovement>();
+                if (movement) { Suspend(movement); movement.ResetMotion(); }
+            }
+            if (GameManager.Instance.PlayerRotation) Suspend(GameManager.Instance.PlayerRotation);
             foreach (var enemy in FindObjectsByType<EnemyMovement>(FindObjectsSortMode.None)) Suspend(enemy);
             foreach (var actor in actors) actor.Suspend();
+            foreach (var actor in reserveActors)
+            {
+                actor.Suspend();
+                var movement = actor.Transform.GetComponent<PlayerMovement>();
+                if (movement) { Suspend(movement); movement.ResetMotion(); }
+            }
+            foreach (var member in party) member.gameObject.SetActive(true);
             player.ResetMotion();
             if (battleMenu) battleMenu.Hide();
             input.SwitchToBattle(); input.enabled = true;
@@ -135,7 +160,8 @@ public class BattleManager : MonoBehaviour
             var encounter = encounterRoot.AddComponent<InSceneGridBattle>();
             var figures = new List<Transform>(); var offsets = new List<float>();
             foreach (var actor in actors) { figures.Add(actor.Transform); offsets.Add(actor.FootOffset); }
-            encounter.Initialize(grid, figures, offsets, positions, worldCamera, shader, CompleteBattle, preemptive);
+            encounter.Initialize(grid, figures, offsets, positions, worldCamera, shader, CompleteBattle, preemptive, partySize);
+            foreach (var reserve in reserveActors) encounter.AddReserve(reserve.Transform.GetComponent<BattleCharacterInfo>(), reserve.FootOffset);
             if (battleMenu) battleMenu.Bind(encounter);
             Debug.Log(preemptive ? "[Battle] Pre-emptive strike: controlled character acts first this round." : "[Battle] Initiative determines turn order.");
             return true;
@@ -155,10 +181,16 @@ public class BattleManager : MonoBehaviour
     private void CompleteBattle(bool victory)
     {
         if (!InBattle) return;
+        var encounter = encounterRoot ? encounterRoot.GetComponent<InSceneGridBattle>() : null;
+        var participants = encounter ? new List<BattleCharacterInfo>(encounter.Participants) : new List<BattleCharacterInfo>();
+        bool totalDefeat = encounter && encounter.TotalDefeat;
+        if (encounter) encounter.StorePartyHealth();
         if (battleMenu) battleMenu.Unbind();
         if (encounterRoot) { encounterRoot.SetActive(false); Destroy(encounterRoot); encounterRoot = null; }
         // Keep the encounter guard raised until all collider/behaviour state is restored.
         foreach (var actor in actors) actor.Restore();
+        foreach (var actor in reserveActors) actor.Restore();
+        reserveActors.Clear();
         foreach (var pair in behaviours) if (pair.Key) pair.Key.enabled = pair.Value;
         behaviours.Clear();
         if (GameManager.Instance && GameManager.Instance.PossessedCharacter) GameManager.Instance.PossessedCharacter.ResetMotion();
@@ -169,11 +201,11 @@ public class BattleManager : MonoBehaviour
         if (victory && group && GameManager.Instance)
         {
             experienceReward = group.ClaimVictoryExperience();
-            gainedLevels = GameManager.Instance.Progression.AwardExperience(experienceReward);
+            gainedLevels = GameManager.Instance.Progression.AwardExperience(experienceReward, participants);
         }
         if (group) group.CompleteEncounter(victory);
         actors.Clear(); group = null; InBattle = false;
-        Notify(victory ? $"Victory: +{experienceReward} party XP." + (gainedLevels > 0 ? $" Party level +{gainedLevels}! Spend points with Tab / Y / Triangle." : " Back in the overworld.") : "Back in the overworld. Encounter reset; re-entry cooldown active.");
+        Notify(victory ? $"Victory: {experienceReward} XP for participants; half for unused reserves." + (gainedLevels > 0 ? " Level-ups available: spend points with Tab / Y / Triangle." : " Back in the overworld.") : totalDefeat ? "Party defeated. Checkpoint loading is not implemented; prototype returned to the overworld." : "Back in the overworld. Encounter reset; re-entry cooldown active.");
     }
 
     private void Notify(string text) { notice = text; noticeUntil = Time.unscaledTime + 7; Debug.Log("[Battle] " + text); }
