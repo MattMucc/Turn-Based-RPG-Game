@@ -75,11 +75,11 @@ namespace Game.GridPrototype
             return initiativeOrder.Preview(actorIndex, i => turnOrder[i].Health > 0);
         }
         public void SetAutoCamera(bool value)
-        { AutoCamera = value; if (value) FocusActor(actorIndex); else cameraControls.ReleaseFocus(); }
+        { AutoCamera = value; if (EntryActive) return; if (value) FocusActor(actorIndex); else cameraControls.ReleaseFocus(); }
         private void FocusActor(int index)
         { cameraControls.FocusTarget = actors[index]; if (AutoCamera) cameraControls.SmoothFocus(actors[index]); }
         public void FocusCharacter(int index)
-        { if (index >= 0 && index < actors.Count) cameraControls.SmoothFocus(actors[index]); }
+        { if (!EntryActive && index >= 0 && index < actors.Count) cameraControls.SmoothFocus(actors[index]); }
         public Transform Actor(int index) => actors[index];
         public BattleCharacterInfo Info(int index) => actors[index].GetComponent<BattleCharacterInfo>();
         public event Action<int, Vector2> ContextRequested;
@@ -87,9 +87,9 @@ namespace Game.GridPrototype
         public bool PartySelectionOpen;
         public int PartySelectionClosedFrame = -1;
         public bool PartyInputBlocked => PartySelectionOpen || PartySelectionClosedFrame == Time.frameCount;
-        public bool InteractionBlocked => InspectionOpen || PartyInputBlocked;
+        public bool InteractionBlocked => InspectionOpen || PartyInputBlocked || EntryActive || entryFinishedFrame == Time.frameCount;
         public bool ExternalControllerActive;
-        public bool ControllerInputLocked => busy || closing || playerTurning || SignatureActive || DefenseActive;
+        public bool ControllerInputLocked => EntryActive || entryFinishedFrame == Time.frameCount || busy || closing || playerTurning || SignatureActive || DefenseActive;
         public event Action<BattleTarget, Vector2> TargetContextRequested;
         public bool ReadyToResolve => ChosenAction != null && targets.Count > 0 &&
             (ChosenAction.Pattern != BattleTargetPattern.Multiple || targets.Count == TargetLimit);
@@ -100,7 +100,7 @@ namespace Game.GridPrototype
         public bool GridInputEnabled = true;
         public bool KeyboardGridInputEnabled = true;
         public Func<Vector2, bool> PointerOverUI;
-        public bool PlayerReady => turnOrder.Count > 0 && !busy && !closing && !playerTurning && !SignatureActive && IsAlly(actorIndex) && Active.Health > 0;
+        public bool PlayerReady => turnOrder.Count > 0 && !EntryActive && !busy && !closing && !playerTurning && !SignatureActive && IsAlly(actorIndex) && Active.Health > 0;
         public bool ActionReady => PlayerReady && Active.ActionAvailable;
         public int Movement => Active.Movement;
         public int TargetCount => targets.Count;
@@ -112,9 +112,10 @@ namespace Game.GridPrototype
 
 
         public void Initialize(TerrainBattleGrid grid, IReadOnlyList<Transform> figures, IReadOnlyList<float> footOffsets,
-            IReadOnlyList<Vector2Int> positions, Camera sourceCamera, Shader shader, Action<bool> onFinished, bool preemptive = false, int partySize = 1)
+            IReadOnlyList<Vector2Int> positions, Camera sourceCamera, Shader shader, Action<bool> onFinished, bool preemptive = false, int partySize = 1, BattleEntryPlan entry = null)
         {
             allyCount = Mathf.Clamp(partySize, 1, figures.Count - 1);
+            var originalRotations = new List<Quaternion>(); foreach (var figure in figures) originalRotations.Add(figure.rotation);
             Grid = grid; finished = onFinished; overlayShader = shader;
             // Pick the closest encounter enemy before grid placement moves either actor.
             int nearestEnemy = -1; float nearestDistance = float.PositiveInfinity;
@@ -171,7 +172,14 @@ namespace Game.GridPrototype
             initiativeOrder = new InitiativeOrder(initiatives, preemptive ? 0 : -1);
             actorIndex = initiativeOrder.First;
             if (IsAlly(actorIndex)) DefenseSettings = allyDefense[actorIndex];
-            Active.BeginTurn(); selected = Active.Position;
+            selected = Active.Position;
+            if (entry != null) { BeginEntry(entry, sourceCamera, originalRotations); return; }
+            StartOpeningTurn();
+        }
+
+        private void StartOpeningTurn()
+        {
+            Active.BeginTurn();
             openingEnemyTurnPending = !IsAlly(actorIndex);
             busy = openingEnemyTurnPending;
             FocusActor(actorIndex);
@@ -197,7 +205,13 @@ namespace Game.GridPrototype
         public bool CanAim(Vector2Int cell, BattleActionOption action) => action != null && Grid.Board.Contains(cell)
             && Grid.HasSurface[cell.x, cell.y] && GridTargeting.CanTarget(Grid.Board, Active.Position, cell, action, Sight, TargetableObstacle);
         public HashSet<Vector2Int> ActionFootprint(Vector2Int cell, BattleActionOption action)
-            => GridTargeting.Footprint(Grid.Board, Active.Position, cell, action, Sight, TargetableObstacle);
+        {
+            Vector2Int origin = Active.Position;
+            var previewCells = action != null && action.Pattern == BattleTargetPattern.Multiple ? new List<Vector2Int>(targets) : new List<Vector2Int>();
+            if (!previewCells.Contains(cell)) previewCells.Add(cell);
+            if (TryActionApproach(action, previewCells, out var approach) && approach != null) origin = approach.Stops[approach.Stops.Count - 1];
+            return GridTargeting.Footprint(Grid.Board, origin, cell, action, Sight, TargetableObstacle);
+        }
 
         private void Refresh()
         {
@@ -228,6 +242,7 @@ namespace Game.GridPrototype
         private void Update()
         {
             if (Grid == null || closing) return;
+            if (EntryActive) { if (Application.isFocused) AdvanceEntry(Time.unscaledDeltaTime); return; }
             if (Application.isFocused) AdvanceFacing(Time.deltaTime);
             if (openingEnemyTurnPending && !playerTurning && Application.isFocused)
             { openingEnemyTurnPending = false; StartCoroutine(EnemyRound(false)); }
@@ -297,7 +312,7 @@ namespace Game.GridPrototype
             if (ControllerInputLocked || InteractionBlocked) { TargetFocus.Hover(null); return; }
             BattleTarget target = null;
             if (!overUI && TryPickTarget(pointer, out var picked, out var targetCell)
-                && (ChosenAction == null || CanAim(targetCell, ChosenAction))) target = picked;
+                && (ChosenAction == null || CanSelectActionCell(targetCell, ChosenAction))) target = picked;
             TargetFocus.Hover(target);
             if (overUI) return;
             if (!TryPick(pointer, out var cell)) { if (activate) TargetFocus.Dismiss(); return; }
@@ -322,7 +337,7 @@ namespace Game.GridPrototype
                 Mathf.Clamp(selected.y + delta.y, 0, Grid.Board.Depth - 1));
             Refresh();
             var target = battleTargets.Find(t => t.Alive && t.Occupies(Grid, selected));
-            TargetFocus.Hover(ChosenAction == null || CanAim(selected, ChosenAction) ? target : null);
+            TargetFocus.Hover(ChosenAction == null || CanSelectActionCell(selected, ChosenAction) ? target : null);
             if (!activate) return;
             if (ChosenAction != null) Confirm();
             else if (target != null)
@@ -341,7 +356,7 @@ namespace Game.GridPrototype
             bool overUI = PointerOverUI?.Invoke(pointer) ?? false;
             BattleTarget hovered = null;
             if (!overUI && TryPickTarget(pointer, out var target, out var cell)
-                && (ChosenAction == null || CanAim(cell, ChosenAction))) hovered = target;
+                && (ChosenAction == null || CanSelectActionCell(cell, ChosenAction))) hovered = target;
             TargetFocus.Hover(hovered);
             if (click) TargetFocus.Pin(hovered);
             if (overUI && mouse.leftButton.wasPressedThisFrame) TargetFocus.Dismiss();
@@ -432,12 +447,14 @@ namespace Game.GridPrototype
             if (targets.Count == 0)
                 impact.UnionWith(ActionFootprint(selected, ChosenAction));
             overlay.ShowTargeting(range, impact, selected);
+            var previewCells = targets.Count > 0 ? new List<Vector2Int>(targets) : new List<Vector2Int> { selected };
+            if (TryActionApproach(ChosenAction, previewCells, out var approach) && approach != null) overlay.ShowApproach(approach);
         }
 
         public bool ToggleTarget(Vector2Int cell)
         {
             if (!ActionReady || ChosenAction == null) return false;
-            if (!CanAim(cell, ChosenAction)) { message = "Choose a cell in reach with a clear attack path."; return false; }
+            if (!CanSelectActionCell(cell, ChosenAction)) { message = "Not enough movement to reach a clear attack position for these targets."; return false; }
             if (ChosenAction.Pattern != BattleTargetPattern.Multiple)
             { bool alreadySelected = targets.Contains(cell); targets.Clear(); if (!alreadySelected) targets.Add(cell); }
             else if (targets.Count < TargetLimit) targets.Add(cell);
@@ -465,9 +482,10 @@ namespace Game.GridPrototype
         {
             sequence = null;
             if (!ActionReady || !ReadyToResolve || !ChosenAction.Available) return false;
-            foreach (var cell in targets) if (!CanAim(cell, ChosenAction)) return false;
+            if (!TryActionApproach(ChosenAction, targets, out var approach)) return false;
             var action = ChosenAction;
             var aimedCells = new List<Vector2Int>(targets);
+            if (approach != null && !Grid.Board.TryMove(Active, approach.Stops[approach.Stops.Count - 1], out approach)) return false;
             var batches = new List<List<BattleTarget>>();
             foreach (var cell in aimedCells)
             {
@@ -487,6 +505,7 @@ namespace Game.GridPrototype
                 sequence = ResolveSignature(batches, aimedCells, action);
             }
             else sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple, action);
+            if (approach != null) sequence = ResolveApproach(approach, sequence);
             return true;
         }
         public void AdvanceSignature(float deltaTime, bool correct = false, bool wrong = false, bool held = false, bool secondaryHeld = false)

@@ -31,6 +31,9 @@ public class BattleGroup : MonoBehaviour
     [Tooltip("Optional: center the grid on a suitable authored patch of terrain instead of the player.")]
     [SerializeField] private Transform gridCenter;
     public Transform GridCenter => gridCenter;
+    [Tooltip("Optional companion formation preferences: first companion, then second. Invalid or unreachable cells fall back to nearby safe ground.")]
+    [SerializeField] private Transform[] companionFormationMarkers;
+    public Transform[] CompanionFormationMarkers => companionFormationMarkers;
     public int GroundLayers => groundLayer.value;
 
     [Header("References")]

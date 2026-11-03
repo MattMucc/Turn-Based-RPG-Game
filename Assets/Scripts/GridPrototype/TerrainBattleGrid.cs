@@ -51,6 +51,19 @@ namespace Game.GridPrototype
 
         public void RefreshSurfaces() { edgeCache.Clear(); Sample(); }
 
+        public bool ClearEntryApproach(Vector3 foot, Vector2Int destination)
+        {
+            Vector3 end = Point(destination);
+            int steps = Mathf.Max(1, Mathf.CeilToInt(Vector3.Distance(foot, end) / .2f));
+            for (int i = 0; i <= steps; i++)
+            {
+                Vector3 point = Vector3.Lerp(foot, end, (float)i / steps);
+                if (!GroundAt(point, out var ground) || ground.collider.gameObject.layer == LayerMask.NameToLayer("Water")
+                    || Mathf.Abs(ground.point.y - point.y) > .35f || !ClearBody(point)) return false;
+            }
+            return true;
+        }
+
         private void Sample()
         {
             float half = CellSize * 0.49f;

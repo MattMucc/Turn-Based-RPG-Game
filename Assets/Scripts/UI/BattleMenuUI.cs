@@ -29,6 +29,7 @@ public class BattleMenuUI : MonoBehaviour
     private readonly List<string> descriptions = new();
     private readonly List<BattleActionOption> previewOptions = new();
     private BattleHud hud;
+    private CanvasGroup entryCanvas;
     private BattleSwapPanel swapPanel;
     public bool SwapOpen => swapPanel && swapPanel.IsOpen;
     private BattleControllerNavigation controllerNavigation;
@@ -51,6 +52,7 @@ public class BattleMenuUI : MonoBehaviour
     {
         if (initialized) return;
         initialized = true;
+        entryCanvas = GetComponent<CanvasGroup>(); if (!entryCanvas) entryCanvas = gameObject.AddComponent<CanvasGroup>();
         runControllerIcon = runButton.ControllerIcon;
         if (!blockKeyboardIcon) blockKeyboardIcon = runButton.KeyboardIcon;
         pool.AddRange(new[] { attackButton, skillsButton, itemsButton, runButton });
@@ -322,7 +324,7 @@ public class BattleMenuUI : MonoBehaviour
     private void UpdateAvailability()
     {
         for (int i = 0; i < rows; i++) pool[i].SetAvailable(availability[i]());
-        bool commandsVisible = battle.IsAlly(battle.CurrentActorIndex) && battle.Combatants[battle.CurrentActorIndex].ActionAvailable && !battle.DefenseActive;
+        bool commandsVisible = battle.IsAlly(battle.CurrentActorIndex) && (battle.EntryActive || battle.Combatants[battle.CurrentActorIndex].ActionAvailable) && !battle.DefenseActive;
         viewport.gameObject.SetActive(commandsVisible);
         remainingTurnButton.gameObject.SetActive(battle.PlayerReady && !battle.Combatants[battle.CurrentActorIndex].ActionAvailable);
         remainingTurnButton.SetAvailable(battle.PlayerReady);
@@ -332,11 +334,14 @@ public class BattleMenuUI : MonoBehaviour
             if (highlighted >= 0) pool[highlighted].SetHighlighted(false);
             highlighted = -1;
         }
-        bool showCount = commandsVisible && battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;
+        int approachCost = battle.PreviewApproachCost;
+        bool multi = battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;
+        bool showCount = commandsVisible && (multi || approachCost > 0);
         targetCounter.transform.parent.gameObject.SetActive(showCount);
         if (showCount)
         {
-            targetCounter.text = $"{battle.TargetCount} / {battle.TargetLimit} targets selected";
+            ((RectTransform)targetCounter.transform.parent).SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, multi && approachCost > 0 ? 42 : 30);
+            targetCounter.text = (multi ? $"{battle.TargetCount} / {battle.TargetLimit} targets selected" : "") + (approachCost > 0 ? (multi ? "\n" : "") + $"Move {approachCost} MP, then act" : "");
             ((RectTransform)targetCounter.transform.parent).anchoredPosition = new Vector2(12, 16 + viewport.sizeDelta.y);
         }
     }
@@ -402,6 +407,8 @@ public class BattleMenuUI : MonoBehaviour
     {
         UpdateShortcutFocus();
         if (!battle) return;
+        entryCanvas.alpha = battle.EntryHudAlpha; entryCanvas.interactable = entryCanvas.blocksRaycasts = !battle.EntryActive;
+        if (battle.EntryActive) { UpdateAvailability(); return; }
         if (battle.PartyInputBlocked) return;
         UpdateAvailability();
         bool targeting = battle.ChosenAction != null;

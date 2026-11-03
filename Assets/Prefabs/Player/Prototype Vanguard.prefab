@@ -153,6 +153,7 @@ GameObject:
   - component: {fileID: 4678588296192817636}
   - component: {fileID: 4418546057224845090}
   - component: {fileID: 3003055958351131635}
+  - component: {fileID: 791043194022376401}
   m_Layer: 6
   m_Name: Prototype Vanguard
   m_TagString: Untagged
@@ -230,6 +231,7 @@ MonoBehaviour:
     Initiative: 0
   unspentPoints: 0
   rewardedLevel: 1
+  storedHealth: -1
   BaseHealth: 100
   HealthPerVitality: 10
   BurningDamagePerTick: 5
@@ -433,10 +435,11 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Sweeping Blow
     FavoriteSlot: 1
-    Description: Prototype area strike; allies are also hit.
+    Description: Sweep a three-cell-wide row in a cardinal direction. Allies in the
+      row can also be hit.
     Category: 1
-    Pattern: 1
-    Reach: 1
+    Pattern: 4
+    Reach: 2
     Radius: 1
     MaxTargets: 3
     Damage: 8
@@ -467,7 +470,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2713249943951413015}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
@@ -490,6 +493,26 @@ MonoBehaviour:
   m_DefaultActionMap: World
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &791043194022376401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2713249943951413015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f48b798073c4115a07c4adf47767b11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PartyFollower
+  followDistance: 2.2
+  walkSpeed: 6
+  catchUpSpeed: 9
+  trailSpacing: 0.2
+  gravity: -30
+  leader: {fileID: 0}
+  sideOffset: 0
+  settleRadius: 0.6
 --- !u!1 &3479316304952442349
 GameObject:
   m_ObjectHideFlags: 0

@@ -293,7 +293,7 @@ public class BattleActionTests
     [Test] public void SingleTargetIsReadyImmediatelyButInvalidSelectionIsNot()
     {
         battle.ChooseAction(battle.Loadout.Options[0]);
-        Assert.IsFalse(battle.ToggleTarget(Vector2Int.zero)); Assert.IsFalse(battle.ReadyToResolve);
+        Assert.IsFalse(battle.ToggleTarget(new Vector2Int(-1, -1))); Assert.IsFalse(battle.ReadyToResolve);
         Assert.IsTrue(battle.ToggleTarget(cells[1])); Assert.IsTrue(battle.ReadyToResolve);
         Assert.IsTrue(CompletePrepared()); Assert.AreEqual(75, battle.Combatants[1].Health);
     }

@@ -186,4 +186,26 @@ public class PartyBattleTests
         battle.Combatants[1].Health = battle.Combatants[2].Health = 0;
         Assert.AreEqual(true, check.Invoke(battle, null)); Assert.AreEqual(false, outcome);
     }
+    [Test] public void ApproachFindsMinimumAffordableRouteAndPreparationSpendsBothBudgets()
+    {
+        battle.Combatants[1].Position = new Vector2Int(0, 6); battle.Combatants[2].Position = new Vector2Int(1, 6);
+        var action = battle.Loadout.Options[0]; action.Reach = 1;
+        var target = battle.Combatants[3].Position;
+        Assert.IsTrue(battle.TryActionApproach(action, new[] { target }, out var route));
+        Assert.NotNull(route); Assert.AreEqual(2, route.Cost);
+        var active = battle.Combatants[0]; int health = battle.Combatants[3].Health;
+        Assert.IsTrue(battle.ChooseAction(action)); Assert.IsTrue(battle.ToggleTarget(target));
+        Assert.IsTrue(battle.TryPrepareAction(out var sequence));
+        Assert.AreEqual(1, active.Movement); Assert.IsFalse(active.ActionAvailable);
+        Assert.AreEqual(health, battle.Combatants[3].Health, "Damage must wait for movement and attack presentation.");
+        Assert.NotNull(sequence);
+    }
+    [Test] public void UnaffordableApproachPreservesPositionActionAndMovement()
+    {
+        battle.Combatants[1].Position = new Vector2Int(0, 6); battle.Combatants[2].Position = new Vector2Int(1, 6);
+        var action = battle.Loadout.Options[0]; action.Reach = 1;
+        var active = battle.Combatants[0]; active.SpendMovement(2); var before = active.Position;
+        Assert.IsFalse(battle.TryActionApproach(action, new[] { battle.Combatants[3].Position }, out _));
+        Assert.AreEqual(before, active.Position); Assert.AreEqual(1, active.Movement); Assert.IsTrue(active.ActionAvailable);
+    }
 }

@@ -151,7 +151,8 @@ public class PressQteTests : InputTestFixture
     }
     [Test] public void SavedPrefabSeparatesAllThreeQteTypesAndGlyphCatalogIsComplete()
     {
-        var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Character.prefab");
+        var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(UnityEditor.AssetDatabase.GUIDToAssetPath("33fc2d0129d8dfe4c91a60c0f8d9d7bf"));
+        Assert.IsNotNull(prefab, "The balanced character prefab must remain available for QTE validation.");
         var loadout = prefab.GetComponent<BattleActionLoadout>();
         var single = loadout.Options.Find(o => o.Name == "Signature Strike");
         Assert.AreEqual(QteMode.SinglePress, single.QteType); Assert.IsEmpty(single.QteSequence);

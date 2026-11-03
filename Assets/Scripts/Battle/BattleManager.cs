@@ -13,6 +13,8 @@ public class BattleManager : MonoBehaviour
     [SerializeField, Range(6, 24)] private int gridDepth = 12;
     [SerializeField, Min(1)] private float cellSize = 2;
     [SerializeField] private Shader gridOverlayShader;
+    [Header("Battle entry")]
+    [SerializeField, Range(.4f, 3f)] private float battleEntryDuration = 2f;
     private readonly List<ActorSnapshot> actors = new();
     private readonly List<ActorSnapshot> reserveActors = new();
     private readonly Dictionary<Behaviour, bool> behaviours = new();
@@ -77,13 +79,13 @@ public class BattleManager : MonoBehaviour
 
     public bool TryStartBattle(BattleGroup source, List<GameObject> enemies, bool preemptive = false)
     {
-        if (InBattle || !source || !GameManager.Instance || !GameManager.Instance.PossessedCharacter) return false;
+        if (InBattle || !source || !GameManager.Instance || GameManager.Instance.WorldInputBlocked || !GameManager.Instance.PossessedCharacter) return false;
         var player = GameManager.Instance.PossessedCharacter;
         input = GameManager.Instance.Input; worldCamera = Camera.main;
         Shader shader = gridOverlayShader ? gridOverlayShader : Shader.Find("Game/GridOverlay");
         if (!worldCamera || !input || !shader) { Notify("Battle cannot start: missing camera, input or grid shader."); return false; }
         actors.Clear(); reserveActors.Clear();
-        var party = GameManager.Instance.GetBattleParty();
+        var party = GameManager.Instance.GetEncounterParty();
         foreach (var member in party) actors.Add(new ActorSnapshot(member.transform));
         int partySize = actors.Count;
         foreach (var member in GameManager.Instance.ReserveParty)
@@ -99,35 +101,27 @@ public class BattleManager : MonoBehaviour
         foreach (var reserve in reserveActors) ignored.AddRange(reserve.Colliders);
         foreach (var actor in actors)
         {
-            ignored.AddRange(actor.Colliders); desired.Add(actor.Position);
+            ignored.AddRange(actor.Colliders); desired.Add(actor.Position - Vector3.up * actor.FootOffset);
             foreach (var controller in actor.Transform.GetComponentsInChildren<CharacterController>(true))
             {
                 radius = Mathf.Max(radius, controller.radius * Mathf.Max(Mathf.Abs(controller.transform.lossyScale.x), Mathf.Abs(controller.transform.lossyScale.z)));
                 height = Mathf.Max(height, controller.height * Mathf.Abs(controller.transform.lossyScale.y));
             }
         }
-        desired[0] = player.transform.position;
-        for (int i = 1; i < partySize; i++)
-            desired[i] = player.transform.position + player.transform.right * (i == 1 ? -cellSize : cellSize) - player.transform.forward * cellSize;
+        desired[0] = player.transform.position - Vector3.up * actors[0].FootOffset;
         Physics.SyncTransforms();
-        Vector3 center = source.GridCenter ? source.GridCenter.position : player.transform.position;
-        // Stable world-aligned cells let authored scenery occupy the same tiles from any approach.
-        // Explicit encounter centers retain their authored alignment.
-        if (!source.GridCenter)
+        if (!BattleFormation.TryGridBounds(desired, partySize, cellSize, gridWidth, gridDepth,
+            source.GridCenter ? source.GridCenter.position : (Vector3?)null, out var center, out int width, out int depth, true))
         {
-            center.x = Mathf.Round(center.x / cellSize) * cellSize;
-            center.z = Mathf.Round(center.z / cellSize) * cellSize;
+            actors.Clear(); reserveActors.Clear(); Notify("Enemy group is too spread out for one battle grid. Bring the group closer together."); return false;
         }
-        var grid = new TerrainBattleGrid(center, gridWidth, gridDepth, cellSize, source.GroundLayers, ignored, radius, height);
-        // With an authored center, use formation preferences there, not a distant player's old position.
-        if (source.GridCenter)
+        var grid = new TerrainBattleGrid(center, width, depth, cellSize, source.GroundLayers, ignored, radius, height);
+        var markers = new List<Vector3?>();
+        if (source.CompanionFormationMarkers != null)
+            foreach (var marker in source.CompanionFormationMarkers) markers.Add(marker ? marker.position : (Vector3?)null);
+        if (!BattleFormation.TryPlan(grid, desired, partySize, player.transform.forward, markers, out var entry, out string failure, true))
         {
-            Vector3 shift = center - desired[0];
-            for (int i = 0; i < desired.Count; i++) desired[i] += shift;
-        }
-        if (!grid.TryPlace(desired, out var positions))
-        {
-            actors.Clear(); Notify("Not enough connected, clear terrain for this group. Move to open ground or assign its Grid Center marker.");
+            actors.Clear(); reserveActors.Clear(); Notify("Battle could not start: " + failure);
             return false;
         }
         if (GameManager.Instance.ProgressionMenu) GameManager.Instance.ProgressionMenu.Close();
@@ -140,6 +134,7 @@ public class BattleManager : MonoBehaviour
             {
                 var movement = member.GetComponent<PlayerMovement>();
                 if (movement) { Suspend(movement); movement.ResetMotion(); }
+                var follower = member.GetComponent<PartyFollower>(); if (follower) Suspend(follower);
             }
             if (GameManager.Instance.PlayerRotation) Suspend(GameManager.Instance.PlayerRotation);
             foreach (var enemy in FindObjectsByType<EnemyMovement>(FindObjectsSortMode.None)) Suspend(enemy);
@@ -160,7 +155,8 @@ public class BattleManager : MonoBehaviour
             var encounter = encounterRoot.AddComponent<InSceneGridBattle>();
             var figures = new List<Transform>(); var offsets = new List<float>();
             foreach (var actor in actors) { figures.Add(actor.Transform); offsets.Add(actor.FootOffset); }
-            encounter.Initialize(grid, figures, offsets, positions, worldCamera, shader, CompleteBattle, preemptive, partySize);
+            entry.Duration = battleEntryDuration;
+            encounter.Initialize(grid, figures, offsets, entry.Cells, worldCamera, shader, CompleteBattle, preemptive, partySize, entry);
             foreach (var reserve in reserveActors) encounter.AddReserve(reserve.Transform.GetComponent<BattleCharacterInfo>(), reserve.FootOffset);
             if (battleMenu) battleMenu.Bind(encounter);
             Debug.Log(preemptive ? "[Battle] Pre-emptive strike: controlled character acts first this round." : "[Battle] Initiative determines turn order.");
@@ -205,6 +201,7 @@ public class BattleManager : MonoBehaviour
         }
         if (group) group.CompleteEncounter(victory);
         actors.Clear(); group = null; InBattle = false;
+        if (GameManager.Instance) GameManager.Instance.ConfigureFollowers();
         Notify(victory ? $"Victory: {experienceReward} XP for participants; half for unused reserves." + (gainedLevels > 0 ? " Level-ups available: spend points with Tab / Y / Triangle." : " Back in the overworld.") : totalDefeat ? "Party defeated. Checkpoint loading is not implemented; prototype returned to the overworld." : "Back in the overworld. Encounter reset; re-entry cooldown active.");
     }
 

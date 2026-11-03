@@ -40,4 +40,15 @@ public class GridTargetingTests
         Assert.AreEqual(4, result.Count);
         Assert.IsEmpty(GridTargeting.Footprint(board, new Vector2Int(3, 3), Vector2Int.zero, action, (a, b) => false));
     }
+    [TestCase(0, 1)] [TestCase(0, -1)] [TestCase(1, 0)] [TestCase(-1, 0)]
+    public void SweepRotatesThreeWideRowWithoutHittingCaster(int x, int y)
+    {
+        var board = new GridBoard(9, 9); var origin = new Vector2Int(4, 4);
+        var aim = origin + new Vector2Int(x, y) * 2;
+        var side = new Vector2Int(y, -x);
+        var action = new BattleActionOption { Reach = 2, Radius = 1, Pattern = BattleTargetPattern.Sweep };
+        CollectionAssert.AreEquivalent(new[] { aim - side, aim, aim + side }, GridTargeting.Footprint(board, origin, aim, action));
+        Assert.IsFalse(GridTargeting.CanTarget(board, origin, origin, action));
+        Assert.IsFalse(GridTargeting.CanTarget(board, origin, origin + Vector2Int.one, action));
+    }
 }

@@ -2,7 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 using Game.GridPrototype;
 
-public class GameManager : MonoBehaviour
+[DefaultExecutionOrder(-60)]
+public partial class GameManager : MonoBehaviour
 {
     [Tooltip("Default active team (up to three). First entry is its captain. Temporary battle swaps do not modify this list.")]
     public List<BattleCharacterInfo> BattleParty = new List<BattleCharacterInfo>();
@@ -18,7 +19,7 @@ public class GameManager : MonoBehaviour
     }
     public PartyProgression Progression = new PartyProgression();
     public ProgressionMenu ProgressionMenu { get; private set; }
-    public bool WorldInputBlocked => ProgressionMenu && ProgressionMenu.BlocksWorldInput;
+    public bool WorldInputBlocked => IsSwitchingCharacter || switchCompletedFrame == Time.frameCount || (ProgressionMenu && ProgressionMenu.BlocksWorldInput);
     public static GameManager Instance { get; private set; }
     public PlayerInputReader Input { get; private set; }
     public PlayerMovement PossessedCharacter { get; private set; }
@@ -49,10 +50,42 @@ public class GameManager : MonoBehaviour
             PossessedCharacter.Unpossess();
 
         PossessedCharacter = character;
+        character.gameObject.SetActive(true); character.enabled = true;
+        var controlledFollower = character.GetComponent<PartyFollower>(); if (controlledFollower) controlledFollower.enabled = false;
+        character.ResetMotion();
         var info = character.GetComponent<BattleCharacterInfo>();
         if (!info) info = character.gameObject.AddComponent<BattleCharacterInfo>();
         Progression.Register(info);
         PossessedCharacter.Possess();
-        PlayerRotation.SetFollowTarget(PossessedCharacter.gameObject.transform);
+        if (PlayerRotation) PlayerRotation.SetFollowTarget(PossessedCharacter.gameObject.transform);
+        ConfigureFollowers();
+    }
+
+    public void ConfigureFollowers()
+    {
+        var party = GetBattleParty(); Transform preceding = PossessedCharacter ? PossessedCharacter.transform : null;
+        int slot = 0;
+        foreach (var member in party) foreach (var deviceOwner in member.GetComponentsInChildren<UnityEngine.InputSystem.PlayerInput>(true)) deviceOwner.enabled = false;
+        foreach (var member in party)
+        {
+            if (!member || member.transform == preceding) continue;
+            if (PossessedCharacter && member.transform == PossessedCharacter.transform) continue;
+            var movement = member.GetComponent<PlayerMovement>();
+            if (movement) { movement.Unpossess(); movement.enabled = false; }
+            var follower = member.GetComponent<PartyFollower>();
+            if (!follower) follower = member.gameObject.AddComponent<PartyFollower>();
+            member.gameObject.SetActive(true); follower.enabled = true; follower.SetCompanionSlot(slot++); follower.Follow(preceding);
+        }
+        foreach (var member in ReserveParty) if (member && !party.Contains(member)) member.gameObject.SetActive(false);
+        // Party bodies must not trap one another at a narrow turn in the trail.
+        for (int i = 0; i < party.Count; i++) for (int j = i + 1; j < party.Count; j++)
+            foreach (var a in party[i].GetComponentsInChildren<Collider>(true)) foreach (var b in party[j].GetComponentsInChildren<Collider>(true)) Physics.IgnoreCollision(a, b);
+    }
+
+    public List<BattleCharacterInfo> GetEncounterParty()
+    {
+        var party = GetBattleParty(); var controlled = PossessedCharacter ? PossessedCharacter.GetComponent<BattleCharacterInfo>() : null;
+        if (controlled && party.Remove(controlled)) party.Insert(0, controlled);
+        return party;
     }
 }

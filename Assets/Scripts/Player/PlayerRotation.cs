@@ -125,7 +125,7 @@ public class PlayerRotation : MonoBehaviour
             targetDistance = Mathf.Max(0.1f, hit.distance - collisionBuffer);
 
         float activeTransitionSpeed = 1f / 18f;
-        currentDistance = Mathf.SmoothDamp(currentDistance, targetDistance, ref distanceVelocity, activeTransitionSpeed);
+        currentDistance = Mathf.SmoothDamp(currentDistance, targetDistance, ref distanceVelocity, activeTransitionSpeed, Mathf.Infinity, GameManager.Instance && GameManager.Instance.IsSwitchingCharacter ? Time.unscaledDeltaTime : Time.deltaTime);
 
         // Apply final camera position with offset
         Vector3 finalCamPos = pitchPivot.position - pitchPivot.forward * currentDistance;
@@ -135,7 +135,14 @@ public class PlayerRotation : MonoBehaviour
 
     public void SetFollowTarget(Transform character)
     {
-        followTarget = character;
+        followTarget = character; followVelocity = Vector3.zero;
+    }
+
+    public void BlendToCharacter(Transform target, Vector3 start, float fraction)
+    {
+        transform.position = Vector3.Lerp(start, target.position + Vector3.up * cameraHeight, Mathf.SmoothStep(0, 1, fraction));
+        followVelocity = Vector3.zero;
+        if (pitchPivot && cameraTransform) ApplyCameraDistance();
     }
 
     private void OnDrawGizmos()

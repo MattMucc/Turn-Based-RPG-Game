@@ -7,6 +7,12 @@ namespace Game.GridPrototype
     {
         private readonly List<Mesh> meshes = new List<Mesh>();
         private readonly List<Material> materials = new List<Material>();
+        private readonly List<float> originalAlphas = new();
+        public void SetOpacity(float alpha)
+        {
+            for (int i = 0; i < materials.Count; i++)
+            { var color = materials[i].color; color.a = originalAlphas[i] * Mathf.Clamp01(alpha); materials[i].color = color; }
+        }
         private readonly Dictionary<Vector2Int, Renderer> fills = new Dictionary<Vector2Int, Renderer>();
         private TerrainBattleGrid grid;
         private Material movement, reach, affected;
@@ -76,6 +82,14 @@ namespace Game.GridPrototype
             }
         }
 
+        public void ShowApproach(GridRoute path)
+        {
+            var points = new List<Vector3>();
+            for (int i = 1; i < path.Stops.Count; i++) for (int step = 0; step <= 8; step++)
+                points.Add(grid.RoutePoint(path.Stops[i - 1], path.Stops[i], step / 8f) + Vector3.up * .15f);
+            route.positionCount = points.Count; route.SetPositions(points.ToArray());
+        }
+
         private void AddQuad(List<Vector3> vertices, List<int> triangles, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
         {
             int n = vertices.Count; vertices.AddRange(new[] { a, b, c, d });
@@ -89,7 +103,7 @@ namespace Game.GridPrototype
             renderer.sharedMaterial = material; return renderer;
         }
         private Material MakeMaterial(Shader shader, Color color)
-        { var m = new Material(shader); m.color = color; materials.Add(m); return m; }
+        { var m = new Material(shader); m.color = color; materials.Add(m); originalAlphas.Add(color.a); return m; }
         private LineRenderer MakeLine(string label, Material material, bool loop)
         {
             var line = new GameObject(label).AddComponent<LineRenderer>(); line.transform.SetParent(transform);

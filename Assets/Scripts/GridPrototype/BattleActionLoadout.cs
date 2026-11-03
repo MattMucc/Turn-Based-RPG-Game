@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Game.GridPrototype
 {
     public enum BattleActionCategory { Attack, Skill, Item, Magic }
-    public enum BattleTargetPattern { Single, Area, Piercing, Multiple }
+    public enum BattleTargetPattern { Single, Area, Piercing, Multiple, Sweep }
 
     [Serializable]
     public sealed class BattleActionOption
@@ -55,17 +55,18 @@ namespace Game.GridPrototype
         public bool Available => Category != BattleActionCategory.Item || Quantity > 0;
         public string EffectTooltip => Effect == ActionEffect.Push ? "\n<b>Push</b>  1 cell forward; requires strictly higher Strength. Blocked destinations stop the push." :
             $"\n<b>Hit chance</b>  {HitChance:0.#}%" +
-            (Effect == ActionEffect.Damage ? $"\n{DamageType} / {Element}; scaling: {Scaling} × {StatScaling:0.##}. Defense and Block reduce damage." : "") +
+            (Effect == ActionEffect.Damage ? $"\n{DamageType} / {Element}; scaling: {Scaling} Ã— {StatScaling:0.##}. Defense and Block reduce damage." : "") +
             (InflictedStatus != CombatStatus.None ? $"\n<b>{InflictedStatus}</b>  {StatusChance:0.#}% per landed hit; +{StatusStacks} stacks (maximum 10)." : "") +
             (BarrierGranted > 0 ? $"\n<b>Barrier</b>  +{BarrierGranted} absorption." : "");
         public string Tooltip => $"<b>{Name}</b>\n{Description}\n\n<b>Reach</b>   {Reach} tiles from the user\n<b>Damage</b>   {Damage} per hit\n<b>Cost</b>   1 action\n\n<b>Targets</b>\n"
-            + (Pattern == BattleTargetPattern.Area ? $"Everyone within {Radius} tile(s) of the chosen cell. Allies and destructible objects are also hit." :
+            + (Pattern == BattleTargetPattern.Sweep ? $"A {Radius * 2 + 1}-cell line across the selected direction. Aim north, south, east or west; no diagonal aiming. Allies in the line can be hit." :
+               Pattern == BattleTargetPattern.Area ? $"Everyone within {Radius} tile(s) of the chosen cell. Allies and destructible objects are also hit." :
                Pattern == BattleTargetPattern.Piercing ? "Hits characters and destructible objects in a straight or diagonal line, including allies. Stops at terrain." :
                Pattern == BattleTargetPattern.Multiple ? $"Assign {MaxTargets} hits to start. Repeated cells and allies are allowed. Hits resolve in selection order." : "One cell. One hit. Can hit allies or destructible objects.")
             + (Category == BattleActionCategory.Item ? $"\n\n<b>Carried</b>   {Quantity}\nUses one item when the action starts." : "")
             + (SignatureQte ? $"\n\n<b>Signature QTE</b>\n{(QteType == QteMode.DualInput ? "Hold the direction and face button together; either input may be held first" : QteType == QteMode.Staged ? "Respond to each prompt; success or failure advances to the next. Timer resets per prompt. All prompts must succeed for bonus damage" : QteType == QteMode.FixedSequence ? "Complete the displayed fixed sequence" : QteType == QteMode.RepeatedTap ? $"Fill the meter by tapping ({Mathf.Max(1, QteRequiredTaps)} taps without decay); pausing gradually drains it" : QteType == QteMode.Hold ? $"Fill the meter by holding ({QteHoldDuration:0.0}s without decay); releasing gradually drains it" : "Press Space / south face button")} before {Mathf.Max(0.1f, QteDuration):0.0}s expires.\nSuccess: +{Mathf.Max(0, QteBonusDamage)} damage per hit ({Damage + Mathf.Max(0, QteBonusDamage)} total).\nWrong input or timeout: normal damage." : "")
             + EffectTooltip
-            + "\nEmpty cells still spend the action.\n\n<color=#80BEFF>Blue tiles</color>: within reach\n<color=#FF9090>Red tiles</color>: affected by this action";
+            + "\nEmpty cells still spend the action. Out-of-reach targets can be approached using remaining movement; all selected hits must fit from one destination.\n\n<color=#80BEFF>Blue tiles</color>: within reach now\n<color=#FF9090>Red tiles</color>: affected by this action";
 
     }
 
@@ -218,6 +219,7 @@ namespace Game.GridPrototype
             int distance = Distance(from, to);
             if ((distance == 0 && action.Pattern == BattleTargetPattern.Piercing) || distance > action.Reach || !board.Contains(to)) return false;
             var d = to - from;
+            if (action.Pattern == BattleTargetPattern.Sweep && (distance == 0 || (d.x != 0 && d.y != 0))) return false;
             if (action.Pattern == BattleTargetPattern.Piercing && d.x != 0 && d.y != 0 && Mathf.Abs(d.x) != Mathf.Abs(d.y)) return false;
             return Clear(board, from, to, targetableObstacle?.Invoke(to) ?? false) && (sight == null || sight(from, to));
         }
@@ -237,6 +239,15 @@ namespace Game.GridPrototype
                     if (!CanTarget(board, from, p, action, sight, targetableObstacle)) break;
                     result.Add(p);
                     if (board.At(p).Ground == Ground.Obstacle) break;
+                }
+            }
+            else if (action.Pattern == BattleTargetPattern.Sweep)
+            {
+                var across = target.x == from.x ? Vector2Int.right : Vector2Int.up;
+                for (int i = -action.Radius; i <= action.Radius; i++)
+                {
+                    var p = target + across * i;
+                    if (p != from && board.Contains(p) && Clear(board, from, p, targetableObstacle?.Invoke(p) ?? false) && (sight == null || sight(from, p))) result.Add(p);
                 }
             }
             else if (action.Pattern == BattleTargetPattern.Area)

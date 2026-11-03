@@ -48,6 +48,7 @@ public class EnemyMovement : MonoBehaviour
 
     private void Update()
     {
+        if (GameManager.Instance && GameManager.Instance.IsSwitchingCharacter) return;
         if (GameManager.Instance && GameManager.Instance.WorldInputBlocked) return;
         if (!playerTransform && GameManager.Instance.PossessedCharacter)
             playerTransform = GameManager.Instance.PossessedCharacter.transform;

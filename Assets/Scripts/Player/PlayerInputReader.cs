@@ -55,6 +55,10 @@ public class PlayerInputReader : MonoBehaviour
     public bool WorldAttackHeld { get; private set; }
     public bool InteractPressed { get; private set; }
     public bool InteractHeld { get; private set; }
+    public bool PreviousCharacterPressed { get; private set; }
+    public bool NextCharacterPressed { get; private set; }
+    private InputAction previousCharacterAction, nextCharacterAction;
+    private InputActionAsset ownedInput;
 
     // Battle Menu Inputs
     public bool AttackPressed { get; private set; }
@@ -79,6 +83,8 @@ public class PlayerInputReader : MonoBehaviour
             return;
         }
 
+        ownedInput = Instantiate(input); input = ownedInput;
+        input.bindingMask = null; input.devices = null;
         inputMap = input.FindActionMap(outOfCombatMapName, true);
         if (inputMap != null)
         {
@@ -90,6 +96,8 @@ public class PlayerInputReader : MonoBehaviour
             dashAction = inputMap.FindAction("Dash", false);
             worldAttackAction = inputMap.FindAction("Attack", true);
             interactAction = inputMap.FindAction("Interact", true);
+            previousCharacterAction = inputMap.FindAction("PreviousCharacter", false);
+            nextCharacterAction = inputMap.FindAction("NextCharacter", false);
         }
 
         battleInputMap = input.FindActionMap(battleMapName, false);
@@ -143,6 +151,8 @@ public class PlayerInputReader : MonoBehaviour
             DashPressed = dashAction != null && dashAction.WasPressedThisFrame();
             WorldAttackPressed = worldAttackAction.WasPressedThisFrame();
             InteractPressed = interactAction.WasPressedThisFrame();
+            PreviousCharacterPressed = previousCharacterAction != null && previousCharacterAction.WasPressedThisFrame();
+            NextCharacterPressed = nextCharacterAction != null && nextCharacterAction.WasPressedThisFrame();
 
             // Held
             SprintHeld = sprintAction.IsPressed();
@@ -153,6 +163,7 @@ public class PlayerInputReader : MonoBehaviour
         }
         else
         {
+            PreviousCharacterPressed = NextCharacterPressed = false;
             DashPressed = false;
             // Shortcuts
             AttackPressed = attackAction.WasPressedThisFrame();
@@ -199,6 +210,11 @@ public class PlayerInputReader : MonoBehaviour
         JumpHeld = false;
         SprintPressed = false;
         SprintHeld = false;
+    }
+
+    private void OnDestroy()
+    {
+        if (ownedInput) { ownedInput.Disable(); if (Application.isPlaying) Destroy(ownedInput); else DestroyImmediate(ownedInput); }
     }
 
     private void DetectSchemeSwitch()

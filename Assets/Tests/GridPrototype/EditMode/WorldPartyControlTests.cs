@@ -1,0 +1,70 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEditor;
+using Game.GridPrototype;
+using Object = UnityEngine.Object;
+
+public class WorldPartyControlTests
+{
+    readonly List<GameObject> objects = new();
+    const BindingFlags Hidden = BindingFlags.Instance | BindingFlags.NonPublic;
+    GameObject Make(string name) { var obj = new GameObject(name); objects.Add(obj); return obj; }
+    [TearDown] public void Cleanup()
+    { foreach (var obj in objects) if (obj) Object.DestroyImmediate(obj); objects.Clear(); Time.timeScale = 1; }
+
+    [TestCase(1, 1)] [TestCase(-1, 2)]
+    public void SwitchingFreezesTimeAndTransfersControlOnlyAfterCameraArrives(int direction, int expected)
+    {
+        var type = Type.GetType("GameManager, Assembly-CSharp", true);
+        var movement = Type.GetType("PlayerMovement, Assembly-CSharp", true);
+        var manager = Make("Manager").AddComponent(type);
+        var camera = Make("Camera rig").AddComponent(Type.GetType("PlayerRotation, Assembly-CSharp", true));
+        var party = new List<BattleCharacterInfo>();
+        for (int i = 0; i < 3; i++)
+        {
+            var obj = Make("Member " + i); obj.transform.position = Vector3.right * i * 10;
+            obj.AddComponent<CharacterController>(); obj.AddComponent(movement);
+            party.Add(obj.AddComponent<BattleCharacterInfo>());
+        }
+        type.GetField("BattleParty").SetValue(manager, party);
+        type.GetField("<PossessedCharacter>k__BackingField", Hidden).SetValue(manager, party[0].GetComponent(movement));
+        type.GetField("<PlayerRotation>k__BackingField", Hidden).SetValue(manager, camera);
+        Time.timeScale = .75f;
+        Assert.IsTrue((bool)type.GetMethod("TryCycleCharacter").Invoke(manager, new object[] { direction }));
+        Assert.AreEqual(0, Time.timeScale);
+        type.GetMethod("AdvanceCharacterSwitch").Invoke(manager, new object[] { .2f });
+        Assert.AreSame(party[0].GetComponent(movement), type.GetProperty("PossessedCharacter").GetValue(manager));
+        Assert.Greater(camera.transform.position.x, 0); Assert.Less(camera.transform.position.x, party[expected].transform.position.x);
+        type.GetMethod("AdvanceCharacterSwitch").Invoke(manager, new object[] { 1f });
+        Assert.AreEqual(.75f, Time.timeScale);
+        Assert.AreSame(party[expected].GetComponent(movement), type.GetProperty("PossessedCharacter").GetValue(manager));
+        Assert.AreEqual(expected * 10, camera.transform.position.x);
+        var encounter = (List<BattleCharacterInfo>)type.GetMethod("GetEncounterParty").Invoke(manager, null);
+        Assert.AreSame(party[expected], encounter[0]); Assert.AreEqual("Member 0", party[0].name);
+    }
+
+    [Test] public void SharedInputCloneDoesNotInheritKeyboardOnlyDeviceRestriction()
+    {
+        var source = Object.Instantiate(AssetDatabase.LoadAssetAtPath<InputActionAsset>("Assets/PlayerInputActions.inputactions"));
+        var type = Type.GetType("PlayerInputReader, Assembly-CSharp", true);
+        var reader = Make("Reader").AddComponent(type);
+        try
+        {
+            source.bindingMask = InputBinding.MaskByGroup("Keyboard&Mouse");
+            type.GetField("input", Hidden).SetValue(reader, source);
+            type.GetMethod("Awake", Hidden).Invoke(reader, null);
+            var clone = (InputActionAsset)type.GetField("input", Hidden).GetValue(reader);
+            Assert.AreNotSame(source, clone); Assert.IsNull(clone.bindingMask); Assert.IsNull(clone.devices);
+            clone.FindActionMap("World", true).Enable();
+            // Resolve the actual gamepad controls without sending input to the user's editor.
+            var gamepad = InputSystem.AddDevice<Gamepad>();
+            try { CollectionAssert.Contains(clone.FindAction("World/Move", true).controls, gamepad.leftStick); }
+            finally { InputSystem.RemoveDevice(gamepad); }
+        }
+        finally { Object.DestroyImmediate(source); }
+    }
+}
