@@ -15,6 +15,8 @@ public sealed class ControllerGlyphs : ScriptableObject
     public Pair[] Buttons;
     public Sprite[] KeyboardFaces;
     public Sprite[] KeyboardDirections;
+    [Tooltip("Overworld buttons: Restore (R), mode (E), dismiss (Delete), close (Escape).")]
+    public Sprite[] OverworldKeys;
     private static ControllerGlyphs cached;
     public static ControllerGlyphs Catalog => cached ? cached : cached = Resources.Load<ControllerGlyphs>("ControllerGlyphs");
     public static bool DetectPlayStation(Gamepad pad)

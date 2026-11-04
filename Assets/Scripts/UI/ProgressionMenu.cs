@@ -17,6 +17,8 @@ public sealed class ProgressionMenu : MonoBehaviour
     readonly Button[] statButtons = new Button[6];
     readonly string[] names = { "Vitality", "Strength", "Magic", "Physical Defense", "Magical Defense", "Initiative" };
     bool open, savedCursor, savedNavigation;
+    TMP_Text partyStatus;
+    readonly Button[] partyButtons = new Button[3];
     CursorLockMode savedLock;
     EventSystem events;
     int memberIndex, selected, closedFrame = -1;
@@ -29,8 +31,10 @@ public sealed class ProgressionMenu : MonoBehaviour
         if (!Application.isFocused) return;
         var keyboard = Keyboard.current; var pad = Gamepad.current;
         bool toggle = (keyboard != null && keyboard.tabKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame);
-        if (toggle) { if (open) Close(); else Open(); return; }
+        if (toggle) { if (open) Close(); else if (!GameManager.Instance.WorldInputBlocked) Open(); return; }
         if (!open) return;
+        if ((keyboard != null && keyboard.pKey.wasPressedThisFrame) || (pad != null && pad.buttonWest.wasPressedThisFrame)) { partySlot = (partySlot + 1) % 3; Render(); }
+        if ((keyboard != null && keyboard.insertKey.wasPressedThisFrame) || (pad != null && pad.rightTrigger.wasPressedThisFrame)) AssignParty(partySlot);
         if ((keyboard != null && keyboard.escapeKey.wasPressedThisFrame) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Close(); return; }
         if ((keyboard != null && keyboard.upArrowKey.wasPressedThisFrame) || (pad != null && pad.dpad.up.wasPressedThisFrame)) selected = (selected + 5) % 6;
         if ((keyboard != null && keyboard.downArrowKey.wasPressedThisFrame) || (pad != null && pad.dpad.down.wasPressedThisFrame)) selected = (selected + 1) % 6;
@@ -76,6 +80,12 @@ public sealed class ProgressionMenu : MonoBehaviour
         if (members.Count == 0) return null;
         memberIndex = Mathf.Clamp(memberIndex, 0, members.Count - 1); return members[memberIndex];
     }
+    int partySlot;
+    void AssignParty(int slot)
+    {
+        if (Member()) GameManager.Instance.TrySetActiveMember(slot, Member());
+        Render();
+    }
     void Spend(int index)
     {
         if (!open || InBattle) return;
@@ -89,6 +99,11 @@ public sealed class ProgressionMenu : MonoBehaviour
         heading.text = member ? (string.IsNullOrWhiteSpace(member.DisplayName) ? member.name.Replace("(Clone)", "") : member.DisplayName) : "No character";
         summary.text = member ? $"Level {member.Level}   •   {member.UnspentPoints} points available\n" +
             (member.Level >= party.LevelCap ? "XP: level cap reached" : $"XP: {party.ProgressFor(member)} / {party.Cost(Mathf.Max(1, member.Level))}") : "Register a party member.";
+        if (partyStatus)
+        {
+            partyStatus.text = "Active team: " + string.Join(" / ", GameManager.Instance.GetBattleParty().ConvertAll(m => m.DisplayName));
+            for (int i=0;i<3;i++) { partyButtons[i].interactable = member && !GameManager.Instance.GetBattleParty().Contains(member); partyButtons[i].image.color = i == partySlot ? new Color(1,.82f,.38f) : new Color(.85f,.87f,.9f); }
+        }
         for (int i = 0; i < 6; i++)
         {
             statLabels[i].text = names[i] + "   " + (member ? member.Stat((CharacterStat)i).ToString() : "—");
@@ -123,7 +138,7 @@ public sealed class ProgressionMenu : MonoBehaviour
         var canvas = canvasObject.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 200;
         var scaler = canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = .5f;
-        panel = Rect("Stats", canvasObject.transform, 0, 0, 340, 400);
+        panel = Rect("Stats", canvasObject.transform, 0, 0, 340, 500);
         panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, .5f); panel.anchoredPosition = Vector2.zero;
         panel.gameObject.AddComponent<Image>().color = new Color(.035f, .045f, .065f, .97f);
         heading = Label(Rect("Name", panel, 16, 12, 220, 28), "Character", 18);
@@ -135,7 +150,10 @@ public sealed class ProgressionMenu : MonoBehaviour
             statButtons[i] = Button("+", 278, 102 + i * 34, 40, () => Spend(index));
         }
         Label(Rect("Help", panel, 16, 310, 308, 48), "D-pad / ↑↓: stat   A/Cross / Enter: spend\nLB/RB / ←→: character", 12);
-        Button("Close · Tab / Esc / B / Circle", 16, 362, 308, Close);
+        partyStatus = Label(Rect("Active party", panel, 16, 360, 308, 40), "", 12);
+        for (int i=0;i<3;i++) { int slot=i; partyButtons[i]=Button("Use slot " + (i+1), 16+i*104, 404, 100, () => AssignParty(slot)); }
+        Label(Rect("Party controls", panel, 16, 436, 308, 24), "P / X: slot   Insert / RT: assign selected member", 11);
+        Button("Close · Tab / Esc / B / Circle", 16, 466, 308, Close);
     }
     void OnDisable() => Close();
     void OnDestroy() { Close(); if (ownedEvents) Destroy(ownedEvents); }

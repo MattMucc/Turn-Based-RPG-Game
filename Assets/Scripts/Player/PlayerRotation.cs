@@ -70,6 +70,13 @@ public class PlayerRotation : MonoBehaviour
         UpdateNormalCamera();
     }
 
+    public void PreviewWorldCamera(bool rotate)
+    {
+        if (!yawPivot || !pitchPivot || !cameraTransform) return;
+        if (rotate) RotateInput();
+        ApplyRotation(); ApplyCameraDistance();
+    }
+
     private void UpdateNormalCamera()
     {
         RotateInput();

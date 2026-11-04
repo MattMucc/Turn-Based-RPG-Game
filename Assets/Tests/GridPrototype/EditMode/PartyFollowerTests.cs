@@ -87,4 +87,14 @@ public class PartyFollowerTests
         followerType.GetMethod("ResumeFollowing").Invoke(follower, null); Step(150);
         Assert.Greater(body.transform.position.z, before + 2);
     }
+    [Test] public void WaitingCompanionAutomaticallyCrossesNewlySupportedRoute()
+    {
+        Setup(6);
+        for(int i=0;i<100;i++){leader.position+=Vector3.forward*.06f;Step();}
+        Step(100);float waiting=body.transform.position.z;
+        Assert.IsTrue((bool)followerType.GetProperty("WaitingForSafeRoute").GetValue(follower));
+        Box(new Vector3(0,-.5f,7),new Vector3(8,1,6));Physics.SyncTransforms();Step(200);
+        Assert.Greater(body.transform.position.z,waiting+2);
+        Assert.IsFalse((bool)followerType.GetProperty("WaitingForSafeRoute").GetValue(follower));
+    }
 }

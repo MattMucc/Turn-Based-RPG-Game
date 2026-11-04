@@ -67,4 +67,24 @@ public class WorldPartyControlTests
         }
         finally { Object.DestroyImmediate(source); }
     }
+    [Test] public void OutOfCombatRosterReplacementPreservesSlotPositionAndPossession()
+    {
+        var type=Type.GetType("GameManager, Assembly-CSharp",true);
+        var movement=Type.GetType("PlayerMovement, Assembly-CSharp",true);
+        var manager=Make("Roster manager").AddComponent(type);
+        var members=new List<BattleCharacterInfo>();
+        for(int i=0;i<4;i++)
+        {
+            var go=Make("Member "+i);go.transform.position=Vector3.right*i*3;
+            go.AddComponent<CharacterController>();go.AddComponent(movement);members.Add(go.AddComponent<BattleCharacterInfo>());
+        }
+        var party=members.GetRange(0,3);var reserves=members.GetRange(3,1);
+        type.GetField("BattleParty").SetValue(manager,party);type.GetField("ReserveParty").SetValue(manager,reserves);
+        type.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,members[0].GetComponent(movement));
+        var position=members[0].transform.position;
+        Assert.IsTrue((bool)type.GetMethod("TrySetActiveMember").Invoke(manager,new object[]{0,members[3]}));
+        Assert.AreSame(members[3],party[0]);Assert.AreSame(members[0],reserves[0]);Assert.AreEqual(position,members[3].transform.position);
+        Assert.AreSame(members[3].GetComponent(movement),type.GetProperty("PossessedCharacter").GetValue(manager));
+        Assert.IsFalse(members[0].gameObject.activeSelf);Assert.IsTrue(members[3].gameObject.activeSelf);
+    }
 }

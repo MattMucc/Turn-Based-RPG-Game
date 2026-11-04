@@ -57,3 +57,8 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 56f1002c9c66c894cb96ca4fb7172c97, type: 3}
   - {fileID: 21300000, guid: af856ace946144443ab99a512ce0590d, type: 3}
   - {fileID: 21300000, guid: f1dbccfd651b49a438d4645df3ba4062, type: 3}
+  OverworldKeys:
+  - {fileID: 21300000, guid: 44c2d0f09fa1bfd4da516e3c1dd20491, type: 3}
+  - {fileID: 21300000, guid: 6245ef681e7d5004ba343f7b05c31754, type: 3}
+  - {fileID: 21300000, guid: c88bc0b08f17dae44af85b1bd7ac5491, type: 3}
+  - {fileID: 21300000, guid: 7234c366470cb9c4fb697c1050f78628, type: 3}

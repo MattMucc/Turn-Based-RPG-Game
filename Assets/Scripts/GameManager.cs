@@ -19,7 +19,8 @@ public partial class GameManager : MonoBehaviour
     }
     public PartyProgression Progression = new PartyProgression();
     public ProgressionMenu ProgressionMenu { get; private set; }
-    public bool WorldInputBlocked => IsSwitchingCharacter || switchCompletedFrame == Time.frameCount || (ProgressionMenu && ProgressionMenu.BlocksWorldInput);
+    public WorldManipulationController WorldTools { get; private set; }
+    public bool WorldInputBlocked => (WorldTools && WorldTools.BlocksWorldInput) || IsSwitchingCharacter || switchCompletedFrame == Time.frameCount || (ProgressionMenu && ProgressionMenu.BlocksWorldInput);
     public static GameManager Instance { get; private set; }
     public PlayerInputReader Input { get; private set; }
     public PlayerMovement PossessedCharacter { get; private set; }
@@ -34,6 +35,7 @@ public partial class GameManager : MonoBehaviour
         }
         else { Destroy(gameObject); return; }
 
+        WorldTools = GetComponent<WorldManipulationController>();
         ProgressionMenu = GetComponent<ProgressionMenu>();
         if (!ProgressionMenu) ProgressionMenu = gameObject.AddComponent<ProgressionMenu>();
         foreach (var member in BattleParty) Progression.Register(member);
