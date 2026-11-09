@@ -366,3 +366,15 @@ MonoBehaviour:
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
+  - Name: Dash
+    FavoriteSlot: -1
+    Description: Gain movement to reposition this turn.
+    Category: 1
+    Pattern: 0
+    Reach: 1
+    Radius: 0
+    MaxTargets: 1
+    Damage: 0
+    Quantity: 0
+    Effect: 3
+    HitChance: 100

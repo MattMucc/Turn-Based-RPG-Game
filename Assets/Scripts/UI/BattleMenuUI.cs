@@ -181,19 +181,20 @@ public class BattleMenuUI : MonoBehaviour
         if (!battle) return;
         browsing = moving = editingFavorites = false; assigningFavorite = null; battle.GridInputEnabled = true; battle.KeyboardGridInputEnabled = false;
         BeginList();
-        Row("Attack", () => Open(BattleActionCategory.Attack), "Choose an attack available to this character. Movement is free on green tiles. Tab / controller LB switches grid navigation on or off.", () => battle.ActionReady, true);
-        Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a skill available to this character.", () => battle.ActionReady, true);
-        Row("Magic", () => Open(BattleActionCategory.Magic), "Cast a learned spell. Spells are available to every character; MP costs are not implemented yet.", () => battle.ActionReady);
-        Row("Items", () => Open(BattleActionCategory.Item), "Use a carried item. Costs one action and one item.", () => battle.ActionReady, true);
-        for (int i = 0; i < 3; i++) pool[i == 2 ? 3 : i].SetIcons(rootKeyboardIcons[i], rootControllerIcons[i], true);
-        Row("Block", () => battle.Block(), "Spend your action to reduce incoming prototype damage until your next turn. You may still move. Paralyzed prevents Block. Keyboard 4 / controller LT + RB.", () => battle.ActionReady && battle.Combatants[battle.CurrentActorIndex].CanBlock, true);
-        pool[4].SetIcons(blockKeyboardIcon, blockControllerIcon, true);
-        Row("Run", () => battle.Finish(false), "Leave this prototype encounter and restore overworld positions. Keyboard 5 / controller LT + B.", () => battle.PlayerReady, true);
-        pool[5].SetIcons(runKeyboardIcon, runControllerIcon, true);
-        Row("Dash", () => battle.Dash(), "Spend your action to gain 3 movement points. Move normally afterward; unused points carry over.", () => battle.ActionReady);
-        Row("End Turn", () => battle.EndTurn(), "T / controller right-stick click (R3): end this turn. Unspent movement carries over; your next turn grants three more points.", () => battle.PlayerReady, true);
+        Row("Attacks", () => Open(BattleActionCategory.Attack), "Choose a basic attack.", () => battle.ActionReady, true);
+        pool[0].SetIcons(rootKeyboardIcons[0], rootControllerIcons[0], true);
+        Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a unique or common skill, including Dash.", () => battle.ActionReady, true);
+        pool[1].SetIcons(rootKeyboardIcons[1], rootControllerIcons[1], true);
+        Row("Spells", () => Open(BattleActionCategory.Magic), "Cast a learned spell.", () => battle.ActionReady);
+        Row("Block", () => battle.Block(), "Reduce incoming damage until your next turn. Paralyzed prevents Block.", () => battle.ActionReady && battle.Combatants[battle.CurrentActorIndex].CanBlock, true);
+        pool[3].SetIcons(blockKeyboardIcon, blockControllerIcon, true);
+        Row("Items", () => Open(BattleActionCategory.Item), "Use a carried item.", () => battle.ActionReady, true);
+        pool[4].SetIcons(rootKeyboardIcons[2], rootControllerIcons[2], true);
+        Row("Swap", OpenSwap, "Swap with a living reserve. Uses your action; remaining movement transfers.", () => battle.CanSwap);
+        Row("Run", () => battle.Finish(false), "Leave this encounter.", () => battle.PlayerReady, true);
+        pool[6].SetIcons(runKeyboardIcon, runControllerIcon, true);
+        Row("End Turn", () => battle.EndTurn(), "End this turn. Unspent movement carries over.", () => battle.PlayerReady, true);
         pool[7].SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
-        Row("Swap", OpenSwap, "Swap this living character with a living reserve. Costs your action; remaining movement transfers. Your default party returns after battle.", () => battle.CanSwap);
         FinishList();
     }
     private void Open(BattleActionCategory selectedCategory)
@@ -207,7 +208,7 @@ public class BattleMenuUI : MonoBehaviour
         {
             if (option == null || option.Category != category) continue;
             var captured = option;
-            Row(option.Name + (category == BattleActionCategory.Item ? $" ×{option.Quantity}" : ""), () => Select(captured), option.Tooltip,
+            Row(option.Name + (category == BattleActionCategory.Item ? $" ×{option.Quantity}" : ""), () => Select(captured), ActionDetails(option),
                 () => battle.ActionReady && captured.Available && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
             if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
@@ -219,7 +220,7 @@ public class BattleMenuUI : MonoBehaviour
             Row("Clear Targets", () => battle.ClearTargets(), "Remove all assigned hits without spending your action.",
                 () => battle.ActionReady && battle.TargetCount > 0);
         }
-        if (battle.ChosenAction == null) Row("Favorites", EditFavorites, "Choose an ability or item, then assign shortcut 1-4 / LT + A, B, X, Y. All options remain available.", () => battle.PlayerReady);
+        if (battle.ChosenAction == null) Row("Favorites", EditFavorites, "Choose an ability or item, then assign shortcut 1-4 / LT + X, Y, A, B. All options remain available.", () => battle.PlayerReady);
         Row("Back", Back, "Cancel the selection and return to the command menu. Backspace / controller B. Escape cancels the action while keeping this list open.", () => battle.PlayerReady, true);
         pool[rows - 1].SetIcons(backKeyboardIcon, runControllerIcon);
         FinishList();
@@ -227,7 +228,7 @@ public class BattleMenuUI : MonoBehaviour
     private void FavoriteIcons(BattleMenuButton button, int slot)
     {
         button.SetIcons(slot < favoriteKeyboardIcons.Length ? favoriteKeyboardIcons[slot] : null,
-            slot < favoriteControllerIcons.Length ? favoriteControllerIcons[slot] : null, true);
+            slot < favoriteControllerIcons.Length ? favoriteControllerIcons[new[] { 2, 3, 0, 1 }[slot]] : null, true);
     }
     private void EditFavorites()
     {
@@ -281,20 +282,21 @@ public class BattleMenuUI : MonoBehaviour
         }
         if (pad != null && pad.leftTrigger.isPressed)
         {
-            if (pad.buttonSouth.wasPressedThisFrame) return 0;
-            if (pad.buttonEast.wasPressedThisFrame) return 1;
-            if (pad.buttonWest.wasPressedThisFrame) return 2;
-            if (pad.buttonNorth.wasPressedThisFrame) return 3;
+            if (pad.buttonWest.wasPressedThisFrame) return 0;
+            if (pad.buttonNorth.wasPressedThisFrame) return 1;
+            if (pad.buttonSouth.wasPressedThisFrame) return 2;
+            if (pad.buttonEast.wasPressedThisFrame) return 3;
         }
         return -1;
     }
     private void Select(BattleActionOption option)
     {
         if (!battle.ChooseAction(option)) return;
+        if (option.Effect == ActionEffect.Dash) { Root(); return; }
         Open(category);
         battle.GridInputEnabled = battle.KeyboardGridInputEnabled = true;
-        highlighted = -1; tooltip.text = ControllerGlyphs.Adapt(option.Tooltip); tooltipPanel.SetActive(true);
-        for (int i = 0; i < rows; i++) pool[i].SetSelected(descriptions[i] == option.Tooltip);
+        highlighted = -1; tooltip.text = ControllerGlyphs.Adapt(ActionDetails(option)); tooltipPanel.SetActive(true);
+        for (int i = 0; i < rows; i++) pool[i].SetSelected(previewOptions[i] == option);
         UpdateAvailability();
     }
     private void CancelSelection()
@@ -309,8 +311,9 @@ public class BattleMenuUI : MonoBehaviour
         if (editingFavorites) { if (assigningFavorite != null) EditFavorites(); else Open(category); return; }
         battle.CancelAction(); Root();
     }
+    private string ActionDetails(BattleActionOption option) => option.TooltipFor(battle.Combatants[battle.CurrentActorIndex]);
     private void ShowTooltip(int index)
-    { if (index >= 0 && index < descriptions.Count) { tooltip.text = ControllerGlyphs.Adapt(descriptions[index]); tooltipPanel.SetActive(true); if (battle) battle.HoverAction(previewOptions[index]); } }
+    { if (index >= 0 && index < descriptions.Count) { tooltip.text = ControllerGlyphs.Adapt(previewOptions[index] != null ? ActionDetails(previewOptions[index]) : descriptions[index]); tooltipPanel.SetActive(true); if (battle) battle.HoverAction(previewOptions[index]); } }
     private void FitTooltip()
     {
         var bounds = ((RectTransform)transform).rect;
@@ -348,7 +351,7 @@ public class BattleMenuUI : MonoBehaviour
     public void ControllerRootShortcut(int index)
     {
         if (!battle || !battle.PlayerReady || battle.InteractionBlocked || browsing || battle.ChosenAction != null) return;
-        if (index >= 0 && index < 5) pool[index >= 2 ? index + 1 : index].Invoke();
+        if (index >= 0 && index < 5) pool[new[] { 0, 1, 4, 3, 6 }[index]].Invoke();
     }
     public bool ControllerBrowsing => browsing;
     public void ControllerEndTurn() { if (CanUseEndTurnShortcut()) battle.EndTurn(); }

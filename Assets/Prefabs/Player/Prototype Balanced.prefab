@@ -495,8 +495,7 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Ember Volley
     FavoriteSlot: -1
-    Description: Three separately rolled hits. Each successful burn roll adds two
-      remaining ticks.
+    Description: Hurl a volley of embers at selected targets.
     Category: 3
     Pattern: 3
     Reach: 4
@@ -525,7 +524,7 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Renew
     FavoriteSlot: -1
-    Description: Three start-of-turn healing ticks. Select yourself or another character.
+    Description: Restore vitality over time.
     Category: 3
     Pattern: 0
     Reach: 4
@@ -554,7 +553,7 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Ward
     FavoriteSlot: -1
-    Description: Grant a blue shield that absorbs 30 damage before health.
+    Description: Conjure a protective shield.
     Category: 3
     Pattern: 0
     Reach: 4
@@ -583,8 +582,7 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Paralyzing Spark
     FavoriteSlot: -1
-    Description: Prevents dodge, parry and Block through the target's next turn.
-      Does not skip their turn.
+    Description: Disrupt the target with a crackling spark.
     Category: 3
     Pattern: 0
     Reach: 4

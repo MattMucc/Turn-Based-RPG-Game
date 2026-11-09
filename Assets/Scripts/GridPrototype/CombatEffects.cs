@@ -8,7 +8,7 @@ namespace Game.GridPrototype
     public enum DamageKind { Physical, Magical }
     public enum ScalingStat { None, Strength, Magic }
     public enum CombatElement { None, Fire, Lightning, Ice }
-    public enum ActionEffect { Damage, Support, Push }
+    public enum ActionEffect { Damage, Support, Push, Dash }
 
     public sealed partial class GridUnit
     {
@@ -74,11 +74,11 @@ namespace Game.GridPrototype
     {
         public static int Damage(GridUnit source, GridUnit target, int power, DamageKind kind, ScalingStat stat = ScalingStat.None, float scaling = 0)
         {
-            int value = stat == ScalingStat.Strength ? source.Strength : stat == ScalingStat.Magic ? source.Magic : 0;
+            int value = stat == ScalingStat.Strength ? (source?.Strength ?? 0) : stat == ScalingStat.Magic ? (source?.Magic ?? 0) : 0;
             float raw = Math.Max(0, power) + Math.Max(0, value) * Math.Max(0, scaling);
-            int defense = Math.Max(0, kind == DamageKind.Physical ? target.PhysicalDefense : target.MagicalDefense);
+            int defense = Math.Max(0, kind == DamageKind.Physical ? (target?.PhysicalDefense ?? 0) : (target?.MagicalDefense ?? 0));
             int damage = Mathf.RoundToInt(raw * (100f / (100f + defense)));
-            return target.EffectiveBlock ? damage / 2 : damage;
+            return target != null && target.EffectiveBlock ? damage / 2 : damage;
         }
         public static bool Roll(float percent, float roll) => percent >= 100 || (percent > 0 && roll < percent / 100f);
         public static bool CanPush(int strength, int resistance) => strength > resistance;

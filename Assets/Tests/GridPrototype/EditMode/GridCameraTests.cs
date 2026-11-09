@@ -111,6 +111,18 @@ public class GridCameraTests
                             Assert.That(screen.y, Is.InRange(0.14f, 0.86f));
                             Assert.Greater(screen.z, 0);
                         }
+            foreach(var actor in new[]{defender,attacker})
+            {
+                var body=GridCameraController.ActorBounds(actor.transform);
+                var center=new Vector3(body.center.x,body.max.y+GridCameraController.OverheadClearance+GridCameraController.OverheadHeight*.5f,body.center.z);
+                for(int x=-1;x<=1;x+=2)for(int y=-1;y<=1;y+=2)
+                {
+                    var corner=center+camera.transform.right*(x*GridCameraController.OverheadWidth*.5f)+camera.transform.up*(y*GridCameraController.OverheadHeight*.5f);
+                    var screen=camera.WorldToViewportPoint(corner);
+                    Assert.That(screen.x,Is.InRange(.08f,.92f),"Overhead width must stay in view.");
+                    Assert.That(screen.y,Is.InRange(.08f,.92f),"Overhead title must stay in view.");
+                }
+            }
             var left = camera.WorldToViewportPoint(defender.transform.position + Vector3.up * 0.9f);
             var right = camera.WorldToViewportPoint(attacker.transform.position + Vector3.up * 0.9f);
             Assert.Greater(Mathf.Abs(left.x - right.x), 0.15f, "Bodies should read separately on screen.");

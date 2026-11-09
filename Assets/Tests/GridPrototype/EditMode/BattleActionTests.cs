@@ -33,6 +33,37 @@ public class BattleActionTests
         for (int i = objects.Count - 1; i >= 0; i--) if (objects[i]) Object.DestroyImmediate(objects[i]);
         objects.Clear(); Physics.SyncTransforms();
     }
+    [Test] public void DashSkillSpendsOnlyActionAndNeedsNoTarget()
+    {
+        var dash = new BattleActionOption { Name = "Dash", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash };
+        battle.Loadout.Options.Add(dash);
+        int movement = battle.Movement;
+        Assert.IsTrue(battle.ChooseAction(dash));
+        Assert.AreEqual(movement + 3, battle.Movement);
+        Assert.IsNull(battle.ChosenAction);
+        Assert.IsFalse(battle.ActionReady);
+        Assert.IsTrue(battle.PlayerReady, "Dash must leave the turn open for movement.");
+        Assert.IsFalse(battle.ChooseAction(dash));
+        Assert.AreEqual(movement + 3, battle.Movement);
+    }
+    [Test] public void DetailsMatchDamageCalculationWithoutActionCostOrSingleHitSuffix()
+    {
+        var source = new GridUnit("Caster", Vector2Int.zero) { Strength = 10 };
+        var target = new GridUnit("Target", Vector2Int.zero) { PhysicalDefense = 100 };
+        var action = new BattleActionOption { Name = "Test", Damage = 20, Scaling = ScalingStat.Strength, StatScaling = 2, HitChance = 75, InflictedStatus = CombatStatus.Burning, StatusStacks = 2, StatusChance = 10 };
+        string plain = action.TooltipFor(source);
+        StringAssert.Contains("<b>Damage</b><pos=105>40", plain);
+        StringAssert.Contains("75%", plain);
+        StringAssert.Contains("Burning ×2", plain);
+        StringAssert.DoesNotContain("per hit", plain);
+        StringAssert.DoesNotContain("<b>Cost</b>", plain);
+        StringAssert.Contains("<b>Damage</b><pos=105>20", action.TooltipFor(source, target));
+        action.Pattern = BattleTargetPattern.Multiple;
+        action.SignatureQte = true; action.QteBonusDamage = 10;
+        StringAssert.Contains("40–50 (QTE) per hit", action.TooltipFor(source));
+        action.Category = BattleActionCategory.Item; action.Quantity = 4;
+        StringAssert.Contains("1 item (4 carried)", action.TooltipFor(source));
+    }
     private bool CompletePrepared()
     {
         if (!battle.TryPrepareAction(out var sequence)) return false;
@@ -169,7 +200,9 @@ public class BattleActionTests
         Assert.AreSame(endPad, buttonType.GetProperty("ControllerIcon").GetValue(root.transform.Find("Remaining turn").GetComponent(buttonType)));
         Assert.AreEqual("4", ((Sprite)buttonType.GetProperty("KeyboardIcon").GetValue(Find("Block").GetComponent(buttonType))).name);
         Assert.AreEqual("5", ((Sprite)buttonType.GetProperty("KeyboardIcon").GetValue(Find("Run").GetComponent(buttonType))).name);
-        Assert.AreEqual(9, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(8, container.GetComponentsInChildren<Button>().Length);
+        CollectionAssert.AreEqual(new[] { "Attacks", "Skills", "Spells", "Block", "Items", "Swap", "Run", "End Turn" },
+            Array.ConvertAll(container.GetComponentsInChildren<Button>(), b => b.GetComponentInChildren<TMP_Text>().text));
         Assert.IsNull(root.transform.Find("Battle targeting"));
         var hudType = Type.GetType("BattleHud, Assembly-CSharp");
         var hud = root.GetComponentInChildren(hudType);
@@ -237,12 +270,16 @@ public class BattleActionTests
         Assert.IsNull(battle.ChosenAction); Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
         Assert.IsTrue(Find("Area Skill").interactable); Assert.IsFalse(counter.gameObject.activeInHierarchy);
         Find("Multi-target Skill").onClick.Invoke(); battle.ToggleTarget(cells[1]);
-        Find("Back").onClick.Invoke(); Assert.AreEqual(9, container.GetComponentsInChildren<Button>().Length);
+        Find("Back").onClick.Invoke(); Assert.AreEqual(8, container.GetComponentsInChildren<Button>().Length);
+        CollectionAssert.AreEqual(new[] { "Attacks", "Skills", "Spells", "Block", "Items", "Swap", "Run", "End Turn" },
+            Array.ConvertAll(container.GetComponentsInChildren<Button>(), b => b.GetComponentInChildren<TMP_Text>().text));
         Assert.IsNull(battle.ChosenAction); Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
-        Assert.AreEqual(4, Find("Block").transform.GetSiblingIndex()); Assert.AreEqual(5, Find("Run").transform.GetSiblingIndex());
+        Assert.AreEqual(3, Find("Block").transform.GetSiblingIndex()); Assert.AreEqual(6, Find("Run").transform.GetSiblingIndex());
         menuType.GetMethod("Unbind").Invoke(menu, null); Assert.IsFalse(root.activeSelf);
         menuType.GetMethod("Bind").Invoke(menu, new object[] { battle }); Assert.IsTrue(root.activeSelf);
-        Assert.AreEqual(9, container.GetComponentsInChildren<Button>().Length);
+        Assert.AreEqual(8, container.GetComponentsInChildren<Button>().Length);
+        CollectionAssert.AreEqual(new[] { "Attacks", "Skills", "Spells", "Block", "Items", "Swap", "Run", "End Turn" },
+            Array.ConvertAll(container.GetComponentsInChildren<Button>(), b => b.GetComponentInChildren<TMP_Text>().text));
         battle.Block();
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);
@@ -625,5 +662,25 @@ public class BattleActionTests
     {
         foreach (var obj in objects)
             if (obj.name.StartsWith("Test unit") && obj.transform != battle.Actor(0)) Assert.That(Mathf.Abs(Mathf.DeltaAngle(0, obj.transform.eulerAngles.y) % 45), Is.LessThan(0.01f));
+    }
+    [Test] public void OverheadBillboardsShowLiveHealthAndOnlyDefensePairDuringCameraTransition()
+    {
+        var root=Create("Overhead test");var type=System.Type.GetType("BattleOverheadDisplay, Assembly-CSharp",true);var display=root.AddComponent(type);
+        type.GetMethod("Bind").Invoke(display,new object[]{battle,TMP_Settings.defaultFontAsset});
+        battle.Info(0).Level=7;battle.Combatants[0].Health=31;
+        type.GetMethod("Render").Invoke(display,null);Assert.AreEqual(battle.Combatants.Count,root.transform.childCount);
+        StringAssert.Contains("Lv 7",root.transform.GetChild(0).Find("Name and level").GetComponent<TMP_Text>().text);
+        Assert.AreEqual("31 / 100",root.transform.GetChild(0).Find("Health").GetComponentInChildren<TMP_Text>().text);
+        battle.BattleCamera.transform.rotation=Quaternion.Euler(25,80,0);type.GetMethod("Render").Invoke(display,null);
+        Assert.Less(Quaternion.Angle(battle.BattleCamera.transform.rotation,root.transform.GetChild(0).rotation),.01f);
+        var sequence=BeginEnemySequence(false);Assert.IsTrue(battle.DefensePresentationActive);
+        type.GetMethod("Render").Invoke(display,null);
+        Assert.IsTrue(root.transform.GetChild(0).gameObject.activeSelf);Assert.IsTrue(root.transform.GetChild(1).gameObject.activeSelf);
+        Assert.IsFalse(root.transform.GetChild(2).gameObject.activeSelf);
+        typeof(InSceneGridBattle).GetMethod("ResetDefense",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(battle,null);
+        Assert.IsFalse(battle.DefensePresentationActive);
+        battle.BattleCamera.transform.LookAt(battle.Actor(2));type.GetMethod("Render").Invoke(display,null);
+        Assert.IsTrue(root.transform.GetChild(2).gameObject.activeSelf);
+        battle.Combatants[2].Health=0;type.GetMethod("Render").Invoke(display,null);Assert.IsFalse(root.transform.GetChild(2).gameObject.activeSelf);
     }
 }

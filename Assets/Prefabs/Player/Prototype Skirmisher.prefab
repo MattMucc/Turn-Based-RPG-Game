@@ -375,7 +375,7 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Ward
     FavoriteSlot: 0
-    Description: Grant a blue shield that absorbs 30 damage before health.
+    Description: Conjure a protective shield.
     Category: 3
     Pattern: 0
     Reach: 4

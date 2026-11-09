@@ -82,7 +82,7 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         {
             Color tint = Color.white;
             icon.sprite = scheme == PlayerInputReader.ControlScheme.Gamepad ? ControllerGlyphs.Resolve(controllerIcon, out tint) : keyboardIcon;
-            if (scheme == PlayerInputReader.ControlScheme.Gamepad && tint == Color.white)
+            if (scheme != PlayerInputReader.ControlScheme.Gamepad || tint == Color.white)
                 tint = Available ? DarkGlyph : Color.white;
             tint.a = icon.color.a; icon.color = tint;
             ControllerGlyphs.StyleFace(icon);

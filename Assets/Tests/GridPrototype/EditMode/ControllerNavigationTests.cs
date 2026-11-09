@@ -163,7 +163,7 @@ public class ControllerNavigationTests : InputTestFixture
         type.GetMethod("SetIcons").Invoke(button, new object[] { null, rb, true });
         var schemeType = Type.GetType("PlayerInputReader+ControlScheme, Assembly-CSharp");
         type.GetMethod("UpdateIcon", Private).Invoke(button, new[] { Enum.Parse(schemeType, "Gamepad") });
-        Assert.AreEqual("Attack", ((TMP_Text)type.GetProperty("Label").GetValue(button)).text);
+        Assert.AreEqual("Attacks", ((TMP_Text)type.GetProperty("Label").GetValue(button)).text);
         Assert.Less(icon.color.grayscale, 0.2f);
         var trigger = button.transform.Find("Shortcut trigger").GetComponent<Image>();
         Assert.IsTrue(trigger.gameObject.activeSelf); Assert.IsNotNull(trigger.sprite);
@@ -260,6 +260,15 @@ public class ControllerNavigationTests : InputTestFixture
         Press(pad.buttonEast); Tick(); Release(pad.buttonEast);
         Press(pad.leftTrigger); Press(pad.rightShoulder); Tick();
         Assert.IsFalse(battle.ActionReady, "LT + RB must execute Block from root.");
+    }
+
+    [Test] public void FirstFavoriteUsesWestFaceButtonInAttackCategory()
+    {
+        Press(pad.leftTrigger); Press(pad.buttonWest); Tick();
+        Release(pad.buttonWest);
+        Press(pad.buttonWest); Tick();
+        Assert.AreSame(battle.Loadout.Favorite(BattleActionCategory.Attack, 0), battle.ChosenAction);
+        Assert.IsTrue(battle.ActionReady);
     }
 
     [Test] public void ViewTogglesFlightAndFocusedOrbitReleasesOnMovement()

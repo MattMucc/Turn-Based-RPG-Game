@@ -53,20 +53,36 @@ namespace Game.GridPrototype
             return true;
         }
         public bool Available => Category != BattleActionCategory.Item || Quantity > 0;
-        public string EffectTooltip => Effect == ActionEffect.Push ? "\n<b>Push</b>  1 cell forward; requires strictly higher Strength. Blocked destinations stop the push." :
-            $"\n<b>Hit chance</b>  {HitChance:0.#}%" +
-            (Effect == ActionEffect.Damage ? $"\n{DamageType} / {Element}; scaling: {Scaling} × {StatScaling:0.##}. Defense and Block reduce damage." : "") +
-            (InflictedStatus != CombatStatus.None ? $"\n<b>{InflictedStatus}</b>  {StatusChance:0.#}% per landed hit; +{StatusStacks} stacks (maximum 10)." : "") +
-            (BarrierGranted > 0 ? $"\n<b>Barrier</b>  +{BarrierGranted} absorption." : "");
-        public string Tooltip => $"<b>{Name}</b>\n{Description}\n\n<b>Reach</b>   {Reach} tiles from the user\n<b>Damage</b>   {Damage} per hit\n<b>Cost</b>   1 action\n\n<b>Targets</b>\n"
-            + (Pattern == BattleTargetPattern.Sweep ? $"A {Radius * 2 + 1}-cell line across the selected direction. Aim north, south, east or west; no diagonal aiming. Allies in the line can be hit." :
-               Pattern == BattleTargetPattern.Area ? $"Everyone within {Radius} tile(s) of the chosen cell. Allies and destructible objects are also hit." :
-               Pattern == BattleTargetPattern.Piercing ? "Hits characters and destructible objects in a straight or diagonal line, including allies. Stops at terrain." :
-               Pattern == BattleTargetPattern.Multiple ? $"Assign {MaxTargets} hits to start. Repeated cells and allies are allowed. Hits resolve in selection order." : "One cell. One hit. Can hit allies or destructible objects.")
-            + (Category == BattleActionCategory.Item ? $"\n\n<b>Carried</b>   {Quantity}\nUses one item when the action starts." : "")
-            + (SignatureQte ? $"\n\n<b>Signature QTE</b>\n{(QteType == QteMode.DualInput ? "Hold the direction and face button together; either input may be held first" : QteType == QteMode.Staged ? "Respond to each prompt; success or failure advances to the next. Timer resets per prompt. All prompts must succeed for bonus damage" : QteType == QteMode.FixedSequence ? "Complete the displayed fixed sequence" : QteType == QteMode.RepeatedTap ? $"Fill the meter by tapping ({Mathf.Max(1, QteRequiredTaps)} taps without decay); pausing gradually drains it" : QteType == QteMode.Hold ? $"Fill the meter by holding ({QteHoldDuration:0.0}s without decay); releasing gradually drains it" : "Press Space / south face button")} before {Mathf.Max(0.1f, QteDuration):0.0}s expires.\nSuccess: +{Mathf.Max(0, QteBonusDamage)} damage per hit ({Damage + Mathf.Max(0, QteBonusDamage)} total).\nWrong input or timeout: normal damage." : "")
-            + EffectTooltip
-            + "\nEmpty cells still spend the action. Out-of-reach targets can be approached using remaining movement; all selected hits must fit from one destination.\n\n<color=#80BEFF>Blue tiles</color>: within reach now\n<color=#FF9090>Red tiles</color>: affected by this action";
+        public string Tooltip => TooltipFor(null);
+        public string TooltipFor(GridUnit source, GridUnit target = null)
+        {
+            string result = $"<b>{Name}</b>\n{Description}\n";
+            string Row(string label, string value) => $"\n<b>{label}</b><pos=105>{value}";
+            if (Effect == ActionEffect.Dash) return result + Row("Movement", "+3 points");
+            result += Row("Reach", $"{Reach} tiles");
+            if (Effect == ActionEffect.Damage)
+            {
+                int damage = CombatMath.Damage(source, target, Damage, DamageType, Scaling, StatScaling);
+                string amount = damage.ToString();
+                if (SignatureQte && QteBonusDamage > 0)
+                    amount += "–" + CombatMath.Damage(source, target, Damage + QteBonusDamage, DamageType, Scaling, StatScaling) + " (QTE)";
+                if (Pattern == BattleTargetPattern.Multiple) amount += " per hit";
+                result += Row("Damage", amount);
+                result += Row("Defense", target == null ? "Before mitigation" : "Target included");
+            }
+            result += Row("Hit Chance", $"{Mathf.Clamp(HitChance, 0, 100):0.#}%");
+            result += Row("Type", Pattern == BattleTargetPattern.Multiple ? "Multi-Target" : Pattern == BattleTargetPattern.Single ? "Single" : Pattern.ToString());
+            if (Pattern == BattleTargetPattern.Single || Pattern == BattleTargetPattern.Multiple)
+                result += Row("Targets", Pattern == BattleTargetPattern.Multiple ? MaxTargets.ToString() : "1");
+            result += Row("Element", Element.ToString());
+            if (Effect == ActionEffect.Damage) result += Row("Damage Type", DamageType.ToString());
+            if (Category == BattleActionCategory.Item) result += Row("Cost", $"1 item ({Quantity} carried)");
+            if (InflictedStatus != CombatStatus.None)
+                result += Row("Afflictions", $"{InflictedStatus} ×{Mathf.Clamp(StatusStacks, 1, 10)}")
+                    + $"\n<indent=105>{Mathf.Clamp(StatusChance, 0, 100):0.#}% per landed hit</indent>";
+            if (BarrierGranted > 0) result += Row("Barrier", BarrierGranted.ToString());
+            return result;
+        }
 
     }
 
@@ -190,10 +206,10 @@ namespace Game.GridPrototype
         };
         public static BattleActionOption[] CreateStatusPrototypes() => new[]
         {
-            new BattleActionOption { Name = "Ember Volley", Description = "Three separately rolled hits. Each successful burn roll adds two remaining ticks.", Category = BattleActionCategory.Magic, Pattern = BattleTargetPattern.Multiple, Reach = 4, MaxTargets = 3, Damage = 5, DamageType = DamageKind.Magical, Element = CombatElement.Fire, Scaling = ScalingStat.Magic, StatScaling = .5f, InflictedStatus = CombatStatus.Burning, StatusChance = 50, StatusStacks = 2 },
-            new BattleActionOption { Name = "Renew", Description = "Three start-of-turn healing ticks. Select yourself or another character.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, InflictedStatus = CombatStatus.Regeneration, StatusStacks = 3 },
-            new BattleActionOption { Name = "Ward", Description = "Grant a blue shield that absorbs 30 damage before health.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, BarrierGranted = 30 },
-            new BattleActionOption { Name = "Paralyzing Spark", Description = "Prevents dodge, parry and Block through the target's next turn. Does not skip their turn.", Category = BattleActionCategory.Magic, Reach = 4, Damage = 0, DamageType = DamageKind.Magical, Element = CombatElement.Lightning, InflictedStatus = CombatStatus.Paralyzed },
+            new BattleActionOption { Name = "Ember Volley", Description = "Hurl a volley of embers at selected targets.", Category = BattleActionCategory.Magic, Pattern = BattleTargetPattern.Multiple, Reach = 4, MaxTargets = 3, Damage = 5, DamageType = DamageKind.Magical, Element = CombatElement.Fire, Scaling = ScalingStat.Magic, StatScaling = .5f, InflictedStatus = CombatStatus.Burning, StatusChance = 50, StatusStacks = 2 },
+            new BattleActionOption { Name = "Renew", Description = "Restore vitality over time.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, InflictedStatus = CombatStatus.Regeneration, StatusStacks = 3 },
+            new BattleActionOption { Name = "Ward", Description = "Conjure a protective shield.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, BarrierGranted = 30 },
+            new BattleActionOption { Name = "Paralyzing Spark", Description = "Disrupt the target with a crackling spark.", Category = BattleActionCategory.Magic, Reach = 4, Damage = 0, DamageType = DamageKind.Magical, Element = CombatElement.Lightning, InflictedStatus = CombatStatus.Paralyzed },
             new BattleActionOption { Name = "Push", Description = "Push one cell forward on level, clear ground. Your Strength must exceed the target's Strength or object's push resistance. Rivers, falls and traps are not supported yet.", Category = BattleActionCategory.Attack, Effect = ActionEffect.Push, Damage = 0 }
         };
         private static List<BattleActionOption> CreateDefaultOptions()
@@ -204,6 +220,7 @@ namespace Game.GridPrototype
             new BattleActionOption { Name = "Piercing Attack", Description = "Prototype line targeting.", Pattern = BattleTargetPattern.Piercing, Reach = 4, Damage = 18 },
             new BattleActionOption { Name = "Area Skill", Description = "Prototype area targeting.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Area, Reach = 4, Damage = 18 },
             new BattleActionOption { Name = "Multi-target Skill", Description = "Prototype independent target selection.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Multiple, Reach = 4, Damage = 12 },
+            new BattleActionOption { Name = "Dash", Description = "Gain movement to reposition this turn.", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash, Damage = 0 },
             CreatePrototypeSignature(),
             CreatePrototypeSequence(),
             CreatePrototypeMash(),

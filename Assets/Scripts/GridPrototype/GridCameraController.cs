@@ -93,14 +93,15 @@ namespace Game.GridPrototype
             // Frame both full bodies from a raised three-quarter angle, then hold the shot.
             Bounds defenderBounds = ActorBounds(defender), attackerBounds = ActorBounds(attacker);
             Vector3 center = (defenderBounds.center + attackerBounds.center) * 0.5f;
-            Vector3 outward = (right * 0.8f - forward * 0.6f + Vector3.up * 0.5f).normalized;
+            defenderBounds = WithOverhead(defenderBounds); attackerBounds = WithOverhead(attackerBounds);
+            Vector3 outward = (right * 0.95f - forward * 0.45f + Vector3.up * 0.45f).normalized;
             Quaternion rotation = Quaternion.LookRotation(-outward, Vector3.up);
             float distance = FramingDistance(center, rotation, defenderBounds, attackerBounds);
             Vector3 desired = center + outward * distance;
             // Prefer the opposite three-quarter side if scenery blocks the usual side.
             if (Physics.SphereCast(center, 0.2f, outward, out var hit, distance, ~0, QueryTriggerInteraction.Ignore))
             {
-                Vector3 alternate = (-right * 0.8f - forward * 0.6f + Vector3.up * 0.5f).normalized;
+                Vector3 alternate = (-right * 0.95f - forward * 0.45f + Vector3.up * 0.45f).normalized;
                 Quaternion alternateRotation = Quaternion.LookRotation(-alternate, Vector3.up);
                 float alternateDistance = FramingDistance(center, alternateRotation, defenderBounds, attackerBounds);
                 if (!Physics.SphereCast(center, 0.2f, alternate, out var otherHit, alternateDistance, ~0, QueryTriggerInteraction.Ignore))
@@ -114,7 +115,13 @@ namespace Game.GridPrototype
             FocusTarget = defender; followedPosition = defender.position;
             CharacterFocused = Transitioning = poseTransition = shoulderView = true;
         }
-        private static Bounds ActorBounds(Transform actor)
+        public const float OverheadWidth = 1.7f, OverheadHeight = .68f, OverheadClearance = .15f;
+        public static Bounds WithOverhead(Bounds body)
+        {
+            var display = new Bounds(new Vector3(body.center.x,body.max.y+OverheadClearance+OverheadHeight*.5f,body.center.z),new Vector3(OverheadWidth,OverheadHeight,OverheadWidth));
+            body.Encapsulate(display);return body;
+        }
+        public static Bounds ActorBounds(Transform actor)
         {
             var bounds = new Bounds(actor.position + Vector3.up * 0.9f, new Vector3(1, 1.8f, 1));
             bool found = false;
@@ -310,7 +317,7 @@ namespace Game.GridPrototype
             if (overWorld)
             {
                 float scroll = mouse.scroll.ReadValue().y;
-                if (scroll != 0) Dolly(scroll / 120f * ZoomSpeed);
+                if (scroll != 0) Dolly(scroll / 120f * ZoomSpeed * 5f);
             }
             if (keyboard != null && (overWorld || rotating || orbiting || pan.Held))
             {

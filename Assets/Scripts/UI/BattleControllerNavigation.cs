@@ -192,8 +192,8 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         bool confirm = pad.buttonSouth.wasPressedThisFrame;
         if (pad.leftTrigger.isPressed && !battle.InspectionOpen)
         {
-            int slot = confirm ? 0 : pad.buttonEast.wasPressedThisFrame ? 1
-                : pad.buttonWest.wasPressedThisFrame ? 2 : pad.buttonNorth.wasPressedThisFrame ? 3 : -1;
+            int slot = pad.buttonWest.wasPressedThisFrame ? 0 : pad.buttonNorth.wasPressedThisFrame ? 1
+                : confirm ? 2 : pad.buttonEast.wasPressedThisFrame ? 3 : -1;
             if (menu.ControllerBrowsing)
             {
                 if (slot >= 0) { menu.UseFavorite(slot); DrawMode(); return; }

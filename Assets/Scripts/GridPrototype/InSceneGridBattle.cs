@@ -412,6 +412,7 @@ namespace Game.GridPrototype
         public bool ChooseAction(BattleActionOption option)
         {
             if (!ActionReady || option == null || !option.Available || !Loadout.Options.Contains(option)) return false;
+            if (option.Effect == ActionEffect.Dash) { Dash(); return !Active.ActionAvailable; }
             HoveredAction = null; ChosenAction = option; targets.Clear(); selected = Active.Position;
             message = "Choose any cell in reach, including empty cells or allies. Multi-target actions start when all hits are assigned."; Refresh(); return true;
         }
@@ -422,7 +423,7 @@ namespace Game.GridPrototype
         public void HoverAction(BattleActionOption option)
         {
             if (ChosenAction != null) return;
-            HoveredAction = ActionReady && option != null && option.Available && Loadout.Options.Contains(option) ? option : null;
+            HoveredAction = ActionReady && option != null && option.Effect != ActionEffect.Dash && option.Available && Loadout.Options.Contains(option) ? option : null;
             Refresh();
         }
         private HashSet<Vector2Int> Reach(BattleActionOption option)
@@ -731,8 +732,12 @@ namespace Game.GridPrototype
                 default: return "Watch the wind-up";
             }
         }
+        public int DefenseAttackerIndex { get; private set; } = -1;
+        public int DefenseDefenderIndex => defenderIndex;
+        public bool DefensePresentationActive => DefenseAttackerIndex >= 0;
         private IEnumerator EnemyAttack(int index, bool combo)
         {
+            DefenseAttackerIndex = index;
             DefenseSettings = allyDefense[defenderIndex];
             busy = true; perfectParries = true; InspectionOpen = false;
             actors[index].rotation = GridTargeting.Facing(Grid.Point(turnOrder[defenderIndex].Position) - Grid.Point(turnOrder[index].Position));
@@ -774,6 +779,7 @@ namespace Game.GridPrototype
         }
         private void ResetDefense()
         {
+            DefenseAttackerIndex = -1;
             attackerVisual?.Reset(); defenderVisual?.Reset(); attackerVisual = defenderVisual = null;
             defenseSlowMotion.Clear();
             DefenseActive = false; CurrentImpact = null;

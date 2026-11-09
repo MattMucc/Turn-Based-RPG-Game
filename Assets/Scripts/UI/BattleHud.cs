@@ -17,6 +17,7 @@ public sealed class BattleHud : MonoBehaviour
         public int Index;
     }
     private InSceneGridBattle battle;
+    private BattleOverheadDisplay overhead;
     public int InspectionDismissedFrame { get; private set; } = -1;
     private TMP_FontAsset font;
     private RectTransform root, orderPanel, orderContent, inspectionLayer, contextPanel, examinePanel, examineContent;
@@ -51,7 +52,10 @@ public sealed class BattleHud : MonoBehaviour
     public void Bind(InSceneGridBattle source, TMP_FontAsset textFont)
     {
         if (battle) { battle.ContextRequested -= ShowContext; battle.TargetContextRequested -= ShowTargetContext; }
+        if(overhead)Remove(overhead.gameObject);
         battle = source; font = textFont; root = (RectTransform)transform;
+        var overheadObject=new GameObject("Battle overhead displays");overheadObject.transform.SetParent(battle.transform,false);
+        overhead=overheadObject.AddComponent<BattleOverheadDisplay>();overhead.Bind(battle,font);
         for (int i = transform.childCount - 1; i >= 0; i--) Remove(transform.GetChild(i).gameObject);
         cards.Clear(); portraits.Clear();
         orderPanel = Rect("Turn order", root); orderPanel.gameObject.AddComponent<Image>().color = Dark;
@@ -485,15 +489,16 @@ public sealed class BattleHud : MonoBehaviour
     public void ClearControllerPortrait() { controllerPortrait = -1; }
     public void CloseInspection()
     { if (battle) { if (battle.InspectionOpen) InspectionDismissedFrame = Time.frameCount; battle.InspectionOpen = false; } if (inspectionLayer) inspectionLayer.gameObject.SetActive(false); }
-    private void OnDisable() => CloseInspection();
-    private void OnDestroy() { if (battle) { battle.ContextRequested -= ShowContext; battle.TargetContextRequested -= ShowTargetContext; } }
+    private void OnDisable() { CloseInspection(); if(overhead)overhead.gameObject.SetActive(false); }
+    private void OnEnable() { if(overhead)overhead.gameObject.SetActive(true); }
+    private void OnDestroy() { if(overhead)Remove(overhead.gameObject); if (battle) { battle.ContextRequested -= ShowContext; battle.TargetContextRequested -= ShowTargetContext; } }
     private void LateUpdate() => Render();
     public void Render()
     {
         if (!battle) return;
         if (battle.InspectionOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) CloseInspection();
         if (battle.InspectionOpen && examinePanel.gameObject.activeSelf) UpdateExamine();
-        DrawDefense(); DrawSignature(); DrawTargetDetails();
+        DrawDefense(); DrawSignature(); DrawTargetDetails(); if(overhead)overhead.Render();
         var order = battle.UpcomingTurns();
         if (lastActor != battle.CurrentActorIndex || lastCount != order.Count)
         { ApplyLayout(); lastActor = battle.CurrentActorIndex; lastCount = order.Count; }
