@@ -44,6 +44,7 @@ namespace Game.GridPrototype
         [Min(0)] public int BurningDamagePerTick = 5, RegenerationHealingPerTick = 5;
         public void Configure(GridUnit unit)
         {
+            GetComponent<DebtPrototypeSettings>()?.Configure(unit);
             unit.MaxHealth = Mathf.Max(1, BaseHealth + Stat(CharacterStat.Vitality) * HealthPerVitality);
             unit.Health = unit.MaxHealth;
             unit.Strength = Stat(CharacterStat.Strength); unit.Magic = Stat(CharacterStat.Magic);

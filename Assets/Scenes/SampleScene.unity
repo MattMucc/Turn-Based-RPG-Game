@@ -1307,7 +1307,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2713249943951413015, guid: 56a4c950364872e478331d8c2f7d6e88, type: 3}
       propertyPath: m_Name
-      value: Prototype Vanguard
+      value: Prototype Debt
       objectReference: {fileID: 0}
     - target: {fileID: 2713249943951413015, guid: 56a4c950364872e478331d8c2f7d6e88, type: 3}
       propertyPath: m_IsActive

@@ -4,11 +4,11 @@ using UnityEngine;
 
 namespace Game.GridPrototype
 {
-    public enum CombatStatus { None, Burning, Regeneration, Paralyzed }
+    public enum CombatStatus { None, Burning, Regeneration, Paralyzed, Weakened, Exposed }
     public enum DamageKind { Physical, Magical }
     public enum ScalingStat { None, Strength, Magic }
     public enum CombatElement { None, Fire, Lightning, Ice }
-    public enum ActionEffect { Damage, Support, Push, Dash }
+    public enum ActionEffect { Damage, Support, Push, Dash, TransferDebt, Foreclose, SettleDebt }
 
     public sealed partial class GridUnit
     {
@@ -17,7 +17,7 @@ namespace Game.GridPrototype
         public int Barrier { get; private set; }
         public int BarrierMaximum { get; private set; }
         readonly Dictionary<CombatStatus, int> stacks = new Dictionary<CombatStatus, int>();
-        int paralyzedAtTurnStart;
+        int paralyzedAtTurnStart, weakenedAtTurnStart, exposedAtTurnStart;
         public int Stacks(CombatStatus status) => stacks.TryGetValue(status, out int value) ? value : 0;
         public void RemoveStatus(CombatStatus status) => stacks.Remove(status);
         public bool CanReact => !ReactionsDisabled && Stacks(CombatStatus.Paralyzed) == 0;
@@ -53,6 +53,7 @@ namespace Game.GridPrototype
             // Snapshot which effects were present before processing; no newly added effect ticks here.
             bool burn = Stacks(CombatStatus.Burning) > 0, regen = Stacks(CombatStatus.Regeneration) > 0;
             paralyzedAtTurnStart = Stacks(CombatStatus.Paralyzed);
+            weakenedAtTurnStart = Stacks(CombatStatus.Weakened); exposedAtTurnStart = Stacks(CombatStatus.Exposed);
             if (burn) { TakeDamage(BurnTickDamage); stacks[CombatStatus.Burning]--; }
             if (regen) { Heal(RegenerationTickHealing); stacks[CombatStatus.Regeneration]--; }
         }
@@ -60,7 +61,10 @@ namespace Game.GridPrototype
         {
             // Prototype duration: paralysis lasts through the afflicted turn, never expires on application.
             if (paralyzedAtTurnStart > 0 && Stacks(CombatStatus.Paralyzed) > 0) stacks[CombatStatus.Paralyzed]--;
-            paralyzedAtTurnStart = 0;
+            if (weakenedAtTurnStart > 0 && Stacks(CombatStatus.Weakened) > 0) stacks[CombatStatus.Weakened]--;
+            if (exposedAtTurnStart > 0 && Stacks(CombatStatus.Exposed) > 0) stacks[CombatStatus.Exposed]--;
+            paralyzedAtTurnStart = weakenedAtTurnStart = exposedAtTurnStart = 0;
+            CollectDueDebts();
         }
         public string EffectDetails()
         {
@@ -72,11 +76,13 @@ namespace Game.GridPrototype
     }
     public static class CombatMath
     {
-        public static int Damage(GridUnit source, GridUnit target, int power, DamageKind kind, ScalingStat stat = ScalingStat.None, float scaling = 0)
+        public static int Damage(GridUnit source, GridUnit target, int power, DamageKind kind, ScalingStat stat = ScalingStat.None, float scaling = 0, float multiplier = 1)
         {
             int value = stat == ScalingStat.Strength ? (source?.Strength ?? 0) : stat == ScalingStat.Magic ? (source?.Magic ?? 0) : 0;
             float raw = Math.Max(0, power) + Math.Max(0, value) * Math.Max(0, scaling);
+            raw *= Mathf.Max(0, multiplier) * (source != null && source.Stacks(CombatStatus.Weakened) > 0 ? .8f : 1f);
             int defense = Math.Max(0, kind == DamageKind.Physical ? (target?.PhysicalDefense ?? 0) : (target?.MagicalDefense ?? 0));
+            if (target != null && target.Stacks(CombatStatus.Exposed) > 0) defense = Mathf.RoundToInt(defense * .75f);
             int damage = Mathf.RoundToInt(raw * (100f / (100f + defense)));
             return target != null && target.EffectiveBlock ? damage / 2 : damage;
         }

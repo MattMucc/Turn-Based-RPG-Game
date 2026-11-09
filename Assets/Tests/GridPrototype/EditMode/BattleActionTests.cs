@@ -64,6 +64,72 @@ public class BattleActionTests
         action.Category = BattleActionCategory.Item; action.Quantity = 4;
         StringAssert.Contains("1 item (4 carried)", action.TooltipFor(source));
     }
+    [Test] public void OffensiveDebtCommitsOnceAndSnapshotsPowerBeforeBorrowing()
+    {
+        var unit=battle.Combatants[0];unit.UsesDebt=true;unit.Borrow(DebtKind.Might,2);
+        var skill=DebtKit.Create()[1];skill.SignatureQte=false;skill.Damage=10;skill.StatScaling=0;
+        battle.Loadout.Options.Add(skill);battle.ChooseAction(skill);
+        battle.ToggleTarget(cells[1]);battle.ToggleTarget(cells[1]);battle.ToggleTarget(cells[1]);
+        Assert.IsTrue(CompletePrepared());Assert.AreEqual(5,unit.DebtCount);
+        Assert.AreEqual(67,battle.Combatants[1].Health);Assert.IsFalse(battle.CommitAction());Assert.AreEqual(5,unit.DebtCount);
+    }
+    [Test] public void CancelDebtSelectionPreservesLiabilitiesAndAction()
+    {
+        var unit=battle.Combatants[0];unit.UsesDebt=true;unit.Borrow(DebtKind.Blood,3);
+        var skill=DebtKit.Create()[3];skill.SignatureQte=false;battle.Loadout.Options.Add(skill);
+        battle.ChooseAction(skill);battle.SelectDebts(new[]{unit.Debts[0]});battle.CancelAction();
+        Assert.AreEqual(3,unit.DebtCount);Assert.IsTrue(battle.ActionReady);
+    }
+    [Test] public void TransferConsumesOnlySelectedDebtAndSettlingDoesNotEndTurn()
+    {
+        var unit=battle.Combatants[0];unit.UsesDebt=true;unit.Borrow(DebtKind.Blood,3);
+        var transfer=DebtKit.Create()[3];transfer.SignatureQte=false;battle.Loadout.Options.Add(transfer);
+        battle.ChooseAction(transfer);battle.SelectDebts(new[]{unit.Debts[0],unit.Debts[1]});battle.ToggleTarget(cells[1]);
+        Assert.IsTrue(CompletePrepared());Assert.AreEqual(1,unit.DebtCount);Assert.AreEqual(2,battle.Combatants[1].DebtCount);
+        unit.EndTurn();unit.BeginTurn();var settle=DebtKit.Create()[5];settle.SignatureQte=false;battle.Loadout.Options.Add(settle);
+        battle.ChooseAction(settle);battle.ToggleTarget(unit.Position);Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(0,unit.DebtCount);Assert.IsTrue(unit.TurnOpen);Assert.IsFalse(unit.ActionAvailable);
+    }
+    [Test] public void ForecloseConsumesSelectedLiabilitiesOnceAndUsesThresholdArea()
+    {
+        var unit=battle.Combatants[0];unit.UsesDebt=true;unit.Borrow(DebtKind.Blood,7);unit.Borrow(DebtKind.Might,1);unit.Borrow(DebtKind.Guard,1);
+        var skill=DebtKit.Create()[4];skill.SignatureQte=false;battle.Loadout.Options.Add(skill);battle.ChooseAction(skill);
+        var selected=new List<DebtStack>{unit.Debts[0],unit.Debts[7],unit.Debts[8]};battle.SelectDebts(selected);
+        Assert.AreEqual(BattleTargetPattern.Area,skill.Pattern);
+        battle.ToggleTarget(cells[1]);Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(6,unit.DebtCount);Assert.AreEqual(93,battle.Combatants[1].Health);
+        Assert.AreEqual(1,battle.Combatants[1].Stacks(CombatStatus.Weakened));Assert.AreEqual(1,battle.Combatants[1].Stacks(CombatStatus.Exposed));
+        Assert.AreEqual(93,battle.Combatants[2].Health);
+    }
+    [Test] public void TransferThresholdSplitsASelectedAllowanceWithoutDuplicatingDebt()
+    {
+        var unit=battle.Combatants[0];unit.UsesDebt=true;unit.Borrow(DebtKind.Blood,6);
+        var skill=DebtKit.Create()[3];skill.SignatureQte=false;battle.Loadout.Options.Add(skill);battle.ChooseAction(skill);
+        battle.SelectDebts(new[]{unit.Debts[0],unit.Debts[1],unit.Debts[2],unit.Debts[3]});
+        battle.ToggleTarget(cells[1]);battle.ToggleTarget(cells[2]);Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(2,unit.DebtCount);Assert.AreEqual(2,battle.Combatants[1].DebtCount);Assert.AreEqual(2,battle.Combatants[2].DebtCount);
+    }
+    [Test] public void BorrowingOnMissStillCreatesLiabilityAndPreviewShowsMitigation()
+    {
+        var unit=battle.Combatants[0];unit.UsesDebt=true;
+        var skill=DebtKit.Create()[0];skill.SignatureQte=false;skill.HitChance=0;battle.Loadout.Options.Add(skill);
+        battle.Combatants[1].PhysicalDefense=100;battle.Combatants[1].AddBarrier(5);
+        battle.ChooseAction(skill);StringAssert.Contains("mitigation",battle.PreviewDamage(battle.Targetables[1]));
+        battle.ToggleTarget(cells[1]);Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(2,unit.DebtCount);Assert.AreEqual(100,battle.Combatants[1].Health);StringAssert.Contains("Miss",battle.RecentHitFeedback);
+    }
+    [Test] public void ExtraBorrowingOnlyCommitsWithTheAttackAndMakesHighThresholdsReachable()
+    {
+        var unit=battle.Combatants[0];unit.UsesDebt=true;
+        var skill=DebtKit.Create()[0];skill.SignatureQte=false;skill.StatScaling=0;skill.Damage=20;skill.PlannedExtraBorrow=9;
+        battle.Loadout.Options.Add(skill);battle.ChooseAction(skill);
+        Assert.AreEqual(0,unit.DebtCount);Assert.AreEqual(29,skill.CalculateDamage(unit,null,20));
+        battle.CancelAction();Assert.AreEqual(0,unit.DebtCount);Assert.AreEqual(0,skill.PlannedExtraBorrow);
+        skill.PlannedExtraBorrow=9;battle.ChooseAction(skill);battle.ToggleTarget(cells[1]);Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(11,unit.DebtCount);Assert.AreEqual(71,battle.Combatants[1].Health);
+        unit.EndTurn();unit.BeginTurn();Assert.AreEqual(11,unit.DebtCount);
+        var foreclose=DebtKit.Create()[4];foreclose.UpdateDebtShape(unit);Assert.AreEqual(BattleTargetPattern.Area,foreclose.Pattern);
+    }
     private bool CompletePrepared()
     {
         if (!battle.TryPrepareAction(out var sequence)) return false;
@@ -237,13 +303,10 @@ public class BattleActionTests
         Assert.AreEqual(true, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
         Find("Skills").onClick.Invoke();
         Assert.AreEqual(false, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
-        Assert.AreEqual(battle.Loadout.Options.FindAll(o => o.Category == BattleActionCategory.Skill).Count + 2, container.GetComponentsInChildren<Button>().Length);
-        Find("Favorites").onClick.Invoke();
-        Find("Multi-target Skill").onClick.Invoke();
-        menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
-        Assert.AreEqual(false, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
-        Assert.AreEqual(2, battle.Loadout.Options.Find(o => o.Pattern == BattleTargetPattern.Multiple).FavoriteSlot);
-        Find("Back").onClick.Invoke();
+        Assert.AreEqual(battle.Loadout.Options.FindAll(o => o.Category == BattleActionCategory.Skill).Count + 1, container.GetComponentsInChildren<Button>().Length);
+        Assert.IsFalse(Array.Exists(container.GetComponentsInChildren<TMP_Text>(), t => t.text == "Favorites"));
+        // Assignment belongs to the future player menu; existing shortcuts remain usable in battle.
+        battle.Loadout.AssignFavorite(battle.Loadout.Options.Find(o => o.Pattern == BattleTargetPattern.Multiple), 2);
         menuType.GetMethod("UseFavorite").Invoke(menu, new object[] { 2 });
         Assert.AreEqual(BattleTargetPattern.Multiple, battle.ChosenAction.Pattern);
         Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
@@ -280,6 +343,20 @@ public class BattleActionTests
         Assert.AreEqual(8, container.GetComponentsInChildren<Button>().Length);
         CollectionAssert.AreEqual(new[] { "Attacks", "Skills", "Spells", "Block", "Items", "Swap", "Run", "End Turn" },
             Array.ConvertAll(container.GetComponentsInChildren<Button>(), b => b.GetComponentInChildren<TMP_Text>().text));
+        // Debt submenus stage choices without spending resources and restore targeting after Continue.
+        var debtor = battle.Combatants[0]; debtor.UsesDebt = true;
+        var borrowing = DebtKit.Create()[0]; battle.Loadout.Options.Add(borrowing);
+        Find("Skills").onClick.Invoke(); Find("Blood Price").onClick.Invoke(); Find("Borrow +1").onClick.Invoke();
+        Assert.AreEqual(0, debtor.DebtCount); Assert.IsNull(battle.ChosenAction);
+        Find("Continue · 3 debt").onClick.Invoke(); Assert.AreSame(borrowing, battle.ChosenAction);
+        Assert.AreEqual(1, borrowing.PlannedExtraBorrow); Assert.IsTrue(battle.GridInputEnabled);
+        Find("Back").onClick.Invoke(); Assert.AreEqual(0, borrowing.PlannedExtraBorrow); Assert.AreEqual(0, debtor.DebtCount);
+        debtor.Borrow(DebtKind.Blood, 6); var transferSkill = DebtKit.Create()[3]; battle.Loadout.Options.Add(transferSkill);
+        Find("Skills").onClick.Invoke(); Find("Pass the Bill").onClick.Invoke(); Find("Blood: 0 / 6").onClick.Invoke();
+        Find("Continue (1 / 4)").onClick.Invoke();
+        Assert.AreEqual(1, battle.SelectedDebts.Count); Assert.AreEqual(1, battle.TargetLimit); Assert.IsTrue(battle.GridInputEnabled); Assert.IsTrue(battle.KeyboardGridInputEnabled);
+        Find("Back").onClick.Invoke(); Assert.AreEqual(6, debtor.DebtCount); Assert.IsTrue(battle.ActionReady);
+        debtor.SettleDebts(); debtor.UsesDebt = false;
         battle.Block();
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);

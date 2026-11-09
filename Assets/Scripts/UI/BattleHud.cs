@@ -25,6 +25,7 @@ public sealed class BattleHud : MonoBehaviour
     private BattleTarget lastStatusTarget;
     private float targetStatusGrace;
     private int targetDismissVersion;
+    private TMP_Text damagePreview;
     private TMP_Text examineText, layoutLabel, cameraLabel, targetName, targetHealth, targetShieldText;
     private RectTransform targetShield, targetShieldFill;
     private RectTransform targetPanel, targetFill, defensePanel, defenseMarker, impactLine, dodgeWindow, parryWindow;
@@ -192,6 +193,9 @@ public sealed class BattleHud : MonoBehaviour
         var statusRect = Rect("Target status effects", targetPanel);
         statusRect.anchorMin = statusRect.anchorMax = new Vector2(.5f,0);statusRect.anchoredPosition=new Vector2(0,-22);statusRect.sizeDelta=new Vector2(280,36);
         targetStatuses=statusRect.gameObject.AddComponent<BattleStatusRow>();targetStatuses.Initialize(root,font);
+        var previewRect = Rect("Damage preview and mitigation", targetPanel);
+        previewRect.anchorMin = previewRect.anchorMax = new Vector2(.5f,0); previewRect.anchoredPosition = new Vector2(0,-66); previewRect.sizeDelta = new Vector2(360,48);
+        damagePreview = Text(previewRect,12); damagePreview.outlineWidth = .2f; damagePreview.outlineColor = Color.black;
         targetPanel.gameObject.SetActive(false);
     }
     private void DrawTargetDetails()
@@ -203,6 +207,8 @@ public sealed class BattleHud : MonoBehaviour
         else if(lastStatusTarget?.Alive==true && (targetStatuses.PointerInside || Time.unscaledTime<targetStatusGrace))target=lastStatusTarget;
         targetPanel.gameObject.SetActive(target != null && !battle.InspectionOpen);
         if (target == null) return;
+        damagePreview.text = battle.PreviewDamage(target);
+        if (damagePreview.text.Length == 0 && Time.unscaledTime < battle.RecentHitFeedbackUntil) damagePreview.text = battle.RecentHitFeedback;
         targetStatuses.Show(target.StatusUnit, target.Unit == null);
         UpdateShield(targetShield, targetShieldFill, targetShieldText, target.StatusUnit);
         targetFill.parent.gameObject.SetActive(target.HasHealth);

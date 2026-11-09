@@ -21,6 +21,19 @@ namespace Game.GridPrototype
         [Min(0)] public int Damage = 25;
         [Min(0)] public int Quantity;
         public ActionEffect Effect;
+        public bool DebtSkill;
+        public DebtKind BorrowType;
+        [Min(0)] public int BorrowStacks;
+        [NonSerialized] public int PlannedExtraBorrow;
+        [NonSerialized] public float CommittedSkillMultiplier = -1;
+        public bool ChoosesDebt => Effect == ActionEffect.TransferDebt || Effect == ActionEffect.Foreclose;
+        public float SkillMultiplier(GridUnit source) => Category != BattleActionCategory.Skill ? 1 : CommittedSkillMultiplier >= 0 ? CommittedSkillMultiplier : source != null && source.UsesDebt ? 1 + (source.DebtCount + (BorrowStacks > 0 ? Mathf.Clamp(PlannedExtraBorrow, 0, source.MaximumExtraBorrow) : 0)) * source.DebtBonusPerStack : 1;
+        public int CalculateDamage(GridUnit source, GridUnit target, int power) => CombatMath.Damage(source, target, power, DamageType, Scaling, StatScaling, SkillMultiplier(source));
+        public void UpdateDebtShape(GridUnit source)
+        {
+            if (Effect == ActionEffect.TransferDebt) { Pattern = source.DebtCount >= 6 ? BattleTargetPattern.Multiple : BattleTargetPattern.Single; MaxTargets = source.DebtCount >= 6 ? 2 : 1; }
+            if (Effect == ActionEffect.Foreclose) { Pattern = source.DebtCount >= 9 ? BattleTargetPattern.Area : BattleTargetPattern.Single; Radius = 1; }
+        }
         public DamageKind DamageType;
         public CombatElement Element;
         public ScalingStat Scaling;
@@ -47,7 +60,7 @@ namespace Game.GridPrototype
             healthLost = 0;
             if (target.Health <= 0 || !CombatMath.Roll(HitChance, hitRoll)) return false;
             if (Effect == ActionEffect.Damage)
-                healthLost = target.TakeDamage(CombatMath.Damage(source, target, power, DamageType, Scaling, StatScaling));
+                healthLost = target.TakeDamage(CalculateDamage(source, target, power));
             if (CombatMath.Roll(StatusChance, statusRoll)) target.ApplyStatus(InflictedStatus, StatusStacks);
             target.AddBarrier(BarrierGranted);
             return true;
@@ -62,10 +75,10 @@ namespace Game.GridPrototype
             result += Row("Reach", $"{Reach} tiles");
             if (Effect == ActionEffect.Damage)
             {
-                int damage = CombatMath.Damage(source, target, Damage, DamageType, Scaling, StatScaling);
+                int damage = CalculateDamage(source, target, Damage);
                 string amount = damage.ToString();
                 if (SignatureQte && QteBonusDamage > 0)
-                    amount += "–" + CombatMath.Damage(source, target, Damage + QteBonusDamage, DamageType, Scaling, StatScaling) + " (QTE)";
+                    amount += "–" + CalculateDamage(source, target, Damage + QteBonusDamage) + " (QTE)";
                 if (Pattern == BattleTargetPattern.Multiple) amount += " per hit";
                 result += Row("Damage", amount);
                 result += Row("Defense", target == null ? "Before mitigation" : "Target included");
@@ -80,6 +93,10 @@ namespace Game.GridPrototype
             if (InflictedStatus != CombatStatus.None)
                 result += Row("Afflictions", $"{InflictedStatus} ×{Mathf.Clamp(StatusStacks, 1, 10)}")
                     + $"\n<indent=105>{Mathf.Clamp(StatusChance, 0, 100):0.#}% per landed hit</indent>";
+            if (BorrowStacks > 0) result += Row("Debt cost", $"{BorrowStacks + PlannedExtraBorrow} {BorrowType} (even on miss)");
+            if (Effect == ActionEffect.TransferDebt) result += Row("Transfer", $"Up to {source?.TransferCapacity ?? 3} stacks");
+            if (ChoosesDebt) result += "\nChoose which liabilities to use before choosing targets.";
+            if (DebtSkill && Effect != ActionEffect.Damage) result += "\nQTE success: gain 5 Barrier. Failure: ordinary effect.";
             if (BarrierGranted > 0) result += Row("Barrier", BarrierGranted.ToString());
             return result;
         }

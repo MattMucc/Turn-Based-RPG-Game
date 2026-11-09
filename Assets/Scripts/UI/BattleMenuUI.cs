@@ -23,6 +23,8 @@ public class BattleMenuUI : MonoBehaviour
     [SerializeField] private Sprite backKeyboardIcon;
     [SerializeField] private Sprite qteKeyboardIcon, qteControllerIcon;
     private bool editingFavorites;
+    private BattleActionOption debtPicker, borrowPicker;
+    private readonly List<DebtStack> debtChoices = new();
     private BattleActionOption assigningFavorite;
     private readonly List<BattleMenuButton> pool = new();
     private readonly List<Func<bool>> availability = new();
@@ -179,6 +181,8 @@ public class BattleMenuUI : MonoBehaviour
     private void Root()
     {
         if (!battle) return;
+        if (borrowPicker != null) borrowPicker.PlannedExtraBorrow = 0; borrowPicker = null;
+        debtPicker = null; debtChoices.Clear();
         browsing = moving = editingFavorites = false; assigningFavorite = null; battle.GridInputEnabled = true; battle.KeyboardGridInputEnabled = false;
         BeginList();
         Row("Attacks", () => Open(BattleActionCategory.Attack), "Choose a basic attack.", () => battle.ActionReady, true);
@@ -209,7 +213,7 @@ public class BattleMenuUI : MonoBehaviour
             if (option == null || option.Category != category) continue;
             var captured = option;
             Row(option.Name + (category == BattleActionCategory.Item ? $" ×{option.Quantity}" : ""), () => Select(captured), ActionDetails(option),
-                () => battle.ActionReady && captured.Available && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
+                () => battle.ActionReady && battle.CanUseOption(captured) && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
             if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
         if (rows == 0) Row("None available", () => { }, "This character has no available options in this category.", () => false);
@@ -220,7 +224,6 @@ public class BattleMenuUI : MonoBehaviour
             Row("Clear Targets", () => battle.ClearTargets(), "Remove all assigned hits without spending your action.",
                 () => battle.ActionReady && battle.TargetCount > 0);
         }
-        if (battle.ChosenAction == null) Row("Favorites", EditFavorites, "Choose an ability or item, then assign shortcut 1-4 / LT + X, Y, A, B. All options remain available.", () => battle.PlayerReady);
         Row("Back", Back, "Cancel the selection and return to the command menu. Backspace / controller B. Escape cancels the action while keeping this list open.", () => battle.PlayerReady, true);
         pool[rows - 1].SetIcons(backKeyboardIcon, runControllerIcon);
         FinishList();
@@ -265,7 +268,7 @@ public class BattleMenuUI : MonoBehaviour
     }
     public void UseFavorite(int slot)
     {
-        if (!browsing || !battle.PlayerReady) return;
+        if (!browsing || !battle.PlayerReady || debtPicker != null || borrowPicker != null) return;
         if (editingFavorites) { AssignSlot(slot); return; }
         if (battle.ChosenAction != null) return;
         var option = battle.Loadout.Favorite(category, slot);
@@ -291,8 +294,59 @@ public class BattleMenuUI : MonoBehaviour
     }
     private void Select(BattleActionOption option)
     {
+        if (option.DebtSkill && option.BorrowStacks > 0) { borrowPicker = option; option.PlannedExtraBorrow = 0; BorrowPage(); return; }
+        if (option.ChoosesDebt) { debtChoices.Clear(); debtPicker = option; DebtPickerPage(); return; }
+        BeginSelectedAction(option);
+    }
+    private void BorrowPage()
+    {
+        battle.GridInputEnabled = battle.KeyboardGridInputEnabled = false; BeginList();
+        var option = borrowPicker; var unit = battle.Combatants[battle.CurrentActorIndex];
+        Row($"Extra {option.BorrowType}: {option.PlannedExtraBorrow}", () => { }, "Optional borrowing increases this Skill's strength. All new debt is due at the end of your next turn.", () => false);
+        Row("Borrow +1", () => { option.PlannedExtraBorrow++; BorrowPage(); }, "Add one extra liability. No debt is created until the attack is committed.", () => option.PlannedExtraBorrow < unit.MaximumExtraBorrow);
+        Row("Borrow −1", () => { option.PlannedExtraBorrow--; BorrowPage(); }, "Remove one extra liability.", () => option.PlannedExtraBorrow > 0);
+        Row($"Continue · {option.BorrowStacks + option.PlannedExtraBorrow} debt", () => { borrowPicker = null; BeginSelectedAction(option); }, ActionDetails(option), () => true);
+        Row("Back", Back, "Cancel without borrowing or spending an action.", () => true, true);
+        pool[rows - 1].SetIcons(backKeyboardIcon, runControllerIcon); FinishList();
+        tooltip.text = ControllerGlyphs.Adapt(ActionDetails(option)); tooltipPanel.SetActive(true);
+    }
+    private void DebtPickerPage()
+    {
+        battle.GridInputEnabled = battle.KeyboardGridInputEnabled = false;
+        BeginList();
+        var unit = battle.Combatants[battle.CurrentActorIndex];
+        int limit = debtPicker.Effect == ActionEffect.TransferDebt ? unit.TransferCapacity : unit.DebtCount;
+        foreach (DebtKind kind in Enum.GetValues(typeof(DebtKind)))
+        {
+            var captured = kind; int count = 0, chosen = 0;
+            foreach (var debt in unit.Debts) if (debt.Kind == kind) { count++; if (debtChoices.Contains(debt)) chosen++; }
+            string deadline = "";
+            foreach (var debt in unit.Debts) if (debt.Kind == kind) deadline += $"\nDue in {Mathf.Max(0, debt.DueOn(unit) - unit.TurnsStarted)} further turns (end of turn).";
+            Row($"{kind}: {chosen} / {count}", () => {
+                DebtStack oldest = null;
+                foreach (var debt in unit.Debts) if (debt.Kind == captured && !debtChoices.Contains(debt) && (oldest == null || debt.DueOn(unit) < oldest.DueOn(unit))) oldest = debt;
+                if (oldest != null) debtChoices.Add(oldest); DebtPickerPage();
+            }, "Add one stack, earliest deadline first." + deadline, () => chosen < count && debtChoices.Count < limit);
+        }
+        Row($"Continue ({debtChoices.Count} / {limit})", () => {
+            var option = debtPicker; var selection = new List<DebtStack>(debtChoices); debtPicker = null;
+            BeginSelectedAction(option);
+            battle.SelectDebts(selection);
+            if (option.Effect == ActionEffect.TransferDebt && selection.Count < 2) {
+                Open(category); battle.GridInputEnabled = battle.KeyboardGridInputEnabled = true;
+                for (int i = 0; i < rows; i++) pool[i].SetSelected(previewOptions[i] == option);
+            }
+        }, "Transfer splits stacks in selection order between target slots. Select the same enemy twice to send everything to it.", () => debtChoices.Count > 0);
+        Row("Undo debt", () => { if (debtChoices.Count > 0) debtChoices.RemoveAt(debtChoices.Count - 1); DebtPickerPage(); }, "Remove the last chosen liability.", () => debtChoices.Count > 0);
+        Row("Back", Back, "Cancel without spending anything.", () => true, true);
+        pool[rows - 1].SetIcons(backKeyboardIcon, runControllerIcon); FinishList();
+    }
+    private void BeginSelectedAction(BattleActionOption option)
+    {
         if (!battle.ChooseAction(option)) return;
         if (option.Effect == ActionEffect.Dash) { Root(); return; }
+        if (option.Effect == ActionEffect.SettleDebt)
+        { battle.ToggleTarget(battle.Combatants[battle.CurrentActorIndex].Position); battle.CommitAction(); return; }
         Open(category);
         battle.GridInputEnabled = battle.KeyboardGridInputEnabled = true;
         highlighted = -1; tooltip.text = ControllerGlyphs.Adapt(ActionDetails(option)); tooltipPanel.SetActive(true);
@@ -302,7 +356,9 @@ public class BattleMenuUI : MonoBehaviour
     private void CancelSelection()
     {
         if (!battle.PlayerReady) return;
-        if (battle.ChosenAction != null) { battle.CancelAction(); Open(category); }
+        if (borrowPicker != null) { borrowPicker.PlannedExtraBorrow = 0; borrowPicker = null; Open(category); }
+        else if (debtPicker != null) { debtPicker = null; debtChoices.Clear(); Open(category); }
+        else if (battle.ChosenAction != null) { battle.CancelAction(); Open(category); }
         else if (moving) Root();
     }
     private void Back()
@@ -311,7 +367,12 @@ public class BattleMenuUI : MonoBehaviour
         if (editingFavorites) { if (assigningFavorite != null) EditFavorites(); else Open(category); return; }
         battle.CancelAction(); Root();
     }
-    private string ActionDetails(BattleActionOption option) => option.TooltipFor(battle.Combatants[battle.CurrentActorIndex]);
+    private string ActionDetails(BattleActionOption option)
+    {
+        var source = battle.Combatants[battle.CurrentActorIndex];
+        if (battle.ChosenAction != option) option.UpdateDebtShape(source);
+        return option.TooltipFor(source);
+    }
     private void ShowTooltip(int index)
     { if (index >= 0 && index < descriptions.Count) { tooltip.text = ControllerGlyphs.Adapt(previewOptions[index] != null ? ActionDetails(previewOptions[index]) : descriptions[index]); tooltipPanel.SetActive(true); if (battle) battle.HoverAction(previewOptions[index]); } }
     private void FitTooltip()
@@ -339,12 +400,15 @@ public class BattleMenuUI : MonoBehaviour
         }
         int approachCost = battle.PreviewApproachCost;
         bool multi = battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;
-        bool showCount = commandsVisible && (multi || approachCost > 0);
+        var debtor = battle.Combatants[battle.CurrentActorIndex];
+        bool showDebt = debtor.UsesDebt;
+        bool showCount = commandsVisible && (multi || approachCost > 0 || showDebt);
         targetCounter.transform.parent.gameObject.SetActive(showCount);
         if (showCount)
         {
-            ((RectTransform)targetCounter.transform.parent).SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, multi && approachCost > 0 ? 42 : 30);
+            ((RectTransform)targetCounter.transform.parent).SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, (multi && approachCost > 0 ? 42 : 30) + (showDebt && (multi || approachCost > 0) ? 24 : 0));
             targetCounter.text = (multi ? $"{battle.TargetCount} / {battle.TargetLimit} targets selected" : "") + (approachCost > 0 ? (multi ? "\n" : "") + $"Move {approachCost} MP, then act" : "");
+            if (showDebt) targetCounter.text = $"Debt {debtor.DebtCount} · +{(debtor.SkillDebtMultiplier - 1) * 100:0}% · Tier {(debtor.DebtCount >= 9 ? 3 : debtor.DebtCount >= 6 ? 2 : debtor.DebtCount >= 3 ? 1 : 0)}" + (targetCounter.text.Length > 0 ? "\n" + targetCounter.text : "");
             ((RectTransform)targetCounter.transform.parent).anchoredPosition = new Vector2(12, 16 + viewport.sizeDelta.y);
         }
     }

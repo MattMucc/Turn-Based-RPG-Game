@@ -57,13 +57,13 @@ public class BattleFavoritesTests : InputTestFixture
         InputSystem.Update();
         Assert.AreEqual(false, method.Invoke(null, new object[] { keyboard, pad }));
     }
-    [Test] public void ControllerFavoritesRequireTriggerAndMapABXY()
+    [Test] public void ControllerFavoritesRequireTriggerAndMapXYAB()
     {
         var method = Type.GetType("BattleMenuUI, Assembly-CSharp").GetMethod("PressedFavorite", BindingFlags.Static | BindingFlags.NonPublic);
         var pad = InputSystem.AddDevice<Gamepad>();
         try
         {
-            var buttons = new[] { GamepadButton.South, GamepadButton.East, GamepadButton.West, GamepadButton.North };
+            var buttons = new[] { GamepadButton.West, GamepadButton.North, GamepadButton.South, GamepadButton.East };
             for (int i = 0; i < 4; i++)
             {
                 InputSystem.QueueStateEvent(pad, new GamepadState()); InputSystem.Update();

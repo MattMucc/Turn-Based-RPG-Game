@@ -411,19 +411,21 @@ namespace Game.GridPrototype
 
         public bool ChooseAction(BattleActionOption option)
         {
-            if (!ActionReady || option == null || !option.Available || !Loadout.Options.Contains(option)) return false;
+            if (!ActionReady || option == null || !CanUseOption(option) || !Loadout.Options.Contains(option)) return false;
             if (option.Effect == ActionEffect.Dash) { Dash(); return !Active.ActionAvailable; }
+            selectedDebts.Clear();
+            option.UpdateDebtShape(Active);
             HoveredAction = null; ChosenAction = option; targets.Clear(); selected = Active.Position;
             message = "Choose any cell in reach, including empty cells or allies. Multi-target actions start when all hits are assigned."; Refresh(); return true;
         }
 
         public void CancelAction()
-        { if (busy && IsAlly(actorIndex) && !Active.ActionAvailable) return; HoveredAction = null; ChosenAction = null; targets.Clear(); if (Grid != null && !closing) Refresh(); }
+        { if (busy && IsAlly(actorIndex) && !Active.ActionAvailable) return; HoveredAction = null; if (ChosenAction != null) ChosenAction.PlannedExtraBorrow = 0; ChosenAction = null; selectedDebts.Clear(); targets.Clear(); if (Grid != null && !closing) Refresh(); }
 
         public void HoverAction(BattleActionOption option)
         {
             if (ChosenAction != null) return;
-            HoveredAction = ActionReady && option != null && option.Effect != ActionEffect.Dash && option.Available && Loadout.Options.Contains(option) ? option : null;
+            HoveredAction = ActionReady && option != null && option.Effect != ActionEffect.Dash && CanUseOption(option) && Loadout.Options.Contains(option) ? option : null;
             Refresh();
         }
         private HashSet<Vector2Int> Reach(BattleActionOption option)
@@ -437,7 +439,7 @@ namespace Game.GridPrototype
             return result;
         }
         private void PreviewReach(BattleActionOption option)
-        { overlay.ShowTargeting(Reach(option), new HashSet<Vector2Int>(), new Vector2Int(-1, -1)); }
+        { option.UpdateDebtShape(Active); overlay.ShowTargeting(Reach(option), new HashSet<Vector2Int>(), new Vector2Int(-1, -1)); }
 
         private void Preview()
         {
@@ -484,7 +486,12 @@ namespace Game.GridPrototype
             sequence = null;
             if (!ActionReady || !ReadyToResolve || !ChosenAction.Available) return false;
             if (!TryActionApproach(ChosenAction, targets, out var approach)) return false;
-            var action = ChosenAction;
+            if (ChosenAction.ChoosesDebt && (selectedDebts.Count == 0 || selectedDebts.Exists(d => !ContainsDebt(Active, d)))) return false;
+            if (ChosenAction.Effect == ActionEffect.TransferDebt && selectedDebts.Count > Active.TransferCapacity) return false;
+            var action = JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(ChosenAction));
+            action.PlannedExtraBorrow = Mathf.Clamp(ChosenAction.PlannedExtraBorrow, 0, Active.MaximumExtraBorrow);
+            action.CommittedSkillMultiplier = ChosenAction.SkillMultiplier(Active);
+            var spentDebts = action.ChoosesDebt ? new List<DebtStack>(selectedDebts) : new List<DebtStack>();
             var aimedCells = new List<Vector2Int>(targets);
             if (approach != null && !Grid.Board.TryMove(Active, approach.Stops[approach.Stops.Count - 1], out approach)) return false;
             var batches = new List<List<BattleTarget>>();
@@ -497,15 +504,17 @@ namespace Game.GridPrototype
                 batches.Add(hit);
             }
             if (!Active.SpendAction()) return false;
-            if (action.Category == BattleActionCategory.Item) action.Quantity--;
+            if (action.Category == BattleActionCategory.Item) ChosenAction.Quantity--;
+            foreach (var debt in spentDebts) Active.RemoveDebt(debt);
+            if (Active.UsesDebt && action.BorrowStacks > 0) Active.Borrow(action.BorrowType, action.BorrowStacks + action.PlannedExtraBorrow);
             busy = true;
             if (action.SignatureQte)
             {
                 SignatureActive = true; InspectionOpen = false; SignatureName = action.Name;
                 cameraControls.KeyboardInputBlocked = true;
-                sequence = ResolveSignature(batches, aimedCells, action);
+                sequence = ResolveSignature(batches, aimedCells, action, spentDebts);
             }
-            else sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple, action);
+            else sequence = ResolveHits(batches, aimedCells, action.Damage, action.Pattern == BattleTargetPattern.Multiple, action, spentDebts);
             if (approach != null) sequence = ResolveApproach(approach, sequence);
             return true;
         }
@@ -521,7 +530,7 @@ namespace Game.GridPrototype
             else signatureVisual?.Windup(0.5f + (1 - CurrentQte.Fraction) * 0.5f);
         }
 
-        private IEnumerator ResolveSignature(List<List<BattleTarget>> batches, List<Vector2Int> cells, BattleActionOption action)
+        private IEnumerator ResolveSignature(List<List<BattleTarget>> batches, List<Vector2Int> cells, BattleActionOption action, List<DebtStack> spentDebts)
         {
             Transform frameTarget = null;
             GameObject emptyAnchor = null;
@@ -549,7 +558,8 @@ namespace Game.GridPrototype
                     (CurrentQte.Result == PressQteResult.Success ? Mathf.Max(0, action.QteBonusDamage) : 0);
                 while (signatureFeedbackElapsed < 0.45f) yield return null;
                 signatureVisual.Reset();
-                var hits = ResolveHits(batches, cells, SignatureDamage, action.Pattern == BattleTargetPattern.Multiple, action);
+                if (action.DebtSkill && action.Effect != ActionEffect.Damage && CurrentQte.Result == PressQteResult.Success) Active.AddBarrier(5);
+                var hits = ResolveHits(batches, cells, SignatureDamage, action.Pattern == BattleTargetPattern.Multiple, action, spentDebts);
                 while (hits.MoveNext()) yield return hits.Current;
             }
             finally
@@ -573,8 +583,9 @@ namespace Game.GridPrototype
             for (int x = 0; x < Grid.Board.Width; x++) for (int y = 0; y < Grid.Board.Depth; y++)
             { var cell = new Vector2Int(x, y); if (target.Occupies(Grid, cell)) yield return cell; }
         }
-        private IEnumerator ResolveHits(List<List<BattleTarget>> batches, List<Vector2Int> cells, int damage, bool sequential, BattleActionOption action)
+        private IEnumerator ResolveHits(List<List<BattleTarget>> batches, List<Vector2Int> cells, int damage, bool sequential, BattleActionOption action, List<DebtStack> spentDebts)
         {
+            if (action.Effect == ActionEffect.SettleDebt) Active.SettleDebts();
             for (int i = 0; i < batches.Count; i++)
             {
                 if (closing) yield break;
@@ -588,14 +599,20 @@ namespace Game.GridPrototype
                     {
                         var victim = target.Unit;
                         if (action.Effect == ActionEffect.Push) { TryPush(target); continue; }
-                        action.ApplyHit(Active, victim, damage, UnityEngine.Random.value, UnityEngine.Random.value, out int dealt);
-                        RecordHit(target.ActorIndex, dealt);
+                        if (action.ChoosesDebt) ApplyDebtAction(action, spentDebts, target, i, batches.Count);
+                        else if (action.Effect != ActionEffect.SettleDebt)
+                        {
+                            int barrier = victim.Barrier;
+                            bool landed = action.ApplyHit(Active, victim, damage, UnityEngine.Random.value, UnityEngine.Random.value, out int dealt);
+                            RecordHit(target.ActorIndex, dealt);
+                            if (action.Effect == ActionEffect.Damage) Feedback(target, landed, dealt, barrier - victim.Barrier, victim.EffectiveBlock);
+                        }
                         if (victim.Health == 0) { Grid.Board.Units.Remove(victim); target.Transform.gameObject.SetActive(false); }
                     }
                     else if (action.Effect == ActionEffect.Push) TryPush(target);
                     else if (action.Effect == ActionEffect.Damage && CombatMath.Roll(action.HitChance, UnityEngine.Random.value))
                     {
-                        target.Destructible.TakeDamage(CombatMath.Damage(Active, new GridUnit("Scenery", Vector2Int.zero), damage, action.DamageType, action.Scaling, action.StatScaling));
+                        target.Destructible.TakeDamage(action.CalculateDamage(Active, null, damage));
                         var effects=target.Transform.GetComponent<BattleObjectStatus>();
                         if(effects && target.Alive && CombatMath.Roll(action.StatusChance,UnityEngine.Random.value))effects.ApplyStatus(action.InflictedStatus,action.StatusStacks);
                         broken |= !target.Alive;
@@ -688,11 +705,13 @@ namespace Game.GridPrototype
                 int damage = impact.Damage(rawDamage, false, eligible);
                 var result = impact.ForTarget(eligible);
                 perfectParries &= result == DefenseResult.Parried;
+                int barrierBeforeHit = defender.Barrier;
                 damage = defender.TakeDamage(damage);
                 if (result != DefenseResult.Dodged && result != DefenseResult.Parried && CombatMath.Roll(DefenseSettings.EnemyStatusChance, UnityEngine.Random.value))
                     defender.ApplyStatus(DefenseSettings.EnemyStatus, DefenseSettings.EnemyStatusStacks);
                 if (damage > 0) RecordHit(defenderIndex, damage);
                 DefenseFeedback = ResultLabel(result) + (damage > 0 ? $"  -{damage} HP" + (defender.Blocking ? " (Block)" : "") : "");
+                if (barrierBeforeHit > defender.Barrier) DefenseFeedback += $" · {barrierBeforeHit - defender.Barrier} absorbed";
                 PlayDefenseCue(damage == 0 ? successCue : failedCue);
                 if (result == DefenseResult.Dodged && DefenseSettings.DodgeSlowMotion)
                     defenseSlowMotion.Begin(DefenseSettings.DodgeSlowMotionDuration, DefenseSettings.DodgeSlowMotionSpeed);
@@ -867,7 +886,10 @@ namespace Game.GridPrototype
 
         private void AdvanceTurn()
         {
+            int healthBeforeCollection = Active.Health;
             Active.EndTurn();
+            if (healthBeforeCollection != Active.Health) RecordHit(actorIndex, healthBeforeCollection - Active.Health);
+            if (Active.Health <= 0) { RemoveDefeated(actorIndex); if (ResolveOutcome()) return; }
             for (int attempts = 0; attempts < turnOrder.Count; attempts++)
             {
                 actorIndex = initiativeOrder.Next(actorIndex, i => turnOrder[i].Health > 0);
