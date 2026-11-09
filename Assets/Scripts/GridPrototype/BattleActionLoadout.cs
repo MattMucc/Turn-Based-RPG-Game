@@ -74,9 +74,39 @@ namespace Game.GridPrototype
     // These are demonstration options, not approved character kits or balance.
     public sealed class BattleActionLoadout : MonoBehaviour
     {
+        public SharedBattleActionLibrary SharedLibrary;
+        [UnityEngine.Serialization.FormerlySerializedAs("Options")]
+        [SerializeField] private List<BattleActionOption> personalOptions = CreateDefaultOptions();
+        public List<BattleActionOption> PersonalOptions => personalOptions;
+        private List<BattleActionOption> combinedOptions;
+        private SharedBattleActionLibrary cachedLibrary;
+        private int cachedRevision = -1;
+        private readonly Dictionary<string, BattleActionOption> sharedInstances = new();
+        public List<BattleActionOption> Options
+        {
+            get
+            {
+                if (!SharedLibrary) return personalOptions;
+                if (combinedOptions != null && cachedLibrary == SharedLibrary && cachedRevision == SharedLibrary.Revision) return combinedOptions;
+                if (cachedLibrary != SharedLibrary) sharedInstances.Clear();
+                combinedOptions = new List<BattleActionOption>();
+                var names = new HashSet<string>();
+                foreach (var definition in SharedLibrary.Actions)
+                {
+                    if (definition == null || definition.Category == BattleActionCategory.Item || string.IsNullOrWhiteSpace(definition.Name) || !names.Add(definition.Name)) continue;
+                    var copy = JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(definition));
+                    if (sharedInstances.TryGetValue(definition.Name, out var previous)) copy.FavoriteSlot = previous.FavoriteSlot;
+                    sharedInstances[definition.Name] = copy; combinedOptions.Add(copy);
+                }
+                foreach (var option in personalOptions) if (option != null && !names.Contains(option.Name)) combinedOptions.Add(option);
+                cachedLibrary = SharedLibrary; cachedRevision = SharedLibrary.Revision; favoritesInitialized = false;
+                return combinedOptions;
+            }
+        }
         [SerializeField] private bool favoritesInitialized;
         public void InitializeFavorites()
         {
+            var options = Options; // Refresh a changed library before checking the favorites flag.
             if (favoritesInitialized) return;
             favoritesInitialized = true;
             foreach (BattleActionCategory category in Enum.GetValues(typeof(BattleActionCategory)))
@@ -103,6 +133,7 @@ namespace Game.GridPrototype
         }
         public void EnsureUniversalAttacks()
         {
+            if (SharedLibrary) { var shared = Options; return; } // Removing a common action must really remove it.
             if (!Options.Exists(o => o != null && o.Effect == ActionEffect.Push))
                 Options.Add(new BattleActionOption { Name = "Push", Effect = ActionEffect.Push, Damage = 0, Description = "Push one cell on clear, level ground. Requires strictly greater Strength." });
             int basics = Options.FindAll(o => o != null && o.Category == BattleActionCategory.Attack && o.Effect == ActionEffect.Damage).Count;
@@ -138,6 +169,7 @@ namespace Game.GridPrototype
         };
         private void OnValidate()
         {
+            combinedOptions = null;
             foreach (var option in Options)
                 if (option != null && (option.QteType == QteMode.FixedSequence || option.QteType == QteMode.Staged || option.QteType == QteMode.DualInput))
                     option.QteSequence = PressQte.Normalize(option.QteType, option.QteSequence);
@@ -164,7 +196,6 @@ namespace Game.GridPrototype
             new BattleActionOption { Name = "Paralyzing Spark", Description = "Prevents dodge, parry and Block through the target's next turn. Does not skip their turn.", Category = BattleActionCategory.Magic, Reach = 4, Damage = 0, DamageType = DamageKind.Magical, Element = CombatElement.Lightning, InflictedStatus = CombatStatus.Paralyzed },
             new BattleActionOption { Name = "Push", Description = "Push one cell forward on level, clear ground. Your Strength must exceed the target's Strength or object's push resistance. Rivers, falls and traps are not supported yet.", Category = BattleActionCategory.Attack, Effect = ActionEffect.Push, Damage = 0 }
         };
-        public List<BattleActionOption> Options = CreateDefaultOptions();
         private static List<BattleActionOption> CreateDefaultOptions()
         {
             var options = new List<BattleActionOption>

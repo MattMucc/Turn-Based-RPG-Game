@@ -20,6 +20,10 @@ public sealed class BattleHud : MonoBehaviour
     public int InspectionDismissedFrame { get; private set; } = -1;
     private TMP_FontAsset font;
     private RectTransform root, orderPanel, orderContent, inspectionLayer, contextPanel, examinePanel, examineContent;
+    private BattleStatusRow targetStatuses, examineStatuses;
+    private BattleTarget lastStatusTarget;
+    private float targetStatusGrace;
+    private int targetDismissVersion;
     private TMP_Text examineText, layoutLabel, cameraLabel, targetName, targetHealth, targetShieldText;
     private RectTransform targetShield, targetShieldFill;
     private RectTransform targetPanel, targetFill, defensePanel, defenseMarker, impactLine, dodgeWindow, parryWindow;
@@ -181,14 +185,22 @@ public sealed class BattleHud : MonoBehaviour
         var fill = targetFill.gameObject.AddComponent<Image>(); fill.color = new Color(0.75f, 0.12f, 0.1f); fill.raycastTarget = false;
         targetHealth = Text(track, 12);
         targetShield = MakeShield(targetPanel, 22, 10, out targetShieldFill, out targetShieldText);
+        var statusRect = Rect("Target status effects", targetPanel);
+        statusRect.anchorMin = statusRect.anchorMax = new Vector2(.5f,0);statusRect.anchoredPosition=new Vector2(0,-22);statusRect.sizeDelta=new Vector2(280,36);
+        targetStatuses=statusRect.gameObject.AddComponent<BattleStatusRow>();targetStatuses.Initialize(root,font);
         targetPanel.gameObject.SetActive(false);
     }
     private void DrawTargetDetails()
     {
+        if(targetDismissVersion!=battle.TargetFocus.DismissVersion)
+        { targetDismissVersion=battle.TargetFocus.DismissVersion;lastStatusTarget=null;targetStatusGrace=0; }
         var target = battle.TargetFocus.Displayed;
+        if(target!=null){lastStatusTarget=target;targetStatusGrace=Time.unscaledTime+.35f;}
+        else if(lastStatusTarget?.Alive==true && (targetStatuses.PointerInside || Time.unscaledTime<targetStatusGrace))target=lastStatusTarget;
         targetPanel.gameObject.SetActive(target != null && !battle.InspectionOpen);
         if (target == null) return;
-        UpdateShield(targetShield, targetShieldFill, targetShieldText, target.Unit);
+        targetStatuses.Show(target.StatusUnit, target.Unit == null);
+        UpdateShield(targetShield, targetShieldFill, targetShieldText, target.StatusUnit);
         targetFill.parent.gameObject.SetActive(target.HasHealth);
         targetName.text = target.Name; targetHealth.text = $"{target.Health} / {target.MaxHealth}";
         targetFill.anchorMax = new Vector2(Mathf.Clamp01(target.Health / (float)Mathf.Max(1, target.MaxHealth)), 1);
@@ -320,9 +332,9 @@ public sealed class BattleHud : MonoBehaviour
             ? $"{qte.StageIndex + 1} / {qte.InputCount}: {(qte.LastStageResult == PressQteResult.Success ? "Success" : qte.LastStageResult == PressQteResult.TimedOut ? "Time up" : "Wrong input")}"
             : qte.Mode == QteMode.Staged && qte.Result == PressQteResult.Waiting ? $"Prompt {qte.StageIndex + 1} / {qte.InputCount}"
             : qte.Result == PressQteResult.Preparing ? "Get ready"
-            : qte.Result == PressQteResult.Waiting ? dual ? $"Hold both: {(qte.InputHeld ? 1 : 0) + (qte.SecondaryHeld ? 1 : 0)} / 2" : hold ? $"Hold: {qte.HeldTime:0.0} / {qte.HoldDuration:0.0}s" : mash ? $"Tap repeatedly: {qte.TapProgress:0%}" : sequence ? $"{qte.CompletedInputs} / {qte.InputCount} � press in order" : "Press before time runs out"
-            : qte.Result == PressQteResult.Success ? "Success — bonus damage"
-            : qte.Result == PressQteResult.WrongInput ? "Wrong input — normal damage" : "Time up — normal damage";
+            : qte.Result == PressQteResult.Waiting ? dual ? $"Hold both: {(qte.InputHeld ? 1 : 0) + (qte.SecondaryHeld ? 1 : 0)} / 2" : hold ? $"Hold: {qte.HeldTime:0.0} / {qte.HoldDuration:0.0}s" : mash ? $"Tap repeatedly: {qte.TapProgress:0%}" : sequence ? $"{qte.CompletedInputs} / {qte.InputCount} — press in order" : "Press before time runs out"
+            : qte.Result == PressQteResult.Success ? "Success â€” bonus damage"
+            : qte.Result == PressQteResult.WrongInput ? "Wrong input â€” normal damage" : "Time up â€” normal damage";
         qteCountdown.text = qte.Result == PressQteResult.Preparing ? "" : qte.Remaining.ToString("0.00") + "s";
         float half = qte.Fraction * 0.5f;
         qteFill.anchorMin = new Vector2(0.5f - half, 0); qteFill.anchorMax = new Vector2(0.5f + half, 1);
@@ -404,13 +416,15 @@ public sealed class BattleHud : MonoBehaviour
         examinePanel.sizeDelta = new Vector2(340, Mathf.Min(430, Mathf.Max(200, root.rect.height - 60)));
         var close = Rect("Close examine", examinePanel); close.anchorMin = close.anchorMax = new Vector2(1, 1);
         close.pivot = Vector2.one; close.anchoredPosition = new Vector2(-8, -8); close.sizeDelta = new Vector2(80, 32); Button(close, "Close", CloseInspection);
-        var viewport = Rect("Examine scroll", examinePanel); Stretch(viewport); viewport.offsetMin = new Vector2(18, 16); viewport.offsetMax = new Vector2(-18, -48);
+        var viewport = Rect("Examine scroll", examinePanel); Stretch(viewport); viewport.offsetMin = new Vector2(18, 16); viewport.offsetMax = new Vector2(-18, -92);
         viewport.gameObject.AddComponent<Image>().color = Color.clear;
         viewport.gameObject.AddComponent<RectMask2D>(); var scroll = viewport.gameObject.AddComponent<ScrollRect>();
         scroll.viewport = viewport; scroll.horizontal = false; scroll.movementType = ScrollRect.MovementType.Clamped; scroll.scrollSensitivity = 30;
         examineContent = Rect("Character details", viewport); examineContent.anchorMin = new Vector2(0, 1); examineContent.anchorMax = Vector2.one;
         examineContent.pivot = new Vector2(0.5f, 1); scroll.content = examineContent;
         examineText = Text(examineContent, 15); examineText.alignment = TextAlignmentOptions.TopLeft;
+        var statusRect=Rect("Examined status effects",examinePanel);statusRect.anchorMin=statusRect.anchorMax=new Vector2(.5f,1);statusRect.anchoredPosition=new Vector2(0,-65);statusRect.sizeDelta=new Vector2(300,36);
+        examineStatuses=statusRect.gameObject.AddComponent<BattleStatusRow>();examineStatuses.Initialize(root,font);
         CloseInspection();
     }
     public void ShowContext(int index, Vector2 screenPosition)
@@ -435,6 +449,7 @@ public sealed class BattleHud : MonoBehaviour
     private void UpdateExamine()
     {
         if (inspectedTarget == null) return;
+        examineStatuses.Show(inspectedTarget.StatusUnit, inspectedTarget.Unit == null);
         if (inspected >= 0)
         {
             var info = battle.Info(inspected);

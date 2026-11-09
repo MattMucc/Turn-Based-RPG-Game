@@ -204,8 +204,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ed38ec3ffb48ff478301f878e67a5f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleActionLoadout
-  favoritesInitialized: 0
-  Options:
+  SharedLibrary: {fileID: 11400000, guid: 8e9c3de4cfe491b438949f20e58ed5a5, type: 2}
+  personalOptions:
   - Name: Arcane Bolt
     FavoriteSlot: 0
     Description: Prototype party attack.
@@ -323,6 +323,7 @@ MonoBehaviour:
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
+  favoritesInitialized: 0
 --- !u!114 &1505583744708785799
 MonoBehaviour:
   m_ObjectHideFlags: 0

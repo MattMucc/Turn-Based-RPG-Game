@@ -87,4 +87,22 @@ public class WorldPartyControlTests
         Assert.AreSame(members[3].GetComponent(movement),type.GetProperty("PossessedCharacter").GetValue(manager));
         Assert.IsFalse(members[0].gameObject.activeSelf);Assert.IsTrue(members[3].gameObject.activeSelf);
     }
+    [Test] public void OnlyManagerControlledCharacterCanTriggerEvenIfFollowerHasPossessionFlag()
+    {
+        var type=Type.GetType("GameManager, Assembly-CSharp",true);var movement=Type.GetType("PlayerMovement, Assembly-CSharp",true);
+        var instance=type.GetField("<Instance>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic);var previous=instance.GetValue(null);
+        var manager=Make("Encounter manager").AddComponent(type);
+        var leader=Make("Leader");leader.AddComponent<CharacterController>();var controlled=leader.AddComponent(movement);
+        var follower=Make("Follower");follower.AddComponent<CharacterController>();var companion=follower.AddComponent(movement);
+        movement.GetMethod("Possess").Invoke(controlled,null);movement.GetMethod("Possess").Invoke(companion,null);
+        try
+        {
+            instance.SetValue(null,manager);type.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,controlled);
+            var check=Type.GetType("EnemyTrigger, Assembly-CSharp",true).GetMethod("IsControlledActor");
+            Assert.IsTrue((bool)check.Invoke(null,new object[]{controlled}));Assert.IsFalse((bool)check.Invoke(null,new object[]{companion}));
+            type.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,companion);
+            Assert.IsFalse((bool)check.Invoke(null,new object[]{controlled}));Assert.IsTrue((bool)check.Invoke(null,new object[]{companion}));
+        }
+        finally{instance.SetValue(null,previous);}
+    }
 }

@@ -80,7 +80,7 @@ public class PlayerMovement : MonoBehaviour
 
     public bool TryEncounterStrike()
     {
-        if (!IsPossessed || Time.time < nextEncounterStrike || !BattleManager.Instance || BattleManager.Instance.InBattle) return false;
+        if (!EnemyTrigger.IsControlledActor(this) || Time.time < nextEncounterStrike || !BattleManager.Instance || BattleManager.Instance.InBattle) return false;
         nextEncounterStrike = Time.time + encounterStrikeCooldown;
         var target = WorldEncounterStrike.FindTarget(transform, encounterStrikeReach, encounterStrikeHalfAngle);
         if (!target || !target.BattleGroup) return false;

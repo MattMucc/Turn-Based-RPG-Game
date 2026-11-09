@@ -19,6 +19,7 @@ namespace Game.GridPrototype
         readonly Dictionary<CombatStatus, int> stacks = new Dictionary<CombatStatus, int>();
         int paralyzedAtTurnStart;
         public int Stacks(CombatStatus status) => stacks.TryGetValue(status, out int value) ? value : 0;
+        public void RemoveStatus(CombatStatus status) => stacks.Remove(status);
         public bool CanReact => !ReactionsDisabled && Stacks(CombatStatus.Paralyzed) == 0;
         public bool CanBlock => Stacks(CombatStatus.Paralyzed) == 0;
         public bool EffectiveBlock => Blocking && CanBlock;

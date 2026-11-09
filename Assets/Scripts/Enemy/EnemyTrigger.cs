@@ -19,11 +19,13 @@ public class EnemyTrigger : MonoBehaviour
         TryEncounter(other);
     }
 
+    public static bool IsControlledActor(PlayerMovement player) => player && player.IsPossessed && GameManager.Instance && GameManager.Instance.PossessedCharacter == player;
+
     private void TryEncounter(Collider other)
     {
         if (!BattleGroup || (GameManager.Instance && GameManager.Instance.WorldInputBlocked)) return;
         PlayerMovement player = other.GetComponentInParent<PlayerMovement>();
-        if (!player || !player.IsPossessed) return;
+        if (!IsControlledActor(player)) return;
 
         BattleGroup.TriggerBattle();
     }

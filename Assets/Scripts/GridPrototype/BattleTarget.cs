@@ -16,6 +16,7 @@ namespace Game.GridPrototype
         { Transform = prop.transform; Destructible = prop; ActorIndex = -1; Renderers = prop.GetComponentsInChildren<Renderer>(); }
         public BattleTarget(BattleHoverInfo info)
         { Transform = info.transform; ActorIndex = -1; Renderers = info.GetComponentsInChildren<Renderer>(); }
+        public GridUnit StatusUnit => Unit ?? (Transform ? Transform.GetComponent<BattleObjectStatus>()?.State : null);
         public bool HasHealth => Unit != null || Destructible;
         public Color HoverColor(int activeActor)
         {
@@ -65,6 +66,7 @@ namespace Game.GridPrototype
     // Hover temporarily replaces the pin. Dismiss suppresses the current hover until it changes.
     public sealed class BattleTargetFocus
     {
+        public int DismissVersion { get; private set; }
         public BattleTarget Hovered { get; private set; }
         public BattleTarget Pinned { get; private set; }
         private BattleTarget suppressed;
@@ -75,6 +77,6 @@ namespace Game.GridPrototype
             Hovered = target != suppressed && target?.Alive == true ? target : null;
         }
         public void Pin(BattleTarget target) { Pinned = target?.Alive == true ? target : null; }
-        public void Dismiss() { suppressed = Hovered; Hovered = null; Pinned = null; }
+        public void Dismiss() { suppressed = Hovered; Hovered = null; Pinned = null; DismissVersion++; }
     }
 }

@@ -154,7 +154,6 @@ GameObject:
   - component: {fileID: 4418546057224845090}
   - component: {fileID: 3003055958351131635}
   - component: {fileID: 791043194022376401}
-  - component: {fileID: 6379983850948509392}
   m_Layer: 6
   m_Name: Prototype Vanguard
   m_TagString: Untagged
@@ -343,8 +342,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ed38ec3ffb48ff478301f878e67a5f0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleActionLoadout
-  favoritesInitialized: 0
-  Options:
+  SharedLibrary: {fileID: 11400000, guid: 8e9c3de4cfe491b438949f20e58ed5a5, type: 2}
+  personalOptions:
   - Name: Heavy Slash
     FavoriteSlot: 0
     Description: Prototype party attack.
@@ -403,37 +402,6 @@ MonoBehaviour:
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
-  - Name: Push
-    FavoriteSlot: 1
-    Description: Push one cell forward on level, clear ground. Your Strength must
-      exceed the target's Strength or object's push resistance. Rivers, falls and
-      traps are not supported yet.
-    Category: 0
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 0
-    Quantity: 0
-    Effect: 2
-    DamageType: 0
-    Element: 0
-    Scaling: 0
-    StatScaling: 0
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 0
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 1.5
-    QteBonusDamage: 15
   - Name: Sweeping Blow
     FavoriteSlot: 1
     Description: Sweep a three-cell-wide row in a cardinal direction. Allies in the
@@ -464,6 +432,7 @@ MonoBehaviour:
     QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
+  favoritesInitialized: 0
 --- !u!114 &3003055958351131635
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -514,19 +483,6 @@ MonoBehaviour:
   leader: {fileID: 0}
   sideOffset: 0
   settleRadius: 0.6
---- !u!114 &6379983850948509392
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2713249943951413015}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 08e7b201aab4af74bae75ea3844bc83d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Grid::Game.World.PlaceWorldAbility
-  Range: 12
 --- !u!1 &3479316304952442349
 GameObject:
   m_ObjectHideFlags: 0

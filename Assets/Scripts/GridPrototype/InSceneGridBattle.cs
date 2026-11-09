@@ -593,7 +593,12 @@ namespace Game.GridPrototype
                     }
                     else if (action.Effect == ActionEffect.Push) TryPush(target);
                     else if (action.Effect == ActionEffect.Damage && CombatMath.Roll(action.HitChance, UnityEngine.Random.value))
-                    { target.Destructible.TakeDamage(damage); broken |= !target.Alive; }
+                    {
+                        target.Destructible.TakeDamage(CombatMath.Damage(Active, new GridUnit("Scenery", Vector2Int.zero), damage, action.DamageType, action.Scaling, action.StatScaling));
+                        var effects=target.Transform.GetComponent<BattleObjectStatus>();
+                        if(effects && target.Alive && CombatMath.Roll(action.StatusChance,UnityEngine.Random.value))effects.ApplyStatus(action.InflictedStatus,action.StatusStacks);
+                        broken |= !target.Alive;
+                    }
                 }
                 if (broken) { Physics.SyncTransforms(); Grid.RefreshSurfaces(); RebuildOverlay(); Refresh(); }
                 // Empty hits still spend a slot and keep their place in the sequence.
@@ -861,6 +866,16 @@ namespace Game.GridPrototype
             {
                 actorIndex = initiativeOrder.Next(actorIndex, i => turnOrder[i].Health > 0);
                 if (actorIndex < 0) { Finish(false); return; }
+                if(round != initiativeOrder.Round)
+                {
+                    bool broken=false;
+                    foreach(var target in battleTargets)
+                    {
+                        var effects=target.Transform ? target.Transform.GetComponent<BattleObjectStatus>() : null;
+                        if(effects && target.Alive){effects.TickRound();broken|=!target.Alive;}
+                    }
+                    if(broken){Physics.SyncTransforms();Grid.RefreshSurfaces();RebuildOverlay();}
+                }
                 round = initiativeOrder.Round;
                 int before = Active.Health;
                 Active.BeginTurn();
