@@ -82,6 +82,50 @@ public class PlayerMenuTests
         Assert.AreEqual(3, party.Count); Assert.AreEqual(3, reserves.Count);
         Assert.IsFalse((bool)managerType.GetMethod("TrySetCaptain").Invoke(manager, new object[] { reserves[0] }));
     }
+    [Test] public void MenuFrameFillsCanvasAndPartySeparatesActiveAndReserves()
+    {
+        Open(); Canvas.ForceUpdateCanvases();
+        var frame = (RectTransform)menuType.GetField("shell", Hidden).GetValue(menu);
+        Assert.AreEqual(Vector2.zero, frame.anchorMin); Assert.AreEqual(Vector2.one, frame.anchorMax);
+        Assert.AreEqual(Vector2.zero, frame.offsetMin); Assert.AreEqual(Vector2.zero, frame.offsetMax);
+        Assert.AreEqual(((RectTransform)frame.parent).rect.size, frame.rect.size);
+        var texts = menu.GetComponentsInChildren<TMP_Text>();
+        Assert.IsTrue(texts.Any(t => t.text == "ACTIVE   3 / 3"));
+        Assert.IsTrue(texts.Any(t => t.text == "RESERVES   3 / 3"));
+        Assert.AreEqual(6, menu.GetComponentsInChildren<RectTransform>().Count(r => r.name == "XP track"));
+    }
+    [Test] public void AttributePreviewAndCancelAreFreeAndConfirmationSpendsExactlyOnePoint()
+    {
+        var member=party[0]; member.GrantLevel(2,2); int points=member.UnspentPoints, magic=member.Stat(CharacterStat.Magic), mp=member.EffectiveMaxMagicPoints;
+        Open(); Page("Attributes"); Find("Magic   ").onClick.Invoke();
+        Assert.AreEqual(points, member.UnspentPoints); Assert.AreEqual(magic, member.Stat(CharacterStat.Magic));
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t => t.text.Contains($"Maximum MP: {mp} → {mp+member.MagicPointsPerMagic}")));
+        menuType.GetMethod("Back").Invoke(menu,null); Assert.AreEqual(points,member.UnspentPoints);
+        Find("Magic   ").onClick.Invoke(); var confirm=Find("Confirm +1 Magic"); confirm.onClick.Invoke();
+        Assert.AreEqual(points-1,member.UnspentPoints); Assert.AreEqual(magic+1,member.Stat(CharacterStat.Magic));
+        Assert.AreEqual(mp+member.MagicPointsPerMagic,member.EffectiveMaxMagicPoints);
+        // A stale click cannot spend again after the pending choice has been cleared.
+        confirm.onClick.Invoke(); Assert.AreEqual(points-1,member.UnspentPoints);
+    }
+    [Test] public void ChangingCharacterDiscardsPendingAttributeChoice()
+    {
+        party[0].GrantLevel(2,2); Open(); Page("Attributes"); Find("Vitality   ").onClick.Invoke();
+        menuType.GetMethod("Cycle",Hidden).Invoke(menu,new object[]{1});
+        Assert.AreEqual(2,party[0].UnspentPoints); Assert.AreEqual(0,party[1].UnspentPoints);
+        Assert.IsNull(menuType.GetField("pendingStat",Hidden).GetValue(menu));
+    }
+    [TestCase(CharacterStat.Vitality)] [TestCase(CharacterStat.Strength)] [TestCase(CharacterStat.Magic)]
+    [TestCase(CharacterStat.PhysicalDefense)] [TestCase(CharacterStat.MagicalDefense)] [TestCase(CharacterStat.Initiative)]
+    public void AttributePreviewMatchesActualAllocationWithoutMutatingMember(CharacterStat stat)
+    {
+        var member=party[0]; member.GrantLevel(2,2); int before=member.Stat(stat);
+        var preview=AttributePreview.AfterPoint(member,stat);
+        Assert.AreEqual(before,member.Stat(stat)); Assert.AreEqual(2,member.UnspentPoints);
+        Assert.IsTrue(member.SpendPoint(stat)); var actual=new GridUnit("After",Vector2Int.zero);member.Configure(actual);
+        Assert.AreEqual(actual.MaxHealth,preview.MaxHealth);Assert.AreEqual(actual.MaxMagicPoints,preview.MaxMagicPoints);
+        Assert.AreEqual(actual.Strength,preview.Strength);Assert.AreEqual(actual.Magic,preview.Magic);
+        Assert.AreEqual(actual.PhysicalDefense,preview.PhysicalDefense);Assert.AreEqual(actual.MagicalDefense,preview.MagicalDefense);
+    }
     [Test] public void ProgressionAndTreeRenderAuthoredRecordsWithoutGrantingSkills()
     {
         var data = party[0].gameObject.AddComponent<CharacterMenuData>();

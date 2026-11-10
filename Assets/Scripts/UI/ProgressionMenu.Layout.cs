@@ -44,11 +44,11 @@ public sealed partial class ProgressionMenu
     {
         canvasObject=new GameObject("Player menu",typeof(Canvas),typeof(CanvasScaler),typeof(GraphicRaycaster)); canvasObject.transform.SetParent(transform,false);
         var canvas=canvasObject.GetComponent<Canvas>(); canvas.renderMode=RenderMode.ScreenSpaceOverlay; canvas.sortingOrder=200;
-        var scaler=canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution=new Vector2(1280,720); scaler.matchWidthOrHeight=.5f;
+        var scaler=canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution=new Vector2(1280,720); scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;
         var backdrop=Rect("Backdrop",canvasObject.transform,0,0,0,0); backdrop.anchorMin=Vector2.zero; backdrop.anchorMax=Vector2.one; backdrop.offsetMin=backdrop.offsetMax=Vector2.zero;
-        backdrop.gameObject.AddComponent<Image>().color=new Color(.01f,.025f,.045f,.96f);
-        shell=Rect("Menu frame",canvasObject.transform,0,0,1200,660); shell.anchorMin=shell.anchorMax=shell.pivot=new Vector2(.5f,.5f); shell.anchoredPosition=Vector2.zero;
-        shell.gameObject.AddComponent<Image>().color=Panel;
+        backdrop.gameObject.AddComponent<Image>().color=new Color(.01f,.025f,.045f,1);
+        shell=Rect("Menu frame",canvasObject.transform,0,0,1200,660); shell.anchorMin=Vector2.zero; shell.anchorMax=Vector2.one; shell.offsetMin=shell.offsetMax=Vector2.zero;
+        shell.gameObject.AddComponent<Image>().color=new Color(Panel.r,Panel.g,Panel.b,1);
         Label(Rect("Brand",shell,24,20,180,40),"PARTY MENU",23).color=Accent;
         title=Label(Rect("Page title",shell,220,20,460,42),"PARTY",26);
         characterLabel=Label(Rect("Selected member",shell,770,24,300,40),"",18);
@@ -57,8 +57,19 @@ public sealed partial class ProgressionMenu
         Button(shell,"Return to world",24,552,170,Close);
         body=Rect("Page content",shell,220,88,510,510); detailRoot=Rect("Details",shell,750,88,426,510);
         footer=Label(Rect("Controls",shell,24,620,1150,30),"",13);
+        PlaceAtRight(characterLabel.rectTransform,406);
+        PlaceAtRight(shell.Find("<").GetComponent<RectTransform>(),456);
+        PlaceAtRight(shell.Find(">").GetComponent<RectTransform>(),76);
+        var exit=shell.Find("Return to world").GetComponent<RectTransform>();
+        exit.anchorMin=exit.anchorMax=new Vector2(0,0);exit.anchoredPosition=new Vector2(24,104);
+        footer.rectTransform.anchorMin=new Vector2(0,0);footer.rectTransform.anchorMax=new Vector2(1,0);
+        footer.rectTransform.sizeDelta=new Vector2(-48,30);footer.rectTransform.anchoredPosition=new Vector2(24,44);
+        body.anchorMin=new Vector2(0,0);body.anchorMax=new Vector2(1,1);body.offsetMin=new Vector2(220,70);body.offsetMax=new Vector2(-470,-88);
+        detailRoot.anchorMin=new Vector2(1,0);detailRoot.anchorMax=Vector2.one;detailRoot.offsetMin=new Vector2(-450,70);detailRoot.offsetMax=new Vector2(-24,-88);
         capture=canvasObject.AddComponent<BattlePortraitCapture>(); canvasObject.SetActive(false);
     }
+    void PlaceAtRight(RectTransform rect,float inset)
+    { rect.anchorMin=rect.anchorMax=Vector2.one;rect.anchoredPosition=new Vector2(-inset,rect.anchoredPosition.y); }
     void BuildDetails()
     {
         detailName=Label(Rect("Detail name",detailRoot,12,0,400,54),"",22);
@@ -75,7 +86,7 @@ public sealed partial class ProgressionMenu
         float top = image ? 220 : progress >= 0 ? 100 : 72;
         var viewport = (RectTransform)detailContent.parent;
         viewport.anchoredPosition = new Vector2(12, -top);
-        viewport.sizeDelta = new Vector2(400, 508 - top);
+        viewport.sizeDelta = new Vector2(400, Mathf.Max(200, detailRoot.rect.height - top - 2));
         ((RectTransform)experienceFill.transform.parent).anchoredPosition = image ? new Vector2(172,-160) : new Vector2(12,-72);
         detailText.text=description; detailText.rectTransform.sizeDelta=new Vector2(376,Mathf.Max(260,detailText.GetPreferredValues(description,376,0).y));
         detailContent.sizeDelta=new Vector2(detailContent.sizeDelta.x,Mathf.Max(viewport.sizeDelta.y,detailText.rectTransform.sizeDelta.y+20));

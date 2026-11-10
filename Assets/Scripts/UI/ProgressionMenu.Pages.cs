@@ -8,24 +8,53 @@ public sealed partial class ProgressionMenu
 {
     void Party()
     {
-        Label(Rect("Team",body,0,0,500,46),"ACTIVE PARTY & RESERVES",19);
-        var members=Manager.Progression.Members;
-        var list=List(body,"Cast",0,50,500,300,members.Count*48);
-        for(int i=0;i<members.Count;i++)
+        float width=body.rect.width-10, height=body.rect.height;
+        Label(Rect("Team",body,0,0,width,40),"PARTY FORMATION",19);
+        var active=Manager.GetBattleParty();
+        var reserve=Manager.Progression.Members.Where(m=>m&&!active.Contains(m)).ToList();
+        float viewHeight=height-188;
+        var list=List(body,"Cast",0,44,width,viewHeight,(active.Count+reserve.Count)*88+72);
+        float y=0;
+        foreach(bool deployed in new[]{true,false})
         {
-            int index=i; var member=members[i]; if(!member)continue;
-            int slot=Manager.BattleParty.IndexOf(member);
-            string tag=slot<0?"Reserve":slot==0?"Captain":"Active";
-            Button(list,$"{DisplayName(member)}   Lv {member.Level}   · {tag}",0,i*48,486,()=>{memberIndex=index;Rebuild();},()=>ShowMember(member),44);
+            var group=deployed?active:reserve;
+            Label(Rect(deployed?"Active heading":"Reserve heading",list,8,y,width-24,28),
+                (deployed?"ACTIVE":"RESERVES")+"   "+group.Count+" / 3",14).color=deployed?Accent:new Color(.7f,.76f,.83f);
+            y+=32;
+            foreach(var member in group)
+            {
+                int index=Manager.Progression.Members.IndexOf(member);
+                var unit=new GridUnit(member.name,Vector2Int.zero);member.Configure(unit);
+                if(member.StoredHealth>=0)unit.Health=Mathf.Clamp(member.StoredHealth,0,unit.MaxHealth);
+                string role=deployed?(active.IndexOf(member)==0?"CAPTAIN":"ACTIVE"):"RESERVE";
+                var card=Button(list,DisplayName(member),0,y,width-12,()=>{memberIndex=index;Rebuild();},()=>ShowMember(member),82);
+                if(member==Member)card.image.color=new Color(.13f,.3f,.4f);
+                var name=card.transform.Find("Label").GetComponent<TMPro.TMP_Text>();
+                name.rectTransform.anchoredPosition=new Vector2(78,-5);name.rectTransform.sizeDelta=new Vector2(width-190,24);name.fontSize=15;
+                name.enableAutoSizing=true;name.fontSizeMin=11;name.fontSizeMax=15;
+                var picture=Rect("Portrait",card.transform,8,8,60,60).gameObject.AddComponent<RawImage>();picture.texture=Portrait(member);picture.raycastTarget=false;picture.color=picture.texture?Color.white:Color.clear;
+                Label(Rect("Role",card.transform,width-112,7,90,22),role,11).color=role=="CAPTAIN"?new Color(1,.8f,.35f):Accent;
+                Label(Rect("Vitals",card.transform,78,30,width-104,22),$"Lv {member.Level}    HP {unit.Health} / {unit.MaxHealth}    MP {unit.MagicPoints} / {unit.MaxMagicPoints}"+(unit.Health==0?"   KO":""),12);
+                bool capped=member.Level>=Manager.Progression.LevelCap;
+                float progress=capped?1:Manager.Progression.ProgressFor(member)/(float)Manager.Progression.Cost(Mathf.Max(1,member.Level));
+                var track=Rect("XP track",card.transform,78,66,width-244,5);track.gameObject.AddComponent<Image>().color=new Color(.03f,.07f,.1f);
+                Rect("XP fill",track,0,0,(width-244)*Mathf.Clamp01(progress),5).gameObject.AddComponent<Image>().color=Accent;
+                Label(Rect("XP value",card.transform,width-156,55,138,22),capped?"LEVEL CAP":$"{Manager.Progression.ProgressFor(member)} / {Manager.Progression.Cost(Mathf.Max(1,member.Level))} XP",11);
+                y+=88;
+            }
         }
-        Label(Rect("Assign heading",body,0,366,500,32),"Place selected character in active slot:",15);
+        float controls=44+viewHeight+12;
+        Label(Rect("Assign heading",body,0,controls,width,32),Manager.ReserveParty.Contains(Member)?"Replace an active member with "+DisplayName(Member)+":" : "Select a reserve to replace an active member.",14);
         for(int i=0;i<3;i++)
         {
-            int slot=i;
-            var b=Button(body,slot==0?"1 · Captain":$"{slot+1}",i*166,400,158,()=>{Manager.TrySetActiveMember(slot,Member);Rebuild();});
-            b.interactable=Member && Manager.ReserveParty.Contains(Member) && slot<Manager.BattleParty.Count;
+            int slot=i;float buttonWidth=(width-16)/3;
+            string occupant=i<active.Count?DisplayName(active[i]):"Empty";
+            var button=Button(body,$"{i+1}: {occupant}",i*(buttonWidth+8),controls+38,buttonWidth,()=>{Manager.TrySetActiveMember(slot,Member);Rebuild();},
+                ()=>Detail("Replace active member",slot<active.Count?DisplayName(Member)+" replaces "+occupant+". The outgoing member joins reserves.":"No active slot available."));
+            button.interactable=Member&&Manager.ReserveParty.Contains(Member)&&slot<active.Count;
+            var label=button.GetComponentInChildren<TMPro.TMP_Text>();label.enableAutoSizing=true;label.fontSizeMin=10;label.fontSizeMax=15;
         }
-        Button(body,"Make selected member captain",0,450,490,()=>{Manager.TrySetCaptain(Member);Rebuild();}).interactable=Member && Manager.BattleParty.IndexOf(Member)>0;
+        Button(body,"Make "+DisplayName(Member)+" the captain",0,controls+86,width,()=>{Manager.TrySetCaptain(Member);Rebuild();}).interactable=Member&&Manager.BattleParty.IndexOf(Member)>0;
         ShowMember(Member);
     }
     void ShowMember(BattleCharacterInfo member)
@@ -40,13 +69,53 @@ public sealed partial class ProgressionMenu
     }
     void Attributes()
     {
-        Label(Rect("Points",body,0,0,500,48),$"{Member.UnspentPoints} ATTRIBUTE POINTS",20);
+        float width=body.rect.width-10;
+        Label(Rect("Points",body,0,0,width,42),$"{Member.UnspentPoints} ATTRIBUTE POINTS AVAILABLE",19);
+        Label(Rect("Allocation help",body,0,42,width,32),"Select an attribute to preview one point before confirming.",14);
         int i=0;foreach(CharacterStat stat in Enum.GetValues(typeof(CharacterStat)))
         {
             var current=stat;
-            Button(body,$"{stat}   {Member.Stat(stat)}     +",0,60+i++*56,490,()=>{Member.SpendPoint(current);Rebuild();},()=>ShowMember(Member),44).interactable=Member.UnspentPoints>0;
+            var button=Button(body,$"{AttributePreview.Name(stat)}   {Member.Stat(stat)}     +1",0,84+i++*54,width,
+                ()=>{if(Member.UnspentPoints>0&&Member.Stat(current)<int.MaxValue){pendingStat=current;Rebuild();}},
+                ()=>{if(!pendingStat.HasValue)PreviewAttribute(current);},44);
+            if(pendingStat==current)button.image.color=new Color(.17f,.38f,.4f);
         }
-        ShowMember(Member);
+        if(pendingStat.HasValue)
+        {
+            var stat=pendingStat.Value;
+            Button(body,"Confirm +1 "+AttributePreview.Name(stat),0,422,width-140,ConfirmAttribute,()=>PreviewAttribute(stat)).interactable=Member.UnspentPoints>0&&Member.Stat(stat)<int.MaxValue;
+            Button(body,"Cancel",width-130,422,130,()=>{pendingStat=null;Rebuild();});
+            PreviewAttribute(stat);
+        }
+        else Detail("Attributes","Hover or select an attribute to see what one point would change.\n\nNo points are spent until you confirm.\n\nThese points are separate from combat SP and future Training Points.",Portrait(Member));
+    }
+    void ConfirmAttribute()
+    {
+        if(!open||InBattle||!pendingStat.HasValue||!Member)return;
+        var stat=pendingStat.Value;pendingStat=null;Member.SpendPoint(stat);Rebuild();
+    }
+    void PreviewAttribute(CharacterStat stat)
+    {
+        var before=new GridUnit(Member.name,Vector2Int.zero);Member.Configure(before);
+        var after=AttributePreview.AfterPoint(Member,stat);
+        string text=AttributePreview.Explanation(stat)+$"\n\n{AttributePreview.Name(stat)}: {Member.Stat(stat)} → {(long)Member.Stat(stat)+ (Member.Stat(stat)<int.MaxValue?1:0)}";
+        if(stat==CharacterStat.Vitality)text+=$"\nMaximum HP: {before.MaxHealth} → {after.MaxHealth}";
+        if(stat==CharacterStat.Magic)text+=$"\nMaximum MP: {before.MaxMagicPoints} → {after.MaxMagicPoints}";
+        if(stat==CharacterStat.PhysicalDefense||stat==CharacterStat.MagicalDefense)
+        {
+            var kind=stat==CharacterStat.PhysicalDefense?DamageKind.Physical:DamageKind.Magical;
+            text+=$"\n\nExample: 100-power incoming hit\nDamage taken: {CombatMath.Damage(null,before,100,kind)} → {CombatMath.Damage(null,after,100,kind)}\nBefore Block or Barrier.";
+        }
+        if(stat==CharacterStat.Strength||stat==CharacterStat.Magic)
+        {
+            var loadout=Loadout();var scaling=stat==CharacterStat.Strength?ScalingStat.Strength:ScalingStat.Magic;
+            var actions=loadout?loadout.Options.Where(o=>o!=null&&o.Effect==ActionEffect.Damage&&o.Scaling==scaling&&o.StatScaling>0).ToList():new System.Collections.Generic.List<BattleActionOption>();
+            text+="\n\nCurrent actions · before enemy defenses";
+            foreach(var action in actions)text+=$"\n{action.Name}: {action.CalculateDamage(before,null,action.Damage)} → {action.CalculateDamage(after,null,action.Damage)}";
+            if(actions.Count==0)text+="\nNo currently learned actions use this scaling.";
+        }
+        text+="\n\n"+(Member.UnspentPoints>0?$"Cost: 1 attribute point\nRemaining after confirmation: {Member.UnspentPoints-1}":"No attribute points available.");
+        Detail(AttributePreview.Name(stat),text,Portrait(Member));
     }
     BattleActionLoadout Loadout()
     {
