@@ -39,7 +39,7 @@ public class BattleMenuUI : MonoBehaviour
     private PlayerInputReader input;
     private RectTransform content, viewport;
     private ScrollRect scroll;
-    private TMP_Text tooltip, targetCounter;
+    private TMP_Text tooltip, targetCounter, skillPointCounter;
     private ScrollRect tooltipScroll;
     private GameObject tooltipPanel;
     private Image shortcutDimmer;
@@ -83,6 +83,12 @@ public class BattleMenuUI : MonoBehaviour
         tooltip.rectTransform.anchorMin = new Vector2(0, 1); tooltip.rectTransform.anchorMax = Vector2.one;
         tooltip.rectTransform.pivot = new Vector2(0.5f, 1); tooltip.rectTransform.anchoredPosition = new Vector2(0, -10);
         targetCounter = MakeText("Target selection count", Vector2.zero, new Vector2(12, 210), new Vector2(180, 30), true);
+        skillPointCounter = MakeText("Skill Points", Vector2.zero, new Vector2(12, 258), new Vector2(180, 24), false);
+        skillPointCounter.transform.parent.GetComponent<Image>().enabled = false;
+        skillPointCounter.rectTransform.offsetMin = new Vector2(4, 2);
+        skillPointCounter.rectTransform.offsetMax = new Vector2(-4, -2);
+        skillPointCounter.fontSize = 13;
+        skillPointCounter.alignment = TextAlignmentOptions.Center;
         targetCounter.fontSize = 13; targetCounter.alignment = TextAlignmentOptions.Center;
         targetCounter.transform.parent.gameObject.SetActive(false);
         var hudRoot = new GameObject("Battle health and turn order", typeof(RectTransform));
@@ -209,7 +215,7 @@ public class BattleMenuUI : MonoBehaviour
             if (option == null || option.Category != category) continue;
             var captured = option;
             Row(option.Name + (category == BattleActionCategory.Item ? $" ×{option.Quantity}" : ""), () => Select(captured), ActionDetails(option),
-                () => battle.ActionReady && captured.Available && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
+                () => battle.ActionReady && battle.CanAfford(captured) && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
             if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
         if (rows == 0) Row("None available", () => { }, "This character has no available options in this category.", () => false);
@@ -268,7 +274,7 @@ public class BattleMenuUI : MonoBehaviour
         if (editingFavorites) { AssignSlot(slot); return; }
         if (battle.ChosenAction != null) return;
         var option = battle.Loadout.Favorite(category, slot);
-        if (option != null && option.Available && battle.ActionReady) Select(option);
+        if (option != null && battle.CanAfford(option) && battle.ActionReady) Select(option);
     }
     private static int PressedFavorite(Keyboard k, Gamepad pad)
     {
@@ -336,14 +342,23 @@ public class BattleMenuUI : MonoBehaviour
             if (highlighted >= 0) pool[highlighted].SetHighlighted(false);
             highlighted = -1;
         }
+        bool showResources = battle.PlayerReady;
+        skillPointCounter.transform.parent.gameObject.SetActive(showResources);
+        if (showResources)
+        {
+            var actor = battle.Combatants[battle.CurrentActorIndex];
+            skillPointCounter.text = $"SP {actor.SkillPoints} / {GridUnit.MaximumSkillPoints}   Move {actor.Movement}";
+        }
         int approachCost = battle.PreviewApproachCost;
         bool multi = battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;
         bool showCount = commandsVisible && (multi || approachCost > 0);
         targetCounter.transform.parent.gameObject.SetActive(showCount);
+        ((RectTransform)skillPointCounter.transform.parent).anchoredPosition = new Vector2(12,
+            commandsVisible ? 16 + viewport.sizeDelta.y + (showCount ? (multi && approachCost > 0 ? 46 : 34) : 0) : 44);
         if (showCount)
         {
             ((RectTransform)targetCounter.transform.parent).SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, multi && approachCost > 0 ? 42 : 30);
-            targetCounter.text = (multi ? $"{battle.TargetCount} / {battle.TargetLimit} targets selected" : "") + (approachCost > 0 ? (multi ? "\n" : "") + $"Move {approachCost} MP, then act" : "");
+            targetCounter.text = (multi ? $"{battle.TargetCount} / {battle.TargetLimit} targets selected" : "") + (approachCost > 0 ? (multi ? "\n" : "") + $"Move {approachCost} points, then act" : "");
             ((RectTransform)targetCounter.transform.parent).anchoredPosition = new Vector2(12, 16 + viewport.sizeDelta.y);
         }
     }

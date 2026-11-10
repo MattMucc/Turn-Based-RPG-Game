@@ -103,6 +103,7 @@ namespace Game.GridPrototype
         public bool PlayerReady => turnOrder.Count > 0 && !EntryActive && !busy && !closing && !playerTurning && !SignatureActive && IsAlly(actorIndex) && Active.Health > 0;
         public bool ActionReady => PlayerReady && Active.ActionAvailable;
         public int Movement => Active.Movement;
+        public bool CanAfford(BattleActionOption option) => option != null && option.CanUse(Active);
         public int TargetCount => targets.Count;
         public int TargetLimit => ChosenAction?.Pattern == BattleTargetPattern.Multiple ? ChosenAction.MaxTargets : 1;
         public string Message => message;
@@ -413,8 +414,8 @@ namespace Game.GridPrototype
 
         public bool ChooseAction(BattleActionOption option)
         {
-            if (!ActionReady || option == null || !option.Available || !Loadout.Options.Contains(option)) return false;
-            if (option.Effect == ActionEffect.Dash) { Dash(); return !Active.ActionAvailable; }
+            if (!ActionReady || option == null || !CanAfford(option) || !Loadout.Options.Contains(option)) return false;
+            if (option.Effect == ActionEffect.Dash) { Dash(option); return !Active.ActionAvailable; }
             HoveredAction = null; ChosenAction = option; targets.Clear(); selected = Active.Position;
             message = "Choose any cell in reach, including empty cells or allies. Multi-target actions start when all hits are assigned."; Refresh(); return true;
         }
@@ -484,7 +485,7 @@ namespace Game.GridPrototype
         public bool TryPrepareAction(out IEnumerator sequence)
         {
             sequence = null;
-            if (!ActionReady || !ReadyToResolve || !ChosenAction.Available) return false;
+            if (!ActionReady || !ReadyToResolve || !CanAfford(ChosenAction)) return false;
             if (!TryActionApproach(ChosenAction, targets, out var approach)) return false;
             var action = ChosenAction;
             var aimedCells = new List<Vector2Int>(targets);
@@ -498,7 +499,7 @@ namespace Game.GridPrototype
                     if (target.Alive && target.HasHealth && footprint.Overlaps(TargetCells(target))) hit.Add(target);
                 batches.Add(hit);
             }
-            if (!Active.SpendAction()) return false;
+            if (!Active.SpendActionWithSkillPoints(action.EffectiveSkillPointCost)) return false;
             if (action.Category == BattleActionCategory.Item) action.Quantity--;
             busy = true;
             if (action.SignatureQte)
@@ -613,6 +614,7 @@ namespace Game.GridPrototype
                 if (sequential) yield return new WaitForSeconds(0.4f);
             }
             if (!sequential) yield return new WaitForSeconds(0.4f);
+            action.CompleteResourceRecovery(Active);
             busy = false; CancelAction();
             ActionResolved?.Invoke();
             if (ResolveOutcome()) yield break;
@@ -819,8 +821,13 @@ namespace Game.GridPrototype
 
         public void Dash()
         {
-            if (PlayerReady && !InteractionBlocked && ChosenAction == null && Active.Dash())
-            { CancelAction(); ActionResolved?.Invoke(); message = "Dash: +3 movement points. Choose where to move, then End Turn."; Refresh(); }
+            var option = Loadout.Options.Find(o => o != null && o.Effect == ActionEffect.Dash);
+            if (option != null) Dash(option);
+        }
+        private void Dash(BattleActionOption option)
+        {
+            if (PlayerReady && !InteractionBlocked && ChosenAction == null && option.CanUse(Active) && Active.Dash(3, option.EffectiveSkillPointCost))
+            { option.CompleteResourceRecovery(Active); CancelAction(); ActionResolved?.Invoke(); message = "Dash: +3 movement points. Choose where to move, then End Turn."; Refresh(); }
         }
         public void Block()
         {

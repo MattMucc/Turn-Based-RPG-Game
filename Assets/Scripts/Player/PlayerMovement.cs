@@ -24,6 +24,8 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField, Min(.1f)] private float encounterStrikeReach = 3.5f;
     [SerializeField, Range(1, 180)] private float encounterStrikeHalfAngle = 60f;
     [SerializeField, Min(0)] private float encounterStrikeCooldown = .4f;
+    [Tooltip("Draw the strike's sphere range (cyan), facing limits (yellow), and current eligible target (green). Enable Gizmos in Scene/Game view. Also works outside Play Mode; walls can block targets inside the range.")]
+    [SerializeField] private bool displayEncounterStrikeDebug;
     private float nextEncounterStrike;
 
     [Header("Jump Settings")]
@@ -268,6 +270,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void OnDrawGizmos()
     {
+        if (displayEncounterStrikeDebug && (!Application.isPlaying || (IsPossessed && !(BattleManager.Instance && BattleManager.Instance.InBattle))))
+            WorldEncounterStrike.DrawDebug(transform, encounterStrikeReach, encounterStrikeHalfAngle);
         if (!Application.isPlaying) return;
         if (!displayGroundCheckDebug) return;
 

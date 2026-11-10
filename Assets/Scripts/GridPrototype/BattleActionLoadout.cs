@@ -14,6 +14,17 @@ namespace Game.GridPrototype
         [Range(-1, 3)] public int FavoriteSlot = -1;
         [TextArea] public string Description;
         public BattleActionCategory Category;
+        [Tooltip("Used only for Skills. Costs are paid once when the action is committed.")]
+        [Range(1, 9)] public int SkillPointCost = 1;
+        [Tooltip("Optional self recovery once after a Skill completes, not per hit. Normally zero.")]
+        [Range(0, 9)] public int SkillPointRecovery;
+        public int EffectiveSkillPointCost => Category == BattleActionCategory.Skill ? Mathf.Clamp(SkillPointCost, 1, 9) : 0;
+        public bool CanUse(GridUnit source) => Available && source != null && source.CanAffordSkillPoints(EffectiveSkillPointCost);
+        public void CompleteResourceRecovery(GridUnit source)
+        {
+            if (Category == BattleActionCategory.Attack && Effect == ActionEffect.Damage) source.RestoreSkillPoints(source.AttackSkillPointGain);
+            else if (Category == BattleActionCategory.Skill) source.RestoreSkillPoints(Mathf.Clamp(SkillPointRecovery, 0, 9));
+        }
         public BattleTargetPattern Pattern;
         [Min(1)] public int Reach = 1;
         [Min(0)] public int Radius = 1;
@@ -70,6 +81,12 @@ namespace Game.GridPrototype
         {
             string result = $"<b>{Name}</b>\n{Description}\n";
             string Row(string label, string value) => $"\n<b>{label}</b><pos=105>{value}";
+            if (Category == BattleActionCategory.Skill)
+            {
+                result += Row("Cost", $"{EffectiveSkillPointCost} SP");
+                if (source != null && !source.CanAffordSkillPoints(EffectiveSkillPointCost)) result += Row("Available", $"{source.SkillPoints} SP — insufficient");
+                if (SkillPointRecovery > 0) result += Row("Recovery", $"{Mathf.Clamp(SkillPointRecovery, 0, 9)} SP after use");
+            }
             if (Effect == ActionEffect.Dash) return result + Row("Movement", "+3 points");
             result += Row("Reach", $"{Reach} tiles");
             if (Effect == ActionEffect.Damage)

@@ -41,9 +41,16 @@ namespace Game.GridPrototype
         [Header("Prototype stat tuning")]
         [Min(1)] public int BaseHealth = 100;
         [Min(0)] public int HealthPerVitality = 10;
+        [Header("Skill Points")]
+        [Range(0, 9)] public int StartingSkillPoints = 3;
+        [Min(0)] public int SkillPointsPerTurn = 1;
+        [Min(0)] public int SkillPointsPerBasicAttack = 1;
         [Min(0)] public int BurningDamagePerTick = 5, RegenerationHealingPerTick = 5;
         public void Configure(GridUnit unit)
         {
+            unit.InitializeSkillPoints(StartingSkillPoints);
+            unit.TurnSkillPointGain = Mathf.Max(0, SkillPointsPerTurn);
+            unit.AttackSkillPointGain = Mathf.Max(0, SkillPointsPerBasicAttack);
             unit.MaxHealth = Mathf.Max(1, BaseHealth + Stat(CharacterStat.Vitality) * HealthPerVitality);
             unit.Health = unit.MaxHealth;
             unit.Strength = Stat(CharacterStat.Strength); unit.Magic = Stat(CharacterStat.Magic);
@@ -65,7 +72,7 @@ namespace Game.GridPrototype
             string live = unit.EffectDetails();
             if (!string.IsNullOrEmpty(live)) statuses = live + (statuses == "None" ? "" : "\n" + statuses);
             if (unit.EffectiveBlock) statuses = "Blocking" + (statuses == "None" ? "" : "\n" + statuses);
-            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nInitiative  {EffectiveInitiative}{(Initiative < 0 && EffectiveInitiative == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
+            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nSP  {unit.SkillPoints} / {GridUnit.MaximumSkillPoints}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nInitiative  {EffectiveInitiative}{(Initiative < 0 && EffectiveInitiative == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
         }
         private static string Assigned(string value) => string.IsNullOrWhiteSpace(value) ? "Not assigned" : value;
     }

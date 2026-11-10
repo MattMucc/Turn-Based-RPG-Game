@@ -218,7 +218,7 @@ namespace Game.GridPrototype
             panelScroll = GUILayout.BeginScrollView(panelScroll);
             GUILayout.Label("GRID TRAVERSAL PROTOTYPE");
             GUILayout.Label($"Round {round} | {Active.Name}\nMovement: {Active.Movement} | Action: {(Active.ActionAvailable ? "Ready" : "Spent")}\nHealth: {Active.Health} | Jump: {Active.JumpRange} cells / {Active.JumpHeight} level");
-            foreach (var unit in Board.Units) GUILayout.Label($"{(unit == Active ? "> " : "")}{unit.Name}: {unit.Movement} MP banked");
+            foreach (var unit in Board.Units) GUILayout.Label($"{(unit == Active ? "> " : "")}{unit.Name}: {unit.Movement} movement points banked");
             GUILayout.Space(8);
             GUI.enabled = !Busy;
             if (GUILayout.Button(attackMode ? "Move [M]" : "Move [M] - selected", GUILayout.Height(32))) attackMode = false;
@@ -227,7 +227,7 @@ namespace Game.GridPrototype
             if (GUILayout.Button("Block [B]", GUILayout.Height(32))) Block();
             GUI.enabled = !Busy;
             if (GUILayout.Button("Confirm selected cell [Enter]", GUILayout.Height(32))) Confirm();
-            if (GUILayout.Button("End Turn [T] - keep unused MP", GUILayout.Height(36))) EndTurn();
+            if (GUILayout.Button("End Turn [T] - keep unused movement", GUILayout.Height(36))) EndTurn();
             GUI.enabled = true;
             if (GUILayout.Button("Focus active character [F]", GUILayout.Height(30))) cameraControls.FocusActive();
             GUILayout.Space(8);

@@ -52,6 +52,7 @@ namespace Game.GridPrototype
             if (movementGrant < 0) throw new ArgumentOutOfRangeException(nameof(movementGrant));
             TickStartEffects();
             if (Health <= 0) return;
+            RestoreSkillPoints(TurnSkillPointGain);
             Movement = checked(Movement + deferredMovement + movementGrant); deferredMovement = 0;
             ActionAvailable = true;
             Blocking = false;
@@ -72,10 +73,11 @@ namespace Game.GridPrototype
             return true;
         }
 
-        public bool Dash(int movementGain = 3)
+        public bool Dash(int movementGain = 3, int skillPointCost = 0)
         {
             if (!TurnOpen || !ActionAvailable || movementGain <= 0 || Movement > int.MaxValue - movementGain) return false;
-            ActionAvailable = false; Movement += movementGain; return true;
+            if (!SpendActionWithSkillPoints(skillPointCost)) return false;
+            Movement += movementGain; return true;
         }
         public void EndTurn() { if (TurnOpen) TickEndEffects(); TurnOpen = false; ActionAvailable = false; }
     }

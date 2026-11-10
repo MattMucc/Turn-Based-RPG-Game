@@ -123,7 +123,9 @@ public class PartyBattleTests
     {
         Assert.AreEqual(3, battle.AllyCount); Assert.AreEqual(100, battle.Combatants[0].MaxHealth);
         Assert.AreEqual(110, battle.Combatants[1].MaxHealth); Assert.AreEqual(120, battle.Combatants[2].MaxHealth);
-        var first = battle.Loadout; battle.Combatants[0].SpendMovement(2); battle.Dash();
+        var first = battle.Loadout;
+        first.Options.Add(new BattleActionOption { Name = "Dash", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash });
+        battle.Combatants[0].SpendMovement(2); battle.Dash();
         Assert.AreEqual(4, battle.Combatants[0].Movement); Next();
         Assert.IsTrue(battle.PlayerReady); Assert.AreEqual("Personal attack 1", battle.Loadout.Options[0].Name);
         Assert.AreNotSame(first, battle.Loadout); Assert.IsFalse(battle.ChooseAction(first.Options[0]));

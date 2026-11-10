@@ -42,13 +42,43 @@ public class BattleActionTests
         var dash = new BattleActionOption { Name = "Dash", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash };
         battle.Loadout.Options.Add(dash);
         int movement = battle.Movement;
+        int points = battle.Combatants[battle.CurrentActorIndex].SkillPoints;
         Assert.IsTrue(battle.ChooseAction(dash));
         Assert.AreEqual(movement + 3, battle.Movement);
+        Assert.AreEqual(points - 1, battle.Combatants[battle.CurrentActorIndex].SkillPoints);
         Assert.IsNull(battle.ChosenAction);
         Assert.IsFalse(battle.ActionReady);
         Assert.IsTrue(battle.PlayerReady, "Dash must leave the turn open for movement.");
         Assert.IsFalse(battle.ChooseAction(dash));
         Assert.AreEqual(movement + 3, battle.Movement);
+    }
+    [Test] public void SkillSelectionIsFreeAndCommitRechecksPointsThenChargesOnce()
+    {
+        var unit = battle.Combatants[battle.CurrentActorIndex];
+        var skill = new BattleActionOption { Name = "Test SP", Category = BattleActionCategory.Skill, SkillPointCost = 4, Damage = 0 };
+        battle.Loadout.Options.Add(skill);
+        Assert.IsTrue(battle.ChooseAction(skill)); Assert.AreEqual(4, unit.SkillPoints);
+        battle.CancelAction(); Assert.AreEqual(4, unit.SkillPoints);
+        Assert.IsTrue(battle.ChooseAction(skill)); Assert.IsTrue(battle.ToggleTarget(unit.Position));
+        unit.InitializeSkillPoints(3);
+        Assert.IsFalse(battle.TryPrepareAction(out _)); Assert.IsTrue(unit.ActionAvailable);
+        unit.InitializeSkillPoints(4);
+        Assert.IsTrue(battle.TryPrepareAction(out var sequence)); Assert.AreEqual(0, unit.SkillPoints);
+        Assert.IsFalse(battle.TryPrepareAction(out _));
+        while (sequence.MoveNext()) { }
+        Assert.AreEqual(0, unit.SkillPoints); Assert.AreEqual(3, unit.Movement);
+    }
+    [Test] public void MultiHitBasicAttackRecoversOnePointOnlyAfterAllHits()
+    {
+        var unit = battle.Combatants[battle.CurrentActorIndex];
+        var attack = new BattleActionOption { Name = "Test attack", Pattern = BattleTargetPattern.Multiple, MaxTargets = 3, Damage = 0, HitChance = 0 };
+        battle.Loadout.Options.Add(attack);
+        Assert.IsTrue(battle.ChooseAction(attack));
+        for (int i = 0; i < 3; i++) Assert.IsTrue(battle.ToggleTarget(unit.Position));
+        Assert.IsTrue(battle.TryPrepareAction(out var sequence)); Assert.AreEqual(4, unit.SkillPoints);
+        Assert.IsTrue(sequence.MoveNext()); Assert.AreEqual(4, unit.SkillPoints);
+        while (sequence.MoveNext()) { }
+        Assert.AreEqual(5, unit.SkillPoints);
     }
     [Test] public void DetailsMatchDamageCalculationWithoutActionCostOrSingleHitSuffix()
     {
