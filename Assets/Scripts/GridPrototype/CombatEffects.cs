@@ -8,7 +8,7 @@ namespace Game.GridPrototype
     public enum DamageKind { Physical, Magical }
     public enum ScalingStat { None, Strength, Magic }
     public enum CombatElement { None, Fire, Lightning, Ice }
-    public enum ActionEffect { Damage, Support, Push, Dash, TransferDebt, Foreclose, SettleDebt }
+    public enum ActionEffect { Damage, Support, Push, Dash, Heal }
 
     public sealed partial class GridUnit
     {
@@ -64,7 +64,6 @@ namespace Game.GridPrototype
             if (weakenedAtTurnStart > 0 && Stacks(CombatStatus.Weakened) > 0) stacks[CombatStatus.Weakened]--;
             if (exposedAtTurnStart > 0 && Stacks(CombatStatus.Exposed) > 0) stacks[CombatStatus.Exposed]--;
             paralyzedAtTurnStart = weakenedAtTurnStart = exposedAtTurnStart = 0;
-            CollectDueDebts();
         }
         public string EffectDetails()
         {

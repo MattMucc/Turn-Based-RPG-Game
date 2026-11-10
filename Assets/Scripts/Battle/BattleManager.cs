@@ -156,7 +156,7 @@ public class BattleManager : MonoBehaviour
             var figures = new List<Transform>(); var offsets = new List<float>();
             foreach (var actor in actors) { figures.Add(actor.Transform); offsets.Add(actor.FootOffset); }
             entry.Duration = battleEntryDuration;
-            encounter.Initialize(grid, figures, offsets, entry.Cells, worldCamera, shader, CompleteBattle, preemptive, partySize, entry);
+            encounter.Initialize(grid, figures, offsets, entry.Cells, worldCamera, shader, CompleteBattle, preemptive, partySize, entry, GameManager.Instance.Inventory);
             foreach (var reserve in reserveActors) encounter.AddReserve(reserve.Transform.GetComponent<BattleCharacterInfo>(), reserve.FootOffset);
             if (battleMenu) battleMenu.Bind(encounter);
             Debug.Log(preemptive ? "[Battle] Pre-emptive strike: controlled character acts first this round." : "[Battle] Initiative determines turn order.");

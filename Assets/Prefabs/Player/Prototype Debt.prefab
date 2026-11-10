@@ -154,7 +154,6 @@ GameObject:
   - component: {fileID: 4418546057224845090}
   - component: {fileID: 3003055958351131635}
   - component: {fileID: 791043194022376401}
-  - component: {fileID: 2392276633588326960}
   m_Layer: 6
   m_Name: Prototype Debt
   m_TagString: Untagged
@@ -354,11 +353,10 @@ MonoBehaviour:
     Radius: 1
     MaxTargets: 3
     Damage: 12
-    Quantity: 0
+    ItemId:
+    quantity: 0
+    Healing: 0
     Effect: 0
-    DebtSkill: 0
-    BorrowType: 0
-    BorrowStacks: 0
     DamageType: 0
     Element: 0
     Scaling: 1
@@ -374,233 +372,9 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence: 
+    QteSequence:
     QteDuration: 1.5
     QteBonusDamage: 15
-  - Name: Ward
-    FavoriteSlot: 0
-    Description: Conjure a protective shield.
-    Category: 3
-    Pattern: 0
-    Reach: 4
-    Radius: 1
-    MaxTargets: 3
-    Damage: 0
-    Quantity: 0
-    Effect: 1
-    DebtSkill: 0
-    BorrowType: 0
-    BorrowStacks: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 0
-    StatScaling: 0
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 30
-    SignatureQte: 0
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 1.5
-    QteBonusDamage: 15
-  - Name: Blood Price
-    FavoriteSlot: 0
-    Description: Borrow strength for a crushing blow.
-    Category: 1
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 24
-    Quantity: 0
-    Effect: 0
-    DebtSkill: 1
-    BorrowType: 0
-    BorrowStacks: 2
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 2
-    QteBonusDamage: 5
-  - Name: Overextend
-    FavoriteSlot: 1
-    Description: Strike three chosen targets; repeated targets are allowed.
-    Category: 1
-    Pattern: 3
-    Reach: 3
-    Radius: 1
-    MaxTargets: 3
-    Damage: 8
-    Quantity: 0
-    Effect: 0
-    DebtSkill: 1
-    BorrowType: 1
-    BorrowStacks: 3
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 2
-    QteBonusDamage: 5
-  - Name: Collateral Damage
-    FavoriteSlot: 2
-    Description: Unleash a burst that can also strike allies.
-    Category: 1
-    Pattern: 1
-    Reach: 3
-    Radius: 1
-    MaxTargets: 3
-    Damage: 16
-    Quantity: 0
-    Effect: 0
-    DebtSkill: 1
-    BorrowType: 2
-    BorrowStacks: 3
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 2
-    QteBonusDamage: 5
-  - Name: Pass the Bill
-    FavoriteSlot: 3
-    Description: Choose liabilities to transfer. The recipient gets a turn to respond.
-    Category: 1
-    Pattern: 0
-    Reach: 4
-    Radius: 1
-    MaxTargets: 3
-    Damage: 0
-    Quantity: 0
-    Effect: 4
-    DebtSkill: 1
-    BorrowType: 0
-    BorrowStacks: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 0
-    StatScaling: 0
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 2
-    QteBonusDamage: 0
-  - Name: Foreclose
-    FavoriteSlot: -1
-    Description: Consume chosen liabilities and collect their consequences immediately.
-    Category: 1
-    Pattern: 0
-    Reach: 4
-    Radius: 1
-    MaxTargets: 3
-    Damage: 0
-    Quantity: 0
-    Effect: 5
-    DebtSkill: 1
-    BorrowType: 0
-    BorrowStacks: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 0
-    StatScaling: 0
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 2
-    QteBonusDamage: 0
-  - Name: Settle Accounts
-    FavoriteSlot: -1
-    Description: Clear your personal debt and its strength bonus.
-    Category: 1
-    Pattern: 0
-    Reach: 0
-    Radius: 1
-    MaxTargets: 3
-    Damage: 0
-    Quantity: 0
-    Effect: 6
-    DebtSkill: 1
-    BorrowType: 0
-    BorrowStacks: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 0
-    StatScaling: 0
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 2
-    QteBonusDamage: 0
   favoritesInitialized: 0
 --- !u!114 &3003055958351131635
 MonoBehaviour:
@@ -652,20 +426,6 @@ MonoBehaviour:
   leader: {fileID: 0}
   sideOffset: 0
   settleRadius: 0.6
---- !u!114 &2392276633588326960
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2713249943951413015}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de32f925de8d6b5498d3d987c393d0ad, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.DebtPrototypeSettings
-  SkillDamageBonusPerStack: 0.05
-  BloodDamagePerStack: 5
 --- !u!1 &3479316304952442349
 GameObject:
   m_ObjectHideFlags: 0

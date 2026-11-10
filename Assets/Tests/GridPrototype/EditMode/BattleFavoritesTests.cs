@@ -12,7 +12,7 @@ public class BattleFavoritesTests : InputTestFixture
         var obj = new GameObject("Favorites test");
         try
         {
-            var loadout = obj.AddComponent<BattleActionLoadout>(); loadout.InitializeFavorites();
+            var loadout = obj.AddComponent<BattleActionLoadout>(); loadout.BindInventory(new PartyInventory()); loadout.InitializeFavorites();
             var attack = loadout.Favorite(BattleActionCategory.Attack, 0);
             var item = loadout.Favorite(BattleActionCategory.Item, 0); item.Quantity = 0;
             loadout.Options.Reverse();

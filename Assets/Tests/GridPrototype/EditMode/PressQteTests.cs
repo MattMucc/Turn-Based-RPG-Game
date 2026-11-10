@@ -149,15 +149,16 @@ public class PressQteTests : InputTestFixture
         timeout.Advance(0.1f, true); timeout.Advance(2);
         Assert.AreEqual(PressQteResult.TimedOut, timeout.Result);
     }
-    [Test] public void SavedPrefabSeparatesAllThreeQteTypesAndGlyphCatalogIsComplete()
+    [Test] public void QteExamplesRemainTestOnlyAndGlyphCatalogIsComplete()
     {
         var prefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(UnityEditor.AssetDatabase.GUIDToAssetPath("33fc2d0129d8dfe4c91a60c0f8d9d7bf"));
         Assert.IsNotNull(prefab, "The balanced character prefab must remain available for QTE validation.");
         var loadout = prefab.GetComponent<BattleActionLoadout>();
-        var single = loadout.Options.Find(o => o.Name == "Signature Strike");
+        Assert.IsFalse(loadout.Options.Exists(o => o.SignatureQte), "Demonstration QTE Skills must not clutter playable kits.");
+        var single = DemoActionFixtures.CreatePrototypeSignature();
         Assert.AreEqual(QteMode.SinglePress, single.QteType); Assert.IsEmpty(single.QteSequence);
-        Assert.AreEqual(QteMode.FixedSequence, loadout.Options.Find(o => o.Name == "Sequence Strike").QteType);
-        Assert.AreEqual(QteMode.RepeatedTap, loadout.Options.Find(o => o.Name == "Burst Strike").QteType);
+        Assert.AreEqual(QteMode.FixedSequence, DemoActionFixtures.CreatePrototypeSequence().QteType);
+        Assert.AreEqual(QteMode.RepeatedTap, DemoActionFixtures.CreatePrototypeMash().QteType);
         var type = System.Type.GetType("ControllerGlyphs, Assembly-CSharp");
         var catalog = Resources.Load("ControllerGlyphs", type);
         Assert.IsNotNull(catalog);

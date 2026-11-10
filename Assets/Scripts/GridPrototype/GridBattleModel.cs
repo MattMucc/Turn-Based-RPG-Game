@@ -50,7 +50,6 @@ namespace Game.GridPrototype
         {
             if (TurnOpen) throw new InvalidOperationException("Turn already started.");
             if (movementGrant < 0) throw new ArgumentOutOfRangeException(nameof(movementGrant));
-            TurnsStarted++;
             TickStartEffects();
             if (Health <= 0) return;
             Movement = checked(Movement + deferredMovement + movementGrant); deferredMovement = 0;

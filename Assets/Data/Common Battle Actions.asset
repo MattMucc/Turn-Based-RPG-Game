@@ -22,7 +22,9 @@ MonoBehaviour:
     Radius: 1
     MaxTargets: 3
     Damage: 25
-    Quantity: 0
+    ItemId:
+    quantity: 0
+    Healing: 0
     Effect: 0
     DamageType: 0
     Element: 0
@@ -39,7 +41,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence: 
+    QteSequence:
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Piercing Attack
@@ -51,7 +53,9 @@ MonoBehaviour:
     Radius: 1
     MaxTargets: 3
     Damage: 18
-    Quantity: 0
+    ItemId:
+    quantity: 0
+    Healing: 0
     Effect: 0
     DamageType: 0
     Element: 0
@@ -68,243 +72,8 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence: 
+    QteSequence:
     QteDuration: 1.5
-    QteBonusDamage: 15
-  - Name: Area Skill
-    FavoriteSlot: -1
-    Description: Prototype area targeting.
-    Category: 1
-    Pattern: 1
-    Reach: 4
-    Radius: 1
-    MaxTargets: 3
-    Damage: 18
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 0
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 1.5
-    QteBonusDamage: 15
-  - Name: Multi-target Skill
-    FavoriteSlot: -1
-    Description: Prototype independent target selection.
-    Category: 1
-    Pattern: 3
-    Reach: 4
-    Radius: 1
-    MaxTargets: 3
-    Damage: 12
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 0
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 1.5
-    QteBonusDamage: 15
-  - Name: Signature Strike
-    FavoriteSlot: -1
-    Description: Prototype cinematic attack. Press when prompted to strengthen the
-      impact.
-    Category: 1
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 30
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 1.5
-    QteBonusDamage: 15
-  - Name: Sequence Strike
-    FavoriteSlot: -1
-    Description: Complete the fixed input sequence to strengthen the impact.
-    Category: 1
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 30
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 1
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 02000000030000000100000000000000
-    QteDuration: 4
-    QteBonusDamage: 15
-  - Name: Burst Strike
-    FavoriteSlot: -1
-    Description: Repeatedly tap the displayed button to charge the impact.
-    Category: 1
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 30
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 2
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 4
-    QteBonusDamage: 15
-  - Name: Charged Strike
-    FavoriteSlot: -1
-    Description: Hold the displayed button to charge the impact. Release gradually
-      drains the charge.
-    Category: 1
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 30
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 3
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 4
-    QteBonusDamage: 15
-  - Name: Flow Strike
-    FavoriteSlot: -1
-    Description: React to one prompt at a time. Misses still advance to the next
-      prompt.
-    Category: 1
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 30
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 4
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 09000000010000000400000000000000
-    QteDuration: 2
-    QteBonusDamage: 15
-  - Name: Twin Strike
-    FavoriteSlot: -1
-    Description: Combine a direction with a face button. Either may be held first.
-    Category: 1
-    Pattern: 0
-    Reach: 1
-    Radius: 1
-    MaxTargets: 3
-    Damage: 30
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 1
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 1
-    QteType: 5
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 0900000000000000
-    QteDuration: 3
     QteBonusDamage: 15
   - Name: Push
     FavoriteSlot: -1
@@ -317,7 +86,9 @@ MonoBehaviour:
     Radius: 1
     MaxTargets: 3
     Damage: 0
-    Quantity: 0
+    ItemId:
+    quantity: 0
+    Healing: 0
     Effect: 2
     DamageType: 0
     Element: 0
@@ -334,7 +105,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence: 
+    QteSequence:
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Quick Strike
@@ -346,7 +117,9 @@ MonoBehaviour:
     Radius: 1
     MaxTargets: 3
     Damage: 8
-    Quantity: 0
+    ItemId:
+    quantity: 0
+    Healing: 0
     Effect: 0
     DamageType: 0
     Element: 0
@@ -363,7 +136,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence: 
+    QteSequence:
     QteDuration: 1.5
     QteBonusDamage: 15
   - Name: Dash
@@ -375,6 +148,25 @@ MonoBehaviour:
     Radius: 0
     MaxTargets: 1
     Damage: 0
-    Quantity: 0
+    ItemId:
+    quantity: 0
+    Healing: 0
     Effect: 3
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
     HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence:
+    QteDuration: 1.5
+    QteBonusDamage: 15

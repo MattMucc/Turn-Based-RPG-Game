@@ -18,6 +18,10 @@ public class StatusBadgeTests
             type.GetMethod("Initialize").Invoke(component,new object[]{root.transform,TMP_Settings.defaultFontAsset});
             var unit=new GridUnit("Target",Vector2Int.zero){BurnTickDamage=8};unit.ApplyStatus(CombatStatus.Burning,3);unit.ApplyStatus(CombatStatus.Paralyzed,2);
             type.GetMethod("Show").Invoke(component,new object[]{unit,false});
+            foreach (Transform badge in row.transform) {
+                Assert.IsNotNull(badge.GetComponent<CanvasRenderer>(), "Every status badge must own a renderer, including badges added after actions.");
+                badge.GetComponent<UnityEngine.UI.Graphic>().Rebuild(UnityEngine.UI.CanvasUpdate.PreRender);
+            }
             Assert.AreEqual(-18,((RectTransform)row.transform.GetChild(0)).anchoredPosition.x);Assert.AreEqual(18,((RectTransform)row.transform.GetChild(1)).anchoredPosition.x);
             Assert.AreEqual("3",row.transform.GetChild(0).GetComponentInChildren<TMP_Text>().text);
             var hoverType=Type.GetType("StatusBadgeHover, Assembly-CSharp",true);
@@ -26,6 +30,13 @@ public class StatusBadgeTests
             unit.RemoveStatus(CombatStatus.Burning);type.GetMethod("Show").Invoke(component,new object[]{unit,false});
             Assert.IsFalse(tooltip.gameObject.activeSelf);Assert.AreEqual("Paralyzed",row.transform.GetChild(0).name);Assert.AreEqual(0,((RectTransform)row.transform.GetChild(0)).anchoredPosition.x);
             Assert.IsFalse(row.transform.GetChild(1).gameObject.activeSelf);
+            unit.ApplyStatus(CombatStatus.Weakened, 2); unit.ApplyStatus(CombatStatus.Exposed, 2); unit.AddBarrier(20);
+            type.GetMethod("Show").Invoke(component,new object[]{unit,false});
+            foreach (Transform badge in row.transform) {
+                Assert.IsNotNull(badge.GetComponent<CanvasRenderer>());
+                badge.GetComponent<UnityEngine.UI.Graphic>().Rebuild(UnityEngine.UI.CanvasUpdate.PreRender);
+            }
+
         }
         finally{Object.DestroyImmediate(root);}
     }

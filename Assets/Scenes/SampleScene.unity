@@ -1189,6 +1189,39 @@ MonoBehaviour:
   - {fileID: 2100000101}
   - {fileID: 2100000111}
   - {fileID: 2100000121}
+  Inventory:
+    Items:
+    - Name: Health Potion
+      FavoriteSlot: -1
+      Description: Restore health to a living target. Does not revive.
+      Category: 2
+      Pattern: 0
+      Reach: 3
+      Radius: 1
+      MaxTargets: 3
+      Damage: 0
+      ItemId: health-potion
+      quantity: 3
+      Healing: 50
+      Effect: 4
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence:
+      QteDuration: 1.5
+      QteBonusDamage: 15
   Progression:
     Members:
     - {fileID: 2407421259216672344}

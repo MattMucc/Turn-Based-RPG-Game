@@ -37,6 +37,7 @@ public sealed class BattleStatusRow : MonoBehaviour
             if(i==entries.Count)
             {
                 int index=i;var r=NewRect("Status",transform,new Vector2(30,30));
+                r.gameObject.AddComponent<CanvasRenderer>();
                 var graphic=r.gameObject.AddComponent<StatusBadgeGraphic>();
                 var count=NewRect("Remaining",r,new Vector2(32,13)).gameObject.AddComponent<TextMeshProUGUI>();count.rectTransform.anchoredPosition=new Vector2(0,-12);
                 count.font=font;count.fontSize=11;count.fontStyle=FontStyles.Bold;count.color=Color.white;count.alignment=TextAlignmentOptions.Center;count.outlineWidth=.25f;count.outlineColor=Color.black;count.raycastTarget=false;
@@ -71,10 +72,11 @@ public sealed class StatusBadgeHover : MonoBehaviour,IPointerEnterHandler,IPoint
     public void OnPointerExit(PointerEventData data)=>Exit?.Invoke();
     public void OnPointerClick(PointerEventData data) { } // Clicking an icon must not dismiss Examine or issue an attack.
 }
+[RequireComponent(typeof(CanvasRenderer))]
 public sealed class StatusBadgeGraphic : MaskableGraphic
 {
     public int Symbol;
-    static readonly Color[] colors={new Color(1,.35f,.1f),new Color(.3f,.9f,.45f),new Color(1,.85f,.2f),new Color(.3f,.65f,1),new Color(.8f,.85f,.95f),new Color(.65f,.45f,.85f),new Color(1,.65f,.3f),new Color(.95f,.2f,.35f),new Color(.7f,.4f,1),new Color(1,.75f,.25f)};
+    static readonly Color[] colors={new Color(1,.35f,.1f),new Color(.3f,.9f,.45f),new Color(1,.85f,.2f),new Color(.3f,.65f,1),new Color(.8f,.85f,.95f),new Color(.65f,.45f,.85f),new Color(1,.65f,.3f)};
     void Polygon(VertexHelper vh,Vector2[] points,Color tint)
     {
         int start=vh.currentVertCount;Vector2 center=Vector2.zero;foreach(var p in points)center+=p;center/=points.Length;
@@ -90,13 +92,7 @@ public sealed class StatusBadgeGraphic : MaskableGraphic
         Vector2[] shape=Symbol==0 ? new[]{new Vector2(-5,-5),new Vector2(-7,0),new Vector2(-3,5),new Vector2(-1,9),new Vector2(4,4),new Vector2(6,-2),new Vector2(3,-6)}
             : Symbol==2 ? new[]{new Vector2(1,9),new Vector2(-6,-1),new Vector2(-1,-1),new Vector2(-3,-8),new Vector2(6,3),new Vector2(1,3)}
             : new[]{new Vector2(-7,6),new Vector2(7,6),new Vector2(5,-3),new Vector2(0,-7),new Vector2(-5,-3)};
-        if (Symbol >= 7)
-        {
-            // Contract glyph with type-specific tally marks; separate from collected status icons.
-            Polygon(vh,new[]{new Vector2(-6,8),new Vector2(6,8),new Vector2(6,-6),new Vector2(-6,-6)},colors[Symbol]);
-            for(int i=0;i<=Symbol-7;i++) Polygon(vh,new[]{new Vector2(-4,4-i*3),new Vector2(4,4-i*3),new Vector2(4,3-i*3),new Vector2(-4,3-i*3)},new Color(.065f,.085f,.12f));
-        }
-        else if(Symbol==1)
+        if(Symbol==1)
         {
             Polygon(vh,new[]{new Vector2(-2,7),new Vector2(2,7),new Vector2(2,-6),new Vector2(-2,-6)},colors[1]);
             Polygon(vh,new[]{new Vector2(-7,3),new Vector2(7,3),new Vector2(7,-1),new Vector2(-7,-1)},colors[1]);

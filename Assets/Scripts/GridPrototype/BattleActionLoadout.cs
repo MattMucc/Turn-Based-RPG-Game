@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Game.GridPrototype
 {
     public enum BattleActionCategory { Attack, Skill, Item, Magic }
-    public enum BattleTargetPattern { Single, Area, Piercing, Multiple, Sweep }
+    public enum BattleTargetPattern { Single, Area, Piercing, Multiple, Sweep, CustomSingle, CustomArea }
 
     [Serializable]
     public sealed class BattleActionOption
@@ -17,23 +17,20 @@ namespace Game.GridPrototype
         public BattleTargetPattern Pattern;
         [Min(1)] public int Reach = 1;
         [Min(0)] public int Radius = 1;
+        [Tooltip("Gray cells in the custom pattern. Unlisted cells are enabled; offsets outside the current size are preserved but ignored.")]
+        public List<Vector2Int> DisabledPatternCells = new();
+        [Tooltip("Custom AoE only: rotate the footprint in quarter turns toward the aim direction. Top of the editor means forward; ties choose the horizontal direction.")]
+        public bool RotateAreaTowardTarget;
         [Min(1)] public int MaxTargets = 3;
         [Min(0)] public int Damage = 25;
-        [Min(0)] public int Quantity;
+        public string ItemId;
+        [UnityEngine.Serialization.FormerlySerializedAs("Quantity")]
+        [SerializeField, Min(0)] private int quantity;
+        [NonSerialized] private BattleActionOption stock;
+        public int Quantity { get => stock != null ? stock.Quantity : quantity; set { if (stock != null) stock.Quantity = value; else quantity = Mathf.Max(0, value); } }
+        public void BindStock(BattleActionOption source) { stock = source == this ? null : source; }
+        [Min(0)] public int Healing;
         public ActionEffect Effect;
-        public bool DebtSkill;
-        public DebtKind BorrowType;
-        [Min(0)] public int BorrowStacks;
-        [NonSerialized] public int PlannedExtraBorrow;
-        [NonSerialized] public float CommittedSkillMultiplier = -1;
-        public bool ChoosesDebt => Effect == ActionEffect.TransferDebt || Effect == ActionEffect.Foreclose;
-        public float SkillMultiplier(GridUnit source) => Category != BattleActionCategory.Skill ? 1 : CommittedSkillMultiplier >= 0 ? CommittedSkillMultiplier : source != null && source.UsesDebt ? 1 + (source.DebtCount + (BorrowStacks > 0 ? Mathf.Clamp(PlannedExtraBorrow, 0, source.MaximumExtraBorrow) : 0)) * source.DebtBonusPerStack : 1;
-        public int CalculateDamage(GridUnit source, GridUnit target, int power) => CombatMath.Damage(source, target, power, DamageType, Scaling, StatScaling, SkillMultiplier(source));
-        public void UpdateDebtShape(GridUnit source)
-        {
-            if (Effect == ActionEffect.TransferDebt) { Pattern = source.DebtCount >= 6 ? BattleTargetPattern.Multiple : BattleTargetPattern.Single; MaxTargets = source.DebtCount >= 6 ? 2 : 1; }
-            if (Effect == ActionEffect.Foreclose) { Pattern = source.DebtCount >= 9 ? BattleTargetPattern.Area : BattleTargetPattern.Single; Radius = 1; }
-        }
         public DamageKind DamageType;
         public CombatElement Element;
         public ScalingStat Scaling;
@@ -55,12 +52,14 @@ namespace Game.GridPrototype
         public QteButton[] QteSequence = Array.Empty<QteButton>();
         [Min(0.1f)] public float QteDuration = 1.5f;
         [Min(0)] public int QteBonusDamage = 15;
+        public int CalculateDamage(GridUnit source, GridUnit target, int power) => CombatMath.Damage(source, target, power, DamageType, Scaling, StatScaling);
         public bool ApplyHit(GridUnit source, GridUnit target, int power, float hitRoll, float statusRoll, out int healthLost)
         {
             healthLost = 0;
             if (target.Health <= 0 || !CombatMath.Roll(HitChance, hitRoll)) return false;
             if (Effect == ActionEffect.Damage)
-                healthLost = target.TakeDamage(CalculateDamage(source, target, power));
+                healthLost = target.TakeDamage(CombatMath.Damage(source, target, power, DamageType, Scaling, StatScaling));
+            if (Effect == ActionEffect.Heal) healthLost = -target.Heal(Healing);
             if (CombatMath.Roll(StatusChance, statusRoll)) target.ApplyStatus(InflictedStatus, StatusStacks);
             target.AddBarrier(BarrierGranted);
             return true;
@@ -75,17 +74,19 @@ namespace Game.GridPrototype
             result += Row("Reach", $"{Reach} tiles");
             if (Effect == ActionEffect.Damage)
             {
-                int damage = CalculateDamage(source, target, Damage);
+                int damage = CombatMath.Damage(source, target, Damage, DamageType, Scaling, StatScaling);
                 string amount = damage.ToString();
                 if (SignatureQte && QteBonusDamage > 0)
-                    amount += "–" + CalculateDamage(source, target, Damage + QteBonusDamage) + " (QTE)";
+                    amount += "–" + CombatMath.Damage(source, target, Damage + QteBonusDamage, DamageType, Scaling, StatScaling) + " (QTE)";
                 if (Pattern == BattleTargetPattern.Multiple) amount += " per hit";
                 result += Row("Damage", amount);
                 result += Row("Defense", target == null ? "Before mitigation" : "Target included");
             }
+            if (Effect == ActionEffect.Heal) result += Row("Healing", $"Up to {Healing} HP");
             result += Row("Hit Chance", $"{Mathf.Clamp(HitChance, 0, 100):0.#}%");
-            result += Row("Type", Pattern == BattleTargetPattern.Multiple ? "Multi-Target" : Pattern == BattleTargetPattern.Single ? "Single" : Pattern.ToString());
-            if (Pattern == BattleTargetPattern.Single || Pattern == BattleTargetPattern.Multiple)
+            bool single = Pattern == BattleTargetPattern.Single || Pattern == BattleTargetPattern.CustomSingle;
+            result += Row("Type", Pattern == BattleTargetPattern.Multiple ? "Multi-Target" : single ? "Single" : Pattern == BattleTargetPattern.CustomArea ? "Area" : Pattern.ToString());
+            if (single || Pattern == BattleTargetPattern.Multiple)
                 result += Row("Targets", Pattern == BattleTargetPattern.Multiple ? MaxTargets.ToString() : "1");
             result += Row("Element", Element.ToString());
             if (Effect == ActionEffect.Damage) result += Row("Damage Type", DamageType.ToString());
@@ -93,17 +94,13 @@ namespace Game.GridPrototype
             if (InflictedStatus != CombatStatus.None)
                 result += Row("Afflictions", $"{InflictedStatus} ×{Mathf.Clamp(StatusStacks, 1, 10)}")
                     + $"\n<indent=105>{Mathf.Clamp(StatusChance, 0, 100):0.#}% per landed hit</indent>";
-            if (BorrowStacks > 0) result += Row("Debt cost", $"{BorrowStacks + PlannedExtraBorrow} {BorrowType} (even on miss)");
-            if (Effect == ActionEffect.TransferDebt) result += Row("Transfer", $"Up to {source?.TransferCapacity ?? 3} stacks");
-            if (ChoosesDebt) result += "\nChoose which liabilities to use before choosing targets.";
-            if (DebtSkill && Effect != ActionEffect.Damage) result += "\nQTE success: gain 5 Barrier. Failure: ordinary effect.";
             if (BarrierGranted > 0) result += Row("Barrier", BarrierGranted.ToString());
             return result;
         }
 
     }
 
-    // Carried quantities belong to the character, not a newly created encounter.
+    // Ability favorites belong to characters; runtime item stocks are supplied by the party inventory.
     // These are demonstration options, not approved character kits or balance.
     public sealed class BattleActionLoadout : MonoBehaviour
     {
@@ -113,26 +110,47 @@ namespace Game.GridPrototype
         public List<BattleActionOption> PersonalOptions => personalOptions;
         private List<BattleActionOption> combinedOptions;
         private SharedBattleActionLibrary cachedLibrary;
-        private int cachedRevision = -1;
+        private int cachedRevision = -1, cachedInventoryRevision = -1, cachedItemCount = -1;
+        private PartyInventory inventory;
+        private readonly Dictionary<string, BattleActionOption> itemInstances = new();
+        public void BindInventory(PartyInventory shared)
+        {
+            if (ReferenceEquals(inventory, shared)) return;
+            inventory = shared; combinedOptions = null; cachedInventoryRevision = -1; favoritesInitialized = false;
+        }
         private readonly Dictionary<string, BattleActionOption> sharedInstances = new();
         public List<BattleActionOption> Options
         {
             get
             {
-                if (!SharedLibrary) return personalOptions;
-                if (combinedOptions != null && cachedLibrary == SharedLibrary && cachedRevision == SharedLibrary.Revision) return combinedOptions;
+                if (!SharedLibrary && inventory == null) return personalOptions;
+                if (combinedOptions != null && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
                 if (cachedLibrary != SharedLibrary) sharedInstances.Clear();
                 combinedOptions = new List<BattleActionOption>();
                 var names = new HashSet<string>();
-                foreach (var definition in SharedLibrary.Actions)
+                foreach (var definition in SharedLibrary ? SharedLibrary.Actions : new List<BattleActionOption>())
                 {
                     if (definition == null || definition.Category == BattleActionCategory.Item || string.IsNullOrWhiteSpace(definition.Name) || !names.Add(definition.Name)) continue;
                     var copy = JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(definition));
                     if (sharedInstances.TryGetValue(definition.Name, out var previous)) copy.FavoriteSlot = previous.FavoriteSlot;
                     sharedInstances[definition.Name] = copy; combinedOptions.Add(copy);
                 }
-                foreach (var option in personalOptions) if (option != null && !names.Contains(option.Name)) combinedOptions.Add(option);
-                cachedLibrary = SharedLibrary; cachedRevision = SharedLibrary.Revision; favoritesInitialized = false;
+                foreach (var option in personalOptions) if (option != null && !names.Contains(option.Name) && (inventory == null || option.Category != BattleActionCategory.Item)) combinedOptions.Add(option);
+                if (inventory != null)
+                {
+                    var itemIds = new HashSet<string>();
+                    foreach (var source in inventory.Items)
+                    {
+                        if (source == null || source.Category != BattleActionCategory.Item) continue;
+                        string id = string.IsNullOrEmpty(source.ItemId) ? source.Name : source.ItemId;
+                        if (string.IsNullOrEmpty(id) || !itemIds.Add(id)) continue;
+                        var copy = JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(source));
+                        if (itemInstances.TryGetValue(id, out var previous)) copy.FavoriteSlot = previous.FavoriteSlot;
+                        copy.BindStock(source); itemInstances[id] = copy; combinedOptions.Add(copy);
+                    }
+                }
+                cachedLibrary = SharedLibrary; cachedRevision = SharedLibrary ? SharedLibrary.Revision : -1;
+                cachedInventoryRevision = inventory?.Revision ?? -1; cachedItemCount = inventory?.Items.Count ?? -1; favoritesInitialized = false;
                 return combinedOptions;
             }
         }
@@ -173,33 +191,10 @@ namespace Game.GridPrototype
             if (basics == 0) Options.Add(new BattleActionOption { Name = "Strike", Damage = 12, Scaling = ScalingStat.Strength, StatScaling = 1, Description = "A simple adjacent physical attack." });
             if (basics < 2) Options.Add(new BattleActionOption { Name = "Quick Strike", Damage = 8, Scaling = ScalingStat.Strength, StatScaling = .75f, Description = "A lighter adjacent physical attack." });
         }
-        public static BattleActionOption CreatePrototypeSignature() => new BattleActionOption
-        {
-            Name = "Signature Strike", Description = "Prototype cinematic attack. Press when prompted to strengthen the impact.",
-            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
-            Damage = 30, SignatureQte = true, QteDuration = 1.5f, QteBonusDamage = 15
-        };
-        public static BattleActionOption CreatePrototypeSequence() => new BattleActionOption
-        {
-            QteType = QteMode.FixedSequence, Name = "Sequence Strike", Description = "Complete the fixed input sequence to strengthen the impact.",
-            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
-            Damage = 30, SignatureQte = true, QteDuration = 4, QteBonusDamage = 15,
-            QteSequence = new[] { QteButton.West, QteButton.North, QteButton.East, QteButton.South }
-        };
-        public static BattleActionOption CreatePrototypeMash() => new BattleActionOption
-        {
-            Name = "Burst Strike", Description = "Repeatedly tap the displayed button to charge the impact.",
-            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
-            Damage = 30, SignatureQte = true, QteType = QteMode.RepeatedTap,
-            QteDuration = 4, QteRequiredTaps = 12, QteBonusDamage = 15
-        };
-        public static BattleActionOption CreatePrototypeHold() => new BattleActionOption
-        {
-            Name = "Charged Strike", Description = "Hold the displayed button to charge the impact. Release gradually drains the charge.",
-            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
-            Damage = 30, SignatureQte = true, QteType = QteMode.Hold,
-            QteDuration = 4, QteHoldDuration = 2, QteBonusDamage = 15
-        };
+
+
+
+
         private void OnValidate()
         {
             combinedOptions = null;
@@ -207,46 +202,18 @@ namespace Game.GridPrototype
                 if (option != null && (option.QteType == QteMode.FixedSequence || option.QteType == QteMode.Staged || option.QteType == QteMode.DualInput))
                     option.QteSequence = PressQte.Normalize(option.QteType, option.QteSequence);
         }
-        public static BattleActionOption CreatePrototypeStaged() => new BattleActionOption
-        {
-            Name = "Flow Strike", Description = "React to one prompt at a time. Misses still advance to the next prompt.",
-            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
-            Damage = 30, SignatureQte = true, QteType = QteMode.Staged, QteDuration = 2, QteBonusDamage = 15,
-            QteSequence = new[] { QteButton.StickRight, QteButton.East, QteButton.DpadUp, QteButton.South }
-        };
-        public static BattleActionOption CreatePrototypeDual() => new BattleActionOption
-        {
-            Name = "Twin Strike", Description = "Combine a direction with a face button. Either may be held first.",
-            Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Single, Reach = 1,
-            Damage = 30, SignatureQte = true, QteType = QteMode.DualInput, QteDuration = 3, QteBonusDamage = 15,
-            QteSequence = new[] { QteButton.StickRight, QteButton.South }
-        };
-        public static BattleActionOption[] CreateStatusPrototypes() => new[]
-        {
-            new BattleActionOption { Name = "Ember Volley", Description = "Hurl a volley of embers at selected targets.", Category = BattleActionCategory.Magic, Pattern = BattleTargetPattern.Multiple, Reach = 4, MaxTargets = 3, Damage = 5, DamageType = DamageKind.Magical, Element = CombatElement.Fire, Scaling = ScalingStat.Magic, StatScaling = .5f, InflictedStatus = CombatStatus.Burning, StatusChance = 50, StatusStacks = 2 },
-            new BattleActionOption { Name = "Renew", Description = "Restore vitality over time.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, InflictedStatus = CombatStatus.Regeneration, StatusStacks = 3 },
-            new BattleActionOption { Name = "Ward", Description = "Conjure a protective shield.", Category = BattleActionCategory.Magic, Reach = 4, Effect = ActionEffect.Support, Damage = 0, BarrierGranted = 30 },
-            new BattleActionOption { Name = "Paralyzing Spark", Description = "Disrupt the target with a crackling spark.", Category = BattleActionCategory.Magic, Reach = 4, Damage = 0, DamageType = DamageKind.Magical, Element = CombatElement.Lightning, InflictedStatus = CombatStatus.Paralyzed },
-            new BattleActionOption { Name = "Push", Description = "Push one cell forward on level, clear ground. Your Strength must exceed the target's Strength or object's push resistance. Rivers, falls and traps are not supported yet.", Category = BattleActionCategory.Attack, Effect = ActionEffect.Push, Damage = 0 }
-        };
+
+
         private static List<BattleActionOption> CreateDefaultOptions()
         {
             var options = new List<BattleActionOption>
         {
             new BattleActionOption { Name = "Strike", Description = "Prototype adjacent attack." },
             new BattleActionOption { Name = "Piercing Attack", Description = "Prototype line targeting.", Pattern = BattleTargetPattern.Piercing, Reach = 4, Damage = 18 },
-            new BattleActionOption { Name = "Area Skill", Description = "Prototype area targeting.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Area, Reach = 4, Damage = 18 },
-            new BattleActionOption { Name = "Multi-target Skill", Description = "Prototype independent target selection.", Category = BattleActionCategory.Skill, Pattern = BattleTargetPattern.Multiple, Reach = 4, Damage = 12 },
             new BattleActionOption { Name = "Dash", Description = "Gain movement to reposition this turn.", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash, Damage = 0 },
-            CreatePrototypeSignature(),
-            CreatePrototypeSequence(),
-            CreatePrototypeMash(),
-            CreatePrototypeHold(),
-            CreatePrototypeStaged(),
-            CreatePrototypeDual(),
-            new BattleActionOption { Name = "Blast Flask", Description = "Prototype offensive consumable.", Category = BattleActionCategory.Item, Pattern = BattleTargetPattern.Area, Reach = 3, Damage = 20, Quantity = 3 }
+            new BattleActionOption { Name = "Push", Category = BattleActionCategory.Attack, Effect = ActionEffect.Push, Damage = 0, Description = "Push one cell forward. Requires higher Strength." }
         };
-            options.AddRange(CreateStatusPrototypes()); return options;
+            return options;
         }
     }
 
@@ -284,6 +251,7 @@ namespace Game.GridPrototype
             int distance = Distance(from, to);
             if ((distance == 0 && action.Pattern == BattleTargetPattern.Piercing) || distance > action.Reach || !board.Contains(to)) return false;
             var d = to - from;
+            if (action.Pattern == BattleTargetPattern.CustomSingle && action.DisabledPatternCells != null && action.DisabledPatternCells.Contains(d)) return false;
             if (action.Pattern == BattleTargetPattern.Sweep && (distance == 0 || (d.x != 0 && d.y != 0))) return false;
             if (action.Pattern == BattleTargetPattern.Piercing && d.x != 0 && d.y != 0 && Mathf.Abs(d.x) != Mathf.Abs(d.y)) return false;
             return Clear(board, from, to, targetableObstacle?.Invoke(to) ?? false) && (sight == null || sight(from, to));
@@ -315,16 +283,31 @@ namespace Game.GridPrototype
                     if (p != from && board.Contains(p) && Clear(board, from, p, targetableObstacle?.Invoke(p) ?? false) && (sight == null || sight(from, p))) result.Add(p);
                 }
             }
-            else if (action.Pattern == BattleTargetPattern.Area)
+            else if (action.Pattern == BattleTargetPattern.Area || action.Pattern == BattleTargetPattern.CustomArea)
             {
                 for (int x = -action.Radius; x <= action.Radius; x++) for (int y = -action.Radius; y <= action.Radius; y++)
                 {
-                    var p = target + new Vector2Int(x, y);
+                    var offset = new Vector2Int(x, y);
+                    if (action.Pattern == BattleTargetPattern.CustomArea)
+                    {
+                        if (action.DisabledPatternCells != null && action.DisabledPatternCells.Contains(offset)) continue;
+                        if (action.RotateAreaTowardTarget) offset = RotateOffset(offset, target - from);
+                    }
+                    var p = target + offset;
                     if (board.Contains(p) && Clear(board, target, p, targetableObstacle?.Invoke(p) ?? false) && (sight == null || sight(target, p))) result.Add(p);
                 }
             }
             else result.Add(target);
             return result;
+        }
+
+        // Cardinal rotations preserve exact authored tiles, unlike rounding a 45-degree rotation.
+        public static Vector2Int RotateOffset(Vector2Int offset, Vector2Int direction)
+        {
+            if (direction == Vector2Int.zero) return offset;
+            if (Mathf.Abs(direction.x) >= Mathf.Abs(direction.y))
+                return direction.x > 0 ? new Vector2Int(offset.y, -offset.x) : new Vector2Int(-offset.y, offset.x);
+            return direction.y > 0 ? offset : -offset;
         }
     }
 }

@@ -16,6 +16,20 @@ public class SharedActionStatusTests
     }
     BattleActionLoadout Loadout(SharedBattleActionLibrary lib)
     {var l=Make().AddComponent<BattleActionLoadout>();l.PersonalOptions.Clear();l.SharedLibrary=lib;return l;}
+    [Test] public void PlayableSkillsAreClearExceptForCommonDash()
+    {
+        var defaults=Make().AddComponent<BattleActionLoadout>();
+        Assert.IsFalse(defaults.Options.Exists(x=>x.Category==BattleActionCategory.Skill && x.Effect!=ActionEffect.Dash));
+        var library=UnityEditor.AssetDatabase.LoadAssetAtPath<SharedBattleActionLibrary>("Assets/Data/Common Battle Actions.asset");
+        Assert.IsTrue(library.Actions.Exists(x=>x.Effect==ActionEffect.Dash));
+        Assert.IsFalse(library.Actions.Exists(x=>x.Category==BattleActionCategory.Skill && x.Effect!=ActionEffect.Dash));
+        foreach(var guid in UnityEditor.AssetDatabase.FindAssets("t:Prefab",new[]{"Assets/Prefabs/Player"})) {
+            var prefab=UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+            var loadout=prefab.GetComponent<BattleActionLoadout>();if(!loadout)continue;
+            Assert.IsFalse(loadout.Options.Exists(x=>x.Category==BattleActionCategory.Skill && x.Effect!=ActionEffect.Dash),prefab.name);
+            Assert.IsTrue(loadout.Options.Exists(x=>x.Category==BattleActionCategory.Attack),prefab.name);
+        }
+    }
     [Test] public void SharedDefinitionsUseEachCasterStatsWithoutSharingFavoritesOrArrays()
     {
         var lib=Library();var a=Loadout(lib);var b=Loadout(lib);

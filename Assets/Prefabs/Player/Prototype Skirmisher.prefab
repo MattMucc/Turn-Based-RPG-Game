@@ -353,7 +353,9 @@ MonoBehaviour:
     Radius: 1
     MaxTargets: 3
     Damage: 12
-    Quantity: 0
+    ItemId:
+    quantity: 0
+    Healing: 0
     Effect: 0
     DamageType: 0
     Element: 0
@@ -370,66 +372,7 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 1.5
-    QteBonusDamage: 15
-  - Name: Ward
-    FavoriteSlot: 0
-    Description: Conjure a protective shield.
-    Category: 3
-    Pattern: 0
-    Reach: 4
-    Radius: 1
-    MaxTargets: 3
-    Damage: 0
-    Quantity: 0
-    Effect: 1
-    DamageType: 0
-    Element: 0
-    Scaling: 0
-    StatScaling: 0
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 30
-    SignatureQte: 0
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
-    QteDuration: 1.5
-    QteBonusDamage: 15
-  - Name: Sweeping Blow
-    FavoriteSlot: 1
-    Description: Sweep a three-cell-wide row in a cardinal direction. Allies in the
-      row can also be hit.
-    Category: 1
-    Pattern: 4
-    Reach: 2
-    Radius: 1
-    MaxTargets: 3
-    Damage: 8
-    Quantity: 0
-    Effect: 0
-    DamageType: 0
-    Element: 0
-    Scaling: 1
-    StatScaling: 0.5
-    HitChance: 100
-    InflictedStatus: 0
-    StatusChance: 100
-    StatusStacks: 1
-    BarrierGranted: 0
-    SignatureQte: 0
-    QteType: 0
-    QteRequiredTaps: 12
-    QteHoldDuration: 2
-    QteProgressDrainPerSecond: 0.2
-    QteTapDrainDelay: 0.3
-    QteSequence: 
+    QteSequence:
     QteDuration: 1.5
     QteBonusDamage: 15
   favoritesInitialized: 0

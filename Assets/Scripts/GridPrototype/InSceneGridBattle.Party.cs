@@ -52,7 +52,7 @@ namespace Game.GridPrototype
             battleTargets[slot] = new BattleTarget(actors[slot], incoming.Unit, slot, true);
             var loadout = incoming.Info.GetComponent<BattleActionLoadout>();
             if (!loadout) loadout = incoming.Info.gameObject.AddComponent<BattleActionLoadout>();
-            loadout.EnsureUniversalAttacks(); allyLoadouts[slot] = loadout;
+            loadout.EnsureUniversalAttacks(); loadout.BindInventory(Inventory); allyLoadouts[slot] = loadout;
             var defense = incoming.Info.GetComponent<DefensePrototypeSettings>();
             if (!defense) defense = incoming.Info.gameObject.AddComponent<DefensePrototypeSettings>();
             allyDefense[slot] = defense;

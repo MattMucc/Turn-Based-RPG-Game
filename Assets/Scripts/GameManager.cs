@@ -17,6 +17,8 @@ public partial class GameManager : MonoBehaviour
         if (result.Count == 0 && PossessedCharacter) result.Add(PossessedCharacter.GetComponent<BattleCharacterInfo>());
         return result;
     }
+    public PartyInventory Inventory = new PartyInventory();
+    private void OnValidate() { Inventory?.NotifyChanged(); }
     public PartyProgression Progression = new PartyProgression();
     public ProgressionMenu ProgressionMenu { get; private set; }
     public WorldManipulationController WorldTools { get; private set; }
