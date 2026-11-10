@@ -8,8 +8,9 @@ namespace Game.GridPrototype
         public string PreviewDamage(BattleTarget target)
         {
             var action = ChosenAction ?? HoveredAction;
-            if (target == null || !target.HasHealth || action == null || (action.Effect != ActionEffect.Damage && action.Effect != ActionEffect.Heal) || !ActionReady) return "";
+            if (target == null || !target.HasHealth || action == null || (action.Effect != ActionEffect.Damage && action.Effect != ActionEffect.Heal && action.Effect != ActionEffect.RestoreMagic) || !ActionReady) return "";
             var unit = target.Unit;
+            if (action.Effect == ActionEffect.RestoreMagic) return unit == null ? "Cannot restore MP to objects." : unit.Health <= 0 ? "Requires a living target." : $"Recovery: +{Mathf.Min(action.MagicRestored, unit.MaxMagicPoints - unit.MagicPoints)} MP";
             if (action.Effect == ActionEffect.Heal) return unit == null ? "Cannot heal objects." : unit.Health <= 0 ? "Does not revive." : $"Healing: +{Mathf.Min(action.Healing, unit.MaxHealth - unit.Health)} HP";
             int power = action.CalculateDamage(Active, null, action.Damage);
             int dealt = action.CalculateDamage(Active, unit, action.Damage);

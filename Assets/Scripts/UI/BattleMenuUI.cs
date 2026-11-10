@@ -83,7 +83,7 @@ public class BattleMenuUI : MonoBehaviour
         tooltip.rectTransform.anchorMin = new Vector2(0, 1); tooltip.rectTransform.anchorMax = Vector2.one;
         tooltip.rectTransform.pivot = new Vector2(0.5f, 1); tooltip.rectTransform.anchoredPosition = new Vector2(0, -10);
         targetCounter = MakeText("Target selection count", Vector2.zero, new Vector2(12, 210), new Vector2(180, 30), true);
-        skillPointCounter = MakeText("Skill Points", Vector2.zero, new Vector2(12, 258), new Vector2(180, 24), false);
+        skillPointCounter = MakeText("Skill Points", Vector2.zero, new Vector2(12, 258), new Vector2(180, 40), false);
         skillPointCounter.transform.parent.GetComponent<Image>().enabled = false;
         skillPointCounter.rectTransform.offsetMin = new Vector2(4, 2);
         skillPointCounter.rectTransform.offsetMax = new Vector2(-4, -2);
@@ -218,6 +218,8 @@ public class BattleMenuUI : MonoBehaviour
                 () => battle.ActionReady && battle.CanAfford(captured) && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
             if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
+        if (category == BattleActionCategory.Magic)
+            Row("Focus", () => battle.Focus(), $"Recover up to {battle.Combatants[battle.CurrentActorIndex].FocusRecovery} MP. Uses your action, but costs no SP or MP. Movement remains available.", () => battle.CanFocus);
         if (rows == 0) Row("None available", () => { }, "This character has no available options in this category.", () => false);
         if (battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple)
         {
@@ -347,7 +349,7 @@ public class BattleMenuUI : MonoBehaviour
         if (showResources)
         {
             var actor = battle.Combatants[battle.CurrentActorIndex];
-            skillPointCounter.text = $"SP {actor.SkillPoints} / {GridUnit.MaximumSkillPoints}   Move {actor.Movement}";
+            skillPointCounter.text = $"SP {actor.SkillPoints} / {GridUnit.MaximumSkillPoints}   MP {actor.MagicPoints} / {actor.MaxMagicPoints}\nMovement {actor.Movement}";
         }
         int approachCost = battle.PreviewApproachCost;
         bool multi = battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;

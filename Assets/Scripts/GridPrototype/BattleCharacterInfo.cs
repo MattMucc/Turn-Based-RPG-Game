@@ -14,6 +14,9 @@ namespace Game.GridPrototype
         public int UnspentPoints => unspentPoints;
         [SerializeField] private int storedHealth = -1;
         public int StoredHealth => storedHealth;
+        private int storedMagicPoints = -1;
+        public int StoredMagicPoints => storedMagicPoints;
+        public void StoreMagicPoints(GridUnit unit) => storedMagicPoints = Mathf.Clamp(unit.MagicPoints, 0, unit.MaxMagicPoints);
         public void StoreHealth(GridUnit unit) => storedHealth = Mathf.Clamp(unit.Health, 0, unit.MaxHealth);
         public void RestoreBattleHealth(GridUnit unit)
         { if (storedHealth >= 0) unit.Health = Mathf.Clamp(storedHealth, 1, unit.MaxHealth); }
@@ -45,9 +48,27 @@ namespace Game.GridPrototype
         [Range(0, 9)] public int StartingSkillPoints = 3;
         [Min(0)] public int SkillPointsPerTurn = 1;
         [Min(0)] public int SkillPointsPerBasicAttack = 1;
+        [Header("Magic Points (prototype tuning)")]
+        [Min(0)] public int StartingMaxMagicPoints = 24;
+        [Min(0)] public int MagicPointsPerLevel = 2;
+        [Tooltip("Max MP per Magic gained through level growth or allocation, above this character's base Magic. Base Magic does not inflate starting MP.")]
+        [Min(0)] public int MagicPointsPerMagic = 2;
+        [Min(0)] public int FocusMagicRecovery = 8;
+        public int EffectiveMaxMagicPoints => (int)System.Math.Min(int.MaxValue,
+            (long)Mathf.Max(0, StartingMaxMagicPoints) + (long)Mathf.Max(0, Level - 1) * Mathf.Max(0, MagicPointsPerLevel)
+            + (long)Mathf.Max(0, Stat(CharacterStat.Magic) - Mathf.Max(0, BaseStat(CharacterStat.Magic))) * Mathf.Max(0, MagicPointsPerMagic));
+        public void RestoreMagicOutsideCombat(int amount)
+        {
+            if (amount <= 0) return;
+            storedMagicPoints = (int)System.Math.Min(EffectiveMaxMagicPoints,
+                (long)(storedMagicPoints < 0 ? EffectiveMaxMagicPoints : storedMagicPoints) + amount);
+        }
+        [Header("Status tuning")]
         [Min(0)] public int BurningDamagePerTick = 5, RegenerationHealingPerTick = 5;
         public void Configure(GridUnit unit)
         {
+            unit.InitializeMagicPoints(EffectiveMaxMagicPoints, storedMagicPoints);
+            unit.FocusRecovery = Mathf.Max(0, FocusMagicRecovery);
             unit.InitializeSkillPoints(StartingSkillPoints);
             unit.TurnSkillPointGain = Mathf.Max(0, SkillPointsPerTurn);
             unit.AttackSkillPointGain = Mathf.Max(0, SkillPointsPerBasicAttack);
@@ -72,7 +93,7 @@ namespace Game.GridPrototype
             string live = unit.EffectDetails();
             if (!string.IsNullOrEmpty(live)) statuses = live + (statuses == "None" ? "" : "\n" + statuses);
             if (unit.EffectiveBlock) statuses = "Blocking" + (statuses == "None" ? "" : "\n" + statuses);
-            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nSP  {unit.SkillPoints} / {GridUnit.MaximumSkillPoints}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nInitiative  {EffectiveInitiative}{(Initiative < 0 && EffectiveInitiative == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
+            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nMP  {unit.MagicPoints} / {unit.MaxMagicPoints}\nSP  {unit.SkillPoints} / {GridUnit.MaximumSkillPoints}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nInitiative  {EffectiveInitiative}{(Initiative < 0 && EffectiveInitiative == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
         }
         private static string Assigned(string value) => string.IsNullOrWhiteSpace(value) ? "Not assigned" : value;
     }

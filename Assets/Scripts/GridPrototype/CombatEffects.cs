@@ -8,7 +8,7 @@ namespace Game.GridPrototype
     public enum DamageKind { Physical, Magical }
     public enum ScalingStat { None, Strength, Magic }
     public enum CombatElement { None, Fire, Lightning, Ice }
-    public enum ActionEffect { Damage, Support, Push, Dash, Heal }
+    public enum ActionEffect { Damage, Support, Push, Dash, Heal, RestoreMagic }
 
     public sealed partial class GridUnit
     {

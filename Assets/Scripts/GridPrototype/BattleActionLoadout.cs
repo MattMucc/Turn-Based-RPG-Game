@@ -18,8 +18,12 @@ namespace Game.GridPrototype
         [Range(1, 9)] public int SkillPointCost = 1;
         [Tooltip("Optional self recovery once after a Skill completes, not per hit. Normally zero.")]
         [Range(0, 9)] public int SkillPointRecovery;
+        [Tooltip("MP cost for Spells only; no cost for other categories.")]
+        [Min(0)] public int MagicPointCost = 4;
+        [Min(0)] public int MagicRestored;
+        public int EffectiveMagicPointCost => Category == BattleActionCategory.Magic ? Mathf.Max(0, MagicPointCost) : 0;
         public int EffectiveSkillPointCost => Category == BattleActionCategory.Skill ? Mathf.Clamp(SkillPointCost, 1, 9) : 0;
-        public bool CanUse(GridUnit source) => Available && source != null && source.CanAffordSkillPoints(EffectiveSkillPointCost);
+        public bool CanUse(GridUnit source) => Available && source != null && source.CanAffordSkillPoints(EffectiveSkillPointCost) && source.CanAffordMagicPoints(EffectiveMagicPointCost);
         public void CompleteResourceRecovery(GridUnit source)
         {
             if (Category == BattleActionCategory.Attack && Effect == ActionEffect.Damage) source.RestoreSkillPoints(source.AttackSkillPointGain);
@@ -71,6 +75,7 @@ namespace Game.GridPrototype
             if (Effect == ActionEffect.Damage)
                 healthLost = target.TakeDamage(CombatMath.Damage(source, target, power, DamageType, Scaling, StatScaling));
             if (Effect == ActionEffect.Heal) healthLost = -target.Heal(Healing);
+            if (Effect == ActionEffect.RestoreMagic) target.RestoreMagicPoints(MagicRestored);
             if (CombatMath.Roll(StatusChance, statusRoll)) target.ApplyStatus(InflictedStatus, StatusStacks);
             target.AddBarrier(BarrierGranted);
             return true;
@@ -81,6 +86,11 @@ namespace Game.GridPrototype
         {
             string result = $"<b>{Name}</b>\n{Description}\n";
             string Row(string label, string value) => $"\n<b>{label}</b><pos=105>{value}";
+            if (EffectiveMagicPointCost > 0)
+            {
+                result += Row("Cost", $"{EffectiveMagicPointCost} MP");
+                if (source != null && !source.CanAffordMagicPoints(EffectiveMagicPointCost)) result += Row("Available", $"{source.MagicPoints} MP — insufficient");
+            }
             if (Category == BattleActionCategory.Skill)
             {
                 result += Row("Cost", $"{EffectiveSkillPointCost} SP");
@@ -100,6 +110,7 @@ namespace Game.GridPrototype
                 result += Row("Defense", target == null ? "Before mitigation" : "Target included");
             }
             if (Effect == ActionEffect.Heal) result += Row("Healing", $"Up to {Healing} HP");
+            if (Effect == ActionEffect.RestoreMagic) result += Row("Recovery", $"Up to {MagicRestored} MP");
             result += Row("Hit Chance", $"{Mathf.Clamp(HitChance, 0, 100):0.#}%");
             bool single = Pattern == BattleTargetPattern.Single || Pattern == BattleTargetPattern.CustomSingle;
             result += Row("Type", Pattern == BattleTargetPattern.Multiple ? "Multi-Target" : single ? "Single" : Pattern == BattleTargetPattern.CustomArea ? "Area" : Pattern.ToString());
@@ -171,7 +182,7 @@ namespace Game.GridPrototype
                 return combinedOptions;
             }
         }
-        [SerializeField] private bool favoritesInitialized;
+        private bool favoritesInitialized;
         public void InitializeFavorites()
         {
             var options = Options; // Refresh a changed library before checking the favorites flag.

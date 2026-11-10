@@ -92,8 +92,8 @@ namespace Game.GridPrototype
 
         public void StorePartyHealth()
         {
-            for (int i = 0; i < allyCount; i++) Info(i).StoreHealth(turnOrder[i]);
-            foreach (var reserve in reserves) reserve.Info.StoreHealth(reserve.Unit);
+            for (int i = 0; i < allyCount; i++) { Info(i).StoreHealth(turnOrder[i]); Info(i).StoreMagicPoints(turnOrder[i]); }
+            foreach (var reserve in reserves) { reserve.Info.StoreHealth(reserve.Unit); reserve.Info.StoreMagicPoints(reserve.Unit); }
         }
     }
 }

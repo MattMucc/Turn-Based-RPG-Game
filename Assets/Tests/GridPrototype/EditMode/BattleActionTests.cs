@@ -52,6 +52,35 @@ public class BattleActionTests
         Assert.IsFalse(battle.ChooseAction(dash));
         Assert.AreEqual(movement + 3, battle.Movement);
     }
+    [Test] public void SpellCostsOnceAndFocusRestoresMPWithoutSpendingMovementOrSP()
+    {
+        var unit = battle.Combatants[battle.CurrentActorIndex];
+        var spell = new BattleActionOption { Name = "Test spell", Category = BattleActionCategory.Magic, MagicPointCost = 8, Damage = 0 };
+        battle.Loadout.Options.Add(spell);
+        Assert.IsTrue(battle.ChooseAction(spell)); battle.CancelAction(); Assert.AreEqual(24, unit.MagicPoints);
+        Assert.IsTrue(battle.ChooseAction(spell)); Assert.IsTrue(battle.ToggleTarget(unit.Position));
+        unit.InitializeMagicPoints(24, 7); Assert.IsFalse(battle.TryPrepareAction(out _)); Assert.IsTrue(unit.ActionAvailable);
+        unit.InitializeMagicPoints(24, 8); Assert.IsTrue(battle.TryPrepareAction(out var action));
+        Assert.AreEqual(0, unit.MagicPoints); Assert.IsFalse(battle.TryPrepareAction(out _));
+        while (action.MoveNext()) { }
+        Assert.AreEqual(4, unit.SkillPoints); Assert.AreEqual(3, unit.Movement);
+        unit.EndTurn(); unit.BeginTurn(); int movement = unit.Movement; int sp = unit.SkillPoints;
+        Assert.IsTrue(battle.CanFocus); battle.Focus();
+        Assert.AreEqual(8, unit.MagicPoints); Assert.AreEqual(sp, unit.SkillPoints); Assert.AreEqual(movement, unit.Movement);
+        Assert.IsFalse(battle.CanFocus);
+        battle.StorePartyHealth(); var next = new GridUnit("Next", Vector2Int.zero); battle.Info(0).Configure(next);
+        Assert.AreEqual(8, next.MagicPoints);
+    }
+    [Test] public void ManaPotionConsumesOneSharedItemAndRestoresMP()
+    {
+        battle.Inventory.Add(PartyInventory.ManaPotion(), 3);
+        var potion = battle.Loadout.Options.Find(o => o.ItemId == "mana-potion");
+        var unit = battle.Combatants[battle.CurrentActorIndex]; unit.InitializeMagicPoints(24, 0);
+        Assert.IsTrue(battle.ChooseAction(potion)); Assert.IsTrue(battle.ToggleTarget(unit.Position));
+        Assert.IsTrue(battle.TryPrepareAction(out var action)); Assert.AreEqual(2, battle.Inventory.Count("mana-potion"));
+        while (action.MoveNext()) { }
+        Assert.AreEqual(8, unit.MagicPoints); Assert.AreEqual(3, unit.Movement); Assert.AreEqual(4, unit.SkillPoints);
+    }
     [Test] public void SkillSelectionIsFreeAndCommitRechecksPointsThenChargesOnce()
     {
         var unit = battle.Combatants[battle.CurrentActorIndex];

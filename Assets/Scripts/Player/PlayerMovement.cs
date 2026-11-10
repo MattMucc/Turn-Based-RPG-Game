@@ -44,7 +44,7 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private bool displayGroundCheckDebug = false;
 
     [Header("References")]
-    [SerializeField] private PlayerInputReader input;
+    private PlayerInputReader input;
     [SerializeField] private CharacterController controller;
     [SerializeField] private Animator animator;
     [SerializeField] private Transform cameraYaw;

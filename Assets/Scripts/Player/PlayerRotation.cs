@@ -23,8 +23,8 @@ public class PlayerRotation : MonoBehaviour
     [SerializeField] private bool displayCollisionDebug = false;
 
     [Header("References")]
-    [SerializeField] private PlayerInputReader input;
-    [SerializeField] private Transform followTarget;
+    private PlayerInputReader input;
+    private Transform followTarget;
     [SerializeField] private Transform yawPivot;
     [SerializeField] private Transform pitchPivot;
     [SerializeField] private Transform cameraTransform;

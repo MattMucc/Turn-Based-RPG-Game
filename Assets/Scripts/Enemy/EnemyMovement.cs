@@ -23,7 +23,7 @@ public class EnemyMovement : MonoBehaviour
     [SerializeField] private bool displayDetectionDebug = false;
 
     [Header("References")]
-    [SerializeField] private BattleGroup battleGroup;
+    private BattleGroup battleGroup;
     [SerializeField] private CharacterController controller;
     private Transform playerTransform;
 

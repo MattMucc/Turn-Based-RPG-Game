@@ -17,10 +17,11 @@ namespace Game.GridPrototype
             return SkillPoints - before;
         }
         public bool CanAffordSkillPoints(int cost) => cost >= 0 && SkillPoints >= cost;
-        public bool SpendActionWithSkillPoints(int cost)
+        public bool SpendActionWithSkillPoints(int cost, int magicCost = 0)
         {
-            if (!CanAffordSkillPoints(cost) || !SpendAction()) return false;
+            if (!CanAffordSkillPoints(cost) || !CanAffordMagicPoints(magicCost) || !SpendAction()) return false;
             SkillPoints -= cost;
+            MagicPoints -= magicCost;
             return true;
         }
     }

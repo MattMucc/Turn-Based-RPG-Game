@@ -10,8 +10,8 @@ public sealed class PartyFollower : MonoBehaviour
     [SerializeField, Min(.1f)] private float catchUpSpeed = 9f;
     [SerializeField, Min(.05f)] private float trailSpacing = .2f;
     [SerializeField] private float gravity = -30f;
-    [SerializeField] private Transform leader;
-    [SerializeField] private float sideOffset;
+    private Transform leader;
+    private float sideOffset;
     [SerializeField, Min(.1f)] private float settleRadius = .6f;
     private Vector3 velocity;
     private bool settled, manualWaiting;

@@ -499,7 +499,7 @@ namespace Game.GridPrototype
                     if (target.Alive && target.HasHealth && footprint.Overlaps(TargetCells(target))) hit.Add(target);
                 batches.Add(hit);
             }
-            if (!Active.SpendActionWithSkillPoints(action.EffectiveSkillPointCost)) return false;
+            if (!Active.SpendActionWithSkillPoints(action.EffectiveSkillPointCost, action.EffectiveMagicPointCost)) return false;
             if (action.Category == BattleActionCategory.Item) action.Quantity--;
             busy = true;
             if (action.SignatureQte)
@@ -592,10 +592,14 @@ namespace Game.GridPrototype
                         var victim = target.Unit;
                         if (action.Effect == ActionEffect.Push) { TryPush(target); continue; }
                         int barrier = victim.Barrier;
+                        int magicBefore = victim.MagicPoints;
                         bool landed = action.ApplyHit(Active, victim, damage, UnityEngine.Random.value, UnityEngine.Random.value, out int dealt);
                         if (action.Effect == ActionEffect.Damage) Feedback(target, landed, dealt, barrier - victim.Barrier, victim.EffectiveBlock);
                         else if (action.Effect == ActionEffect.Heal) {
                             RecentHitFeedback = target.Name + $": +{-dealt} HP healed"; RecentHitFeedbackUntil = Time.unscaledTime + 2;
+                        }
+                        else if (action.Effect == ActionEffect.RestoreMagic) {
+                            RecentHitFeedback = target.Name + $": +{victim.MagicPoints - magicBefore} MP restored"; RecentHitFeedbackUntil = Time.unscaledTime + 2;
                         }
                         RecordHit(target.ActorIndex, dealt);
                         if (victim.Health == 0) { Grid.Board.Units.Remove(victim); target.Transform.gameObject.SetActive(false); }
@@ -833,6 +837,17 @@ namespace Game.GridPrototype
         {
             if (PlayerReady && Active.CanBlock && Active.SpendAction())
             { CancelAction(); Active.Blocking = true; ActionResolved?.Invoke(); message = "Blocking until your next turn. Movement remains available."; }
+        }
+
+        public bool CanFocus => ActionReady && !InteractionBlocked && ChosenAction == null && Active.MagicPoints < Active.MaxMagicPoints && Active.FocusRecovery > 0;
+        public void Focus()
+        {
+            if (!CanFocus) return;
+            int before = Active.MagicPoints;
+            if (!Active.Focus()) return;
+            RecentHitFeedback = $"Focus: +{Active.MagicPoints - before} MP";
+            RecentHitFeedbackUntil = Time.unscaledTime + 2;
+            CancelAction(); ActionResolved?.Invoke(); Refresh();
         }
 
         public void EndTurn()
