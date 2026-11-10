@@ -48,6 +48,11 @@ MonoBehaviour:
   - {fileID: 21300000, guid: fc7cc6af66ebe0840921aa4ea7253660, type: 3}
   - {fileID: 21300000, guid: 17760f9e1b48ec3448520e717d358d52, type: 3}
   - {fileID: 21300000, guid: 764669c5ed0537147b335cdb4ee888e3, type: 3}
+  ShortcutKeys:
+  - {fileID: 21300000, guid: a1be7975f18288b47a4e708f647fa2dc, type: 3}
+  - {fileID: 21300000, guid: a39b165706d3e694e80f13338cdd537f, type: 3}
+  - {fileID: 21300000, guid: f30a27395fa5a8449af8c57acc037815, type: 3}
+  - {fileID: 21300000, guid: b0409c7d7f0dce44a80dbbf354691d67, type: 3}
   KeyboardDirections:
   - {fileID: 21300000, guid: 764669c5ed0537147b335cdb4ee888e3, type: 3}
   - {fileID: 21300000, guid: fc7cc6af66ebe0840921aa4ea7253660, type: 3}

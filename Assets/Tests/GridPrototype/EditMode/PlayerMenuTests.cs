@@ -68,11 +68,45 @@ public class PlayerMenuTests
     }
     [Test] public void MenuAssignsFavoritesToExistingBattleBindingsWithoutChangingSharedStock()
     {
-        Open(); Page("Shortcuts"); Find("Strike").onClick.Invoke(); Find("4 / ").onClick.Invoke();
+        Open(); Page("Shortcuts"); Find("Strike").onClick.Invoke(); Find("Shortcut 4").onClick.Invoke();
         var loadout = party[0].GetComponent<BattleActionLoadout>();
+        Assert.AreEqual(0,loadout.Options.Find(o=>o.Name=="Strike").FavoriteSlot,"Preview must not change the binding.");
+        Find("Confirm shortcut").onClick.Invoke();
         Assert.AreEqual("Strike", loadout.Favorite(BattleActionCategory.Attack, 3).Name);
         var inventory = (PartyInventory)managerType.GetField("Inventory").GetValue(manager);
         Assert.AreEqual(3, inventory.Count("mana-potion")); Assert.AreEqual(3, inventory.Count("health-potion"));
+    }
+    [Test] public void ShortcutReplacementCanBeCancelledAndPreviewExplainsDisplacedAbility()
+    {
+        Open(); Page("Shortcuts");
+        var loadout=party[0].GetComponent<BattleActionLoadout>();
+        Find("Shortcut 2").onClick.Invoke();Find("Strike").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Piercing Attack loses this shortcut")));
+        Find("Cancel").onClick.Invoke();Assert.AreEqual("Strike",loadout.Favorite(BattleActionCategory.Attack,0).Name);
+        Assert.AreEqual("Piercing Attack",loadout.Favorite(BattleActionCategory.Attack,1).Name);
+        Find("Strike").onClick.Invoke();Find("Shortcut 2").onClick.Invoke();Find("Confirm shortcut").onClick.Invoke();
+        Assert.AreEqual("Strike",loadout.Favorite(BattleActionCategory.Attack,1).Name);Assert.IsNull(loadout.Favorite(BattleActionCategory.Attack,0));
+        Assert.AreEqual(-1,loadout.Options.Find(o=>o.Name=="Piercing Attack").FavoriteSlot);
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="Piercing Attack"));
+    }
+    [Test] public void ShortcutGlyphsResolveKeyboardXboxAndPlayStationWithoutControllerPairing()
+    {
+        Open();Page("Shortcuts");
+        var glyphType=Type.GetType("PlayerShortcutGlyph, Assembly-CSharp",true);
+        var readerType=Type.GetType("PlayerInputReader, Assembly-CSharp",true);
+        var source=Make("Input reader").AddComponent(readerType);
+        managerType.GetField("<Input>k__BackingField",Hidden).SetValue(manager,source);
+        var style=readerType.GetField("ControllerIcons");
+        var glyph=menu.GetComponentInChildren(glyphType);
+        foreach(string scheme in new[]{"Xbox","PlayStation"})
+        {
+            style.SetValue(source,Enum.Parse(style.FieldType,scheme));glyphType.GetMethod("Refresh").Invoke(glyph,new object[]{true});
+            Assert.IsTrue(glyph.transform.Find("Trigger").gameObject.activeSelf);
+            Assert.IsNotNull(glyph.transform.Find("Key").GetComponent<Image>().sprite);
+        }
+        glyphType.GetMethod("Refresh").Invoke(glyph,new object[]{false});
+        Assert.IsFalse(glyph.transform.Find("Trigger").gameObject.activeSelf);
+        Assert.IsNotNull(glyph.transform.Find("Key").GetComponent<Image>().sprite);
     }
     [Test] public void CaptainSelectionReordersOnlyActiveParty()
     {

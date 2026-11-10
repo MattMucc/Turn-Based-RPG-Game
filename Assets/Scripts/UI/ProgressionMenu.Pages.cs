@@ -122,37 +122,6 @@ public sealed partial class ProgressionMenu
         var value=Member.GetComponent<BattleActionLoadout>();
         if(value){value.BindInventory(Manager.Inventory);value.InitializeFavorites();}return value;
     }
-    void Categories()
-    {
-        var categories=new[]{BattleActionCategory.Attack,BattleActionCategory.Skill,BattleActionCategory.Magic,BattleActionCategory.Item};
-        var labels=new[]{"Attacks","Skills","Spells","Items"};
-        for(int i=0;i<4;i++){var c=categories[i];Button(body,labels[i],i*125,0,120,()=>{category=c;assigning=null;Rebuild();});}
-    }
-    string Binding(int slot) => $"{slot+1} / "+ControllerGlyphs.Adapt("LT")+" + "+(ControllerGlyphs.PlayStation?new[]{"Square","Triangle","Cross","Circle"}[slot]:new[]{"X","Y","A","B"}[slot]);
-    void Shortcuts()
-    {
-        Categories();var loadout=Loadout();
-        if(!loadout){Detail("No abilities","This character has no available abilities.");return;}
-        if(assigning!=null)
-        {
-            Detail(assigning.Name,assigning.Tooltip+"\n\nChoose a shortcut slot. Other abilities remain available in battle.");
-            for(int i=0;i<4;i++)
-            {
-                int slot=i;Button(body,Binding(slot)+"   ·   "+(loadout.Favorite(category,slot)?.Name??"Empty"),0,70+i*54,490,()=>{loadout.AssignFavorite(assigning,slot);assigning=null;Rebuild();});
-            }
-            Button(body,"Remove shortcut",0,302,490,()=>{loadout.AssignFavorite(assigning,-1);assigning=null;Rebuild();});
-            Button(body,"Back",0,356,490,()=>{assigning=null;Rebuild();});return;
-        }
-        var options=loadout.Options.Where(o=>o!=null&&o.Category==category).ToList();
-        var list=List(body,"Abilities",0,60,500,440,options.Count*48);
-        for(int i=0;i<options.Count;i++)
-        {
-            var option=options[i];
-            Button(list,option.Name+(option.FavoriteSlot>=0?"   ["+Binding(option.FavoriteSlot)+"]":""),0,i*48,486,
-                ()=>{assigning=option;Rebuild();},()=>Detail(option.Name,option.Tooltip),44);
-        }
-        Detail("Favorite shortcuts",options.Count==0?"No abilities learned in this category.":"Select an ability, then assign it to one of four shortcuts.\n\nKeyboard: 1–4\nController: hold "+ControllerGlyphs.Adapt("LT")+" and press a face button.\n\nAssignments are separate for each character and category. Items use shared party stock.");
-    }
     void Inventory()
     {
         Label(Rect("Inventory title",body,0,0,500,44),"SHARED ITEMS",20);

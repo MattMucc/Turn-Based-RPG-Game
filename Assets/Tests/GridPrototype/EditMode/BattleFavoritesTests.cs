@@ -7,6 +7,25 @@ using UnityEngine.InputSystem.LowLevel;
 using Game.GridPrototype;
 public class BattleFavoritesTests : InputTestFixture
 {
+    [Test] public void DeliberatelyClearedSlotsStayEmptyAfterLibraryAndInventoryRefresh()
+    {
+        var obj=new GameObject("Custom favorites");var library=ScriptableObject.CreateInstance<SharedBattleActionLibrary>();
+        try
+        {
+            library.Actions.Add(new BattleActionOption{Name="Shared attack"});
+            var loadout=obj.AddComponent<BattleActionLoadout>();loadout.PersonalOptions.Clear();loadout.SharedLibrary=library;
+            var inventory=new PartyInventory();loadout.BindInventory(inventory);loadout.InitializeFavorites();
+            Assert.IsTrue(loadout.AssignFavorite(loadout.Favorite(BattleActionCategory.Attack,0),-1));
+            Assert.IsTrue(loadout.AssignFavorite(loadout.Favorite(BattleActionCategory.Item,0),-1));
+            library.Actions.Add(new BattleActionOption{Name="New attack"});library.NotifyChanged();inventory.NotifyChanged();
+            Assert.IsNull(loadout.Favorite(BattleActionCategory.Attack,0));Assert.IsNull(loadout.Favorite(BattleActionCategory.Item,0));
+            Assert.AreEqual("Mana Potion",loadout.Favorite(BattleActionCategory.Item,1).Name);
+            loadout.BindInventory(null);loadout.BindInventory(inventory);
+            Assert.IsNull(loadout.Favorite(BattleActionCategory.Item,0));
+            Assert.AreEqual(3,inventory.Count("health-potion"));
+        }
+        finally {UnityEngine.Object.DestroyImmediate(obj);UnityEngine.Object.DestroyImmediate(library);}
+    }
     [Test] public void StableSlotsSurviveReorderingDepletionAndReassignment()
     {
         var obj = new GameObject("Favorites test");

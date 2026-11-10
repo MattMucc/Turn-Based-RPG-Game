@@ -14,6 +14,7 @@ public sealed class ControllerGlyphs : ScriptableObject
     [Serializable] public sealed class Pair { public Sprite Xbox, PlayStation; public Color XboxColor = Color.white; }
     public Pair[] Buttons;
     public Sprite[] KeyboardFaces;
+    public Sprite[] ShortcutKeys = new Sprite[4];
     public Sprite[] KeyboardDirections;
     [Tooltip("Overworld buttons: Restore (R), mode (E), dismiss (Delete), close (Escape).")]
     public Sprite[] OverworldKeys;

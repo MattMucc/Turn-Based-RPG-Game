@@ -29,6 +29,8 @@ public sealed partial class ProgressionMenu : MonoBehaviour
     ProgressionEntryKind progressionKind;
     BattleActionOption assigning;
     CharacterStat? pendingStat;
+    int? pendingShortcutSlot;
+    string shortcutSelection;
     Vector2 lastMenuSize;
     readonly List<Button> buttons = new();
     readonly Dictionary<BattleCharacterInfo, Texture> portraits = new();
@@ -53,6 +55,7 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         if (toggle) { if (open) Close(); else if (!Manager.WorldInputBlocked) Open(); return; }
         if (!open) return;
         if ((shell.rect.size-lastMenuSize).sqrMagnitude>1) Rebuild();
+        if(page==Page.Shortcuts && HandleShortcutInput(k,pad)) return;
         if ((k != null && (k.escapeKey.wasPressedThisFrame || k.backspaceKey.wasPressedThisFrame)) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Back(); return; }
         if ((k != null && k.leftBracketKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame)) { Cycle(-1); return; }
         if ((k != null && k.rightBracketKey.wasPressedThisFrame) || (pad != null && pad.rightShoulder.wasPressedThisFrame)) { Cycle(1); return; }
@@ -112,9 +115,9 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         if (events) { events.sendNavigationEvents = savedNavigation; events.SetSelectedGameObject(savedSelection ? savedSelection : null); }
         Cursor.visible = savedCursor; Cursor.lockState = savedLock;
     }
-    public void Back() { if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
-    void Cycle(int direction) { int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; assigning = null; pendingStat=null; Rebuild(); }
-    public void ShowPage(Page value) { if (!open) return; page = value; assigning = null; pendingStat=null; Rebuild(); }
+    public void Back() { if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
+    void Cycle(int direction) { int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
+    public void ShowPage(Page value) { if (!open) return; page = value; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
     void Clear(Transform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--) { var child = parent.GetChild(i).gameObject; child.SetActive(false); if (Application.isPlaying) Destroy(child); else DestroyImmediate(child); }
@@ -130,6 +133,11 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         if(page==Page.Party) {
             var selected=buttons.Find(b=>b.name==DisplayName(Member));
             if(selected)events.SetSelectedGameObject(selected.gameObject);
+        }
+        if(page==Page.Shortcuts) {
+            var target=buttons.Find(b=>b.name==shortcutSelection);
+            if(target && target.IsInteractable())events.SetSelectedGameObject(target.gameObject);
+            if(assigning!=null && pendingShortcutSlot.HasValue) PreviewShortcut(pendingShortcutSlot.Value,assigning);
         }
         if (pendingStat.HasValue) {
             var confirm=buttons.Find(b=>b.name.StartsWith("Confirm"));

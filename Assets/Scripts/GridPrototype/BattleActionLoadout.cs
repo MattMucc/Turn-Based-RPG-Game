@@ -183,6 +183,7 @@ namespace Game.GridPrototype
             }
         }
         private bool favoritesInitialized;
+        private readonly HashSet<BattleActionCategory> customizedFavoriteCategories = new();
         public void InitializeFavorites()
         {
             var options = Options; // Refresh a changed library before checking the favorites flag.
@@ -193,6 +194,7 @@ namespace Game.GridPrototype
                 var used = new HashSet<int>();
                 foreach (var option in Options) if (option != null && option.Category == category && option.FavoriteSlot >= 0)
                     if (!used.Add(option.FavoriteSlot)) option.FavoriteSlot = -1;
+                if (customizedFavoriteCategories.Contains(category)) continue;
                 foreach (var option in Options)
                 {
                     if (option == null || option.Category != category || option.FavoriteSlot >= 0) continue;
@@ -206,6 +208,7 @@ namespace Game.GridPrototype
         {
             InitializeFavorites();
             if (option == null || !Options.Contains(option) || slot < -1 || slot >= 4) return false;
+            customizedFavoriteCategories.Add(option.Category);
             if (slot >= 0) foreach (var other in Options)
                 if (other != null && other.Category == option.Category && other.FavoriteSlot == slot) other.FavoriteSlot = -1;
             option.FavoriteSlot = slot; return true;
