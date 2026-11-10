@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Game.GridPrototype;
 using TMPro;
 using UnityEngine;
@@ -6,155 +8,129 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 
-// A compact prototype allocation panel; not the future inventory/system menu.
+// Player menu: replaces the original allocation popup while retaining its public entry point.
 [DefaultExecutionOrder(-50)]
-public sealed class ProgressionMenu : MonoBehaviour
+public sealed partial class ProgressionMenu : MonoBehaviour
 {
+    public enum Page { Party, Attributes, Shortcuts, Progression, SkillTree, Inventory, Settings }
     GameObject canvasObject, ownedEvents;
-    RectTransform panel;
-    TMP_Text heading, summary;
-    readonly TMP_Text[] statLabels = new TMP_Text[6];
-    readonly Button[] statButtons = new Button[6];
-    readonly string[] names = { "Vitality", "Strength", "Magic", "Physical Defense", "Magical Defense", "Initiative" };
-    bool open, savedCursor, savedNavigation;
-    TMP_Text partyStatus;
-    readonly Button[] partyButtons = new Button[3];
-    CursorLockMode savedLock;
+    RectTransform shell, body, detailRoot;
+    TMP_Text title, characterLabel, detailText, footer;
+    RawImage detailImage;
+    Image experienceFill;
     EventSystem events;
-    int memberIndex, selected, closedFrame = -1;
+    bool open, savedCursor, savedNavigation;
+    float savedTimeScale, nextNavigation;
+    CursorLockMode savedLock;
+    GameObject savedSelection;
+    int memberIndex, closedFrame = -1;
+    Page page;
+    BattleActionCategory category = BattleActionCategory.Attack;
+    ProgressionEntryKind progressionKind;
+    BattleActionOption assigning;
+    readonly List<Button> buttons = new();
+    readonly Dictionary<BattleCharacterInfo, Texture> portraits = new();
+    BattlePortraitCapture capture;
     public bool BlocksWorldInput => open || closedFrame == Time.frameCount;
+    public bool IsOpen => open;
+    public Page CurrentPage => page;
     bool InBattle => BattleManager.Instance && BattleManager.Instance.InBattle;
+    GameManager Manager => GameManager.Instance;
+    BattleCharacterInfo Member => Manager && Manager.Progression.Members.Count > 0
+        ? Manager.Progression.Members[memberIndex = Mathf.Clamp(memberIndex, 0, Manager.Progression.Members.Count - 1)] : null;
+    public static string DisplayName(BattleCharacterInfo member) => !member ? "No character" :
+        string.IsNullOrWhiteSpace(member.DisplayName) ? member.name.Replace("(Clone)", "") : member.DisplayName;
+    void Awake() { if (PlayerPrefs.HasKey("PlayerMenu.Volume")) AudioListener.volume = PlayerPrefs.GetFloat("PlayerMenu.Volume"); }
     void Update()
     {
-        if (!GameManager.Instance) return;
+        if (!Manager) return;
         if (InBattle) { Close(); return; }
         if (!Application.isFocused) return;
-        var keyboard = Keyboard.current; var pad = Gamepad.current;
-        bool toggle = (keyboard != null && keyboard.tabKey.wasPressedThisFrame) || (pad != null && pad.buttonNorth.wasPressedThisFrame);
-        if (toggle) { if (open) Close(); else if (!GameManager.Instance.WorldInputBlocked) Open(); return; }
+        var k = Keyboard.current; var pad = Gamepad.current;
+        bool toggle = (k != null && k.tabKey.wasPressedThisFrame) || (pad != null && pad.startButton.wasPressedThisFrame);
+        if (toggle) { if (open) Close(); else if (!Manager.WorldInputBlocked) Open(); return; }
         if (!open) return;
-        if ((keyboard != null && keyboard.pKey.wasPressedThisFrame) || (pad != null && pad.buttonWest.wasPressedThisFrame)) { partySlot = (partySlot + 1) % 3; Render(); }
-        if ((keyboard != null && keyboard.insertKey.wasPressedThisFrame) || (pad != null && pad.rightTrigger.wasPressedThisFrame)) AssignParty(partySlot);
-        if ((keyboard != null && keyboard.escapeKey.wasPressedThisFrame) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Close(); return; }
-        if ((keyboard != null && keyboard.upArrowKey.wasPressedThisFrame) || (pad != null && pad.dpad.up.wasPressedThisFrame)) selected = (selected + 5) % 6;
-        if ((keyboard != null && keyboard.downArrowKey.wasPressedThisFrame) || (pad != null && pad.dpad.down.wasPressedThisFrame)) selected = (selected + 1) % 6;
-        if ((keyboard != null && keyboard.leftArrowKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame)) Cycle(-1);
-        if ((keyboard != null && keyboard.rightArrowKey.wasPressedThisFrame) || (pad != null && pad.rightShoulder.wasPressedThisFrame)) Cycle(1);
-        if ((keyboard != null && keyboard.enterKey.wasPressedThisFrame) || (pad != null && pad.buttonSouth.wasPressedThisFrame)) Spend(selected);
-        Render();
+        if ((k != null && (k.escapeKey.wasPressedThisFrame || k.backspaceKey.wasPressedThisFrame)) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Back(); return; }
+        if ((k != null && k.leftBracketKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame)) { Cycle(-1); return; }
+        if ((k != null && k.rightBracketKey.wasPressedThisFrame) || (pad != null && pad.rightShoulder.wasPressedThisFrame)) { Cycle(1); return; }
+        Vector2 direction = pad == null ? Vector2.zero : pad.dpad.ReadValue();
+        if (direction.sqrMagnitude < .1f && pad != null) direction = pad.leftStick.ReadValue();
+        if (k != null) direction += new Vector2((k.rightArrowKey.isPressed ? 1 : 0) - (k.leftArrowKey.isPressed ? 1 : 0), (k.upArrowKey.isPressed ? 1 : 0) - (k.downArrowKey.isPressed ? 1 : 0));
+        if (direction.sqrMagnitude < .25f) nextNavigation = 0;
+        else if (Time.unscaledTime >= nextNavigation)
+        {
+            nextNavigation = Time.unscaledTime + .18f;
+            var current = events.currentSelectedGameObject ? events.currentSelectedGameObject.GetComponent<Selectable>() : null;
+            Selectable next = !current ? null : Mathf.Abs(direction.x) > Mathf.Abs(direction.y)
+                ? (direction.x > 0 ? current.FindSelectableOnRight() : current.FindSelectableOnLeft())
+                : (direction.y > 0 ? current.FindSelectableOnUp() : current.FindSelectableOnDown());
+            if (next) events.SetSelectedGameObject(next.gameObject); else if (!current) SelectFirst();
+        }
+        if ((k != null && k.enterKey.wasPressedThisFrame) || (pad != null && pad.buttonSouth.wasPressedThisFrame))
+        {
+            var selected = events.currentSelectedGameObject ? events.currentSelectedGameObject.GetComponent<Button>() : null;
+            if (selected && selected.IsInteractable()) selected.onClick.Invoke();
+        }
+        if (pad != null && Mathf.Abs(pad.rightStick.y.ReadValue()) > .2f) ScrollUnderPointer(pad.rightStick.y.ReadValue());
+        footer.text = pad != null && Manager.Input && Manager.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad
+            ? ControllerGlyphs.Adapt("D-pad / left stick: navigate    A: select    controller B: back    LB / RB: character    Right stick: scroll    Menu: close")
+            : "Arrow keys: navigate    Enter: select    Backspace / Esc: back    [ / ]: character    Tab: close";
+    }
+    void ScrollUnderPointer(float direction)
+    {
+        ScrollRect scroll = null;
+        if (Mouse.current != null)
+        {
+            var hits = new List<RaycastResult>(); events.RaycastAll(new PointerEventData(events) { position = Mouse.current.position.ReadValue() }, hits);
+            foreach (var hit in hits) { scroll = hit.gameObject.GetComponentInParent<ScrollRect>(); if (scroll) break; }
+        }
+        if (!scroll && events.currentSelectedGameObject) scroll = events.currentSelectedGameObject.GetComponentInParent<ScrollRect>();
+        if (scroll && scroll.content.rect.height > scroll.viewport.rect.height)
+            scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + direction * Time.unscaledDeltaTime * 600 / (scroll.content.rect.height - scroll.viewport.rect.height));
     }
     public void Open()
     {
-        if (open || InBattle || !GameManager.Instance || GameManager.Instance.Progression.Members.Count == 0) return;
+        if (open || InBattle || !Manager || Manager.IsSwitchingCharacter || Manager.WorldInputBlocked || Manager.Progression.Members.Count == 0) return;
         if (!canvasObject) Build();
-        savedCursor = Cursor.visible; savedLock = Cursor.lockState;
+        savedCursor = Cursor.visible; savedLock = Cursor.lockState; savedTimeScale = Time.timeScale;
         events = EventSystem.current;
-        if (!events)
-        {
-            ownedEvents = new GameObject("Progression input", typeof(EventSystem), typeof(InputSystemUIInputModule));
-            events = ownedEvents.GetComponent<EventSystem>();
-        }
-        savedNavigation = events.sendNavigationEvents; events.sendNavigationEvents = false;
+        if (!events) { ownedEvents = new GameObject("Player menu input", typeof(EventSystem), typeof(InputSystemUIInputModule)); events = ownedEvents.GetComponent<EventSystem>(); }
+        savedNavigation = events.sendNavigationEvents; savedSelection = events.currentSelectedGameObject; events.sendNavigationEvents = false;
+        open = true; canvasObject.SetActive(true); Time.timeScale = 0;
         Cursor.visible = true; Cursor.lockState = CursorLockMode.None;
-        open = true; canvasObject.SetActive(true);
-        if (GameManager.Instance.PossessedCharacter) GameManager.Instance.PossessedCharacter.ResetMotion();
-        Render();
+        if (Manager.PossessedCharacter) Manager.PossessedCharacter.ResetMotion();
+        ShowPage(Page.Party);
     }
     public void Close()
     {
         if (!open) return;
-        open = false; closedFrame = Time.frameCount;
+        open = false; closedFrame = Time.frameCount; Time.timeScale = savedTimeScale;
         if (canvasObject) canvasObject.SetActive(false);
-        if (events) events.sendNavigationEvents = savedNavigation;
+        if (events) { events.sendNavigationEvents = savedNavigation; events.SetSelectedGameObject(savedSelection ? savedSelection : null); }
         Cursor.visible = savedCursor; Cursor.lockState = savedLock;
     }
-    void Cycle(int step)
+    public void Back() { if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
+    void Cycle(int direction) { int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; assigning = null; Rebuild(); }
+    public void ShowPage(Page value) { if (!open) return; page = value; assigning = null; Rebuild(); }
+    void Clear(Transform parent)
     {
-        int count = GameManager.Instance.Progression.Members.Count;
-        if (count > 0) memberIndex = (memberIndex + step + count) % count;
-        Render();
+        for (int i = parent.childCount - 1; i >= 0; i--) { var child = parent.GetChild(i).gameObject; child.SetActive(false); if (Application.isPlaying) Destroy(child); else DestroyImmediate(child); }
     }
-    BattleCharacterInfo Member()
+    void Rebuild()
     {
-        var members = GameManager.Instance.Progression.Members;
-        if (members.Count == 0) return null;
-        memberIndex = Mathf.Clamp(memberIndex, 0, members.Count - 1); return members[memberIndex];
+        events.SetSelectedGameObject(null); Clear(body); Clear(detailRoot); buttons.Clear();
+        title.text = page == Page.SkillTree ? "SKILL TREE" : page.ToString().ToUpperInvariant();
+        characterLabel.text = DisplayName(Member); BuildDetails();
+        switch (page) { case Page.Party: Party(); break; case Page.Attributes: Attributes(); break; case Page.Shortcuts: Shortcuts(); break; case Page.Progression: Progression(); break; case Page.SkillTree: SkillTree(); break; case Page.Inventory: Inventory(); break; case Page.Settings: Settings(); break; }
+        SelectFirst();
     }
-    int partySlot;
-    void AssignParty(int slot)
+    void SelectFirst()
     {
-        if (Member()) GameManager.Instance.TrySetActiveMember(slot, Member());
-        Render();
-    }
-    void Spend(int index)
-    {
-        if (!open || InBattle) return;
-        var member = Member(); if (member) member.SpendPoint((CharacterStat)index);
-        Render();
-    }
-    void Render()
-    {
-        if (!panel || !GameManager.Instance) return;
-        var member = Member(); var party = GameManager.Instance.Progression;
-        heading.text = member ? (string.IsNullOrWhiteSpace(member.DisplayName) ? member.name.Replace("(Clone)", "") : member.DisplayName) : "No character";
-        summary.text = member ? $"Level {member.Level}   •   {member.UnspentPoints} points available\n" +
-            (member.Level >= party.LevelCap ? "XP: level cap reached" : $"XP: {party.ProgressFor(member)} / {party.Cost(Mathf.Max(1, member.Level))}") : "Register a party member.";
-        if (partyStatus)
-        {
-            partyStatus.text = "Active team: " + string.Join(" / ", GameManager.Instance.GetBattleParty().ConvertAll(m => m.DisplayName));
-            for (int i=0;i<3;i++) { partyButtons[i].interactable = member && !GameManager.Instance.GetBattleParty().Contains(member); partyButtons[i].image.color = i == partySlot ? new Color(1,.82f,.38f) : new Color(.85f,.87f,.9f); }
-        }
-        for (int i = 0; i < 6; i++)
-        {
-            statLabels[i].text = names[i] + "   " + (member ? member.Stat((CharacterStat)i).ToString() : "—");
-            statButtons[i].interactable = member && member.UnspentPoints > 0;
-            statButtons[i].image.color = i == selected ? new Color(1, .82f, .38f) : new Color(.85f, .87f, .9f);
-        }
-    }
-    RectTransform Rect(string name, Transform parent, float x, float y, float width, float height)
-    {
-        var obj = new GameObject(name, typeof(RectTransform)); obj.transform.SetParent(parent, false);
-        var rect = (RectTransform)obj.transform; rect.anchorMin = rect.anchorMax = new Vector2(0, 1); rect.pivot = new Vector2(0, 1);
-        rect.anchoredPosition = new Vector2(x, -y); rect.sizeDelta = new Vector2(width, height); return rect;
-    }
-    TMP_Text Label(RectTransform rect, string value, int size = 15)
-    {
-        var text = rect.gameObject.AddComponent<TextMeshProUGUI>(); text.font = TMP_Settings.defaultFontAsset;
-        text.fontSize = size; text.color = Color.white; text.text = value; text.raycastTarget = false;
-        text.alignment = TextAlignmentOptions.MidlineLeft; return text;
-    }
-    Button Button(string value, float x, float y, float width, UnityEngine.Events.UnityAction click)
-    {
-        var rect = Rect(value, panel, x, y, width, 28); var image = rect.gameObject.AddComponent<Image>();
-        image.color = new Color(.85f, .87f, .9f); var button = rect.gameObject.AddComponent<Button>(); button.targetGraphic = image;
-        button.navigation = new Navigation { mode = Navigation.Mode.None }; button.onClick.AddListener(click);
-        var label = Label(Rect("Label", rect, 0, 0, width, 28), value); label.color = Color.black; label.alignment = TextAlignmentOptions.Center;
-        return button;
-    }
-    void Build()
-    {
-        canvasObject = new GameObject("Character progression", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        canvasObject.transform.SetParent(transform, false);
-        var canvas = canvasObject.GetComponent<Canvas>(); canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 200;
-        var scaler = canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080); scaler.matchWidthOrHeight = .5f;
-        panel = Rect("Stats", canvasObject.transform, 0, 0, 340, 500);
-        panel.anchorMin = panel.anchorMax = panel.pivot = new Vector2(.5f, .5f); panel.anchoredPosition = Vector2.zero;
-        panel.gameObject.AddComponent<Image>().color = new Color(.035f, .045f, .065f, .97f);
-        heading = Label(Rect("Name", panel, 16, 12, 220, 28), "Character", 18);
-        Button("<", 246, 12, 32, () => Cycle(-1)); Button(">", 286, 12, 32, () => Cycle(1));
-        summary = Label(Rect("Experience", panel, 16, 46, 308, 44), "");
-        for (int i = 0; i < 6; i++)
-        {
-            int index = i; statLabels[i] = Label(Rect(names[i], panel, 16, 102 + i * 34, 245, 28), names[i]);
-            statButtons[i] = Button("+", 278, 102 + i * 34, 40, () => Spend(index));
-        }
-        Label(Rect("Help", panel, 16, 310, 308, 48), "D-pad / ↑↓: stat   A/Cross / Enter: spend\nLB/RB / ←→: character", 12);
-        partyStatus = Label(Rect("Active party", panel, 16, 360, 308, 40), "", 12);
-        for (int i=0;i<3;i++) { int slot=i; partyButtons[i]=Button("Use slot " + (i+1), 16+i*104, 404, 100, () => AssignParty(slot)); }
-        Label(Rect("Party controls", panel, 16, 436, 308, 24), "P / X: slot   Insert / RT: assign selected member", 11);
-        Button("Close · Tab / Esc / B / Circle", 16, 466, 308, Close);
+        var first = buttons.Find(b => b && b.IsInteractable());
+        if (!first && canvasObject) foreach (var button in canvasObject.GetComponentsInChildren<Button>())
+            if (button.IsInteractable()) { first = button; break; }
+        if (first && events) events.SetSelectedGameObject(first.gameObject);
     }
     void OnDisable() => Close();
-    void OnDestroy() { Close(); if (ownedEvents) Destroy(ownedEvents); }
+    void OnDestroy() { Close(); if (ownedEvents) { if (Application.isPlaying) Destroy(ownedEvents); else DestroyImmediate(ownedEvents); } }
 }

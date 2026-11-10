@@ -3,6 +3,14 @@ using UnityEngine;
 
 public partial class GameManager
 {
+    public bool TrySetCaptain(BattleCharacterInfo member)
+    {
+        if (!member || IsSwitchingCharacter || (BattleManager.Instance && BattleManager.Instance.InBattle)) return false;
+        int index = BattleParty.IndexOf(member);
+        if (index <= 0) return false;
+        BattleParty.RemoveAt(index); BattleParty.Insert(0, member);
+        return true;
+    }
     // The selected reserve replaces an existing member at their actual overworld position.
     public bool TrySetActiveMember(int slot, BattleCharacterInfo incoming)
     {
