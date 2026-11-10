@@ -122,13 +122,6 @@ public sealed partial class ProgressionMenu
         var value=Member.GetComponent<BattleActionLoadout>();
         if(value){value.BindInventory(Manager.Inventory);value.InitializeFavorites();}return value;
     }
-    void Inventory()
-    {
-        Label(Rect("Inventory title",body,0,0,500,44),"SHARED ITEMS",20);
-        var items=Manager.Inventory.Items.Where(x=>x!=null).ToList(); var list=List(body,"Items",0,54,500,448,items.Count*48);
-        for(int i=0;i<items.Count;i++){var item=items[i];Button(list,$"{item.Name}   ×{item.Quantity}",0,i*48,486,()=>Detail(item.Name,item.Tooltip),()=>Detail(item.Name,item.Tooltip),44);}
-        Detail("Party inventory","Items are shared by the entire party.\n\nUse consumables from the Items command in battle.");
-    }
     void Progression()
     {
         var kinds=new[]{ProgressionEntryKind.Spell,ProgressionEntryKind.Weapon,ProgressionEntryKind.Gear};var labels=new[]{"Spells","Weapons","Gear"};

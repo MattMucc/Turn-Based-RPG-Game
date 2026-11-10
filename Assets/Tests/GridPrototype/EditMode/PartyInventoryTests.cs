@@ -13,6 +13,24 @@ public class PartyInventoryTests
         var loadout = obj.AddComponent<BattleActionLoadout>(); loadout.BindInventory(inventory); return loadout;
     }
     [TearDown] public void Cleanup() { foreach(var obj in owned) Object.DestroyImmediate(obj); owned.Clear(); }
+    [Test] public void OutsidePotionsPreviewCappedRecoveryAndShareStockWithoutWastingAtFull()
+    {
+        var inventory=new PartyInventory();var member=Member(inventory).gameObject.AddComponent<BattleCharacterInfo>();
+        var unit=new GridUnit("test",Vector2Int.zero);member.Configure(unit);
+        unit.Health=unit.MaxHealth-7;member.StoreHealth(unit);unit.InitializeMagicPoints(24,21);member.StoreMagicPoints(unit);
+        var health=inventory.Items[0];var mana=inventory.Items[1];
+        Assert.AreEqual(7,inventory.PreviewRecovery(health,member,out int before,out int maximum));
+        Assert.AreEqual(maximum-7,before);Assert.AreEqual(3,health.Quantity);
+        Assert.IsTrue(inventory.TryUseOutsideCombat(health,member));Assert.AreEqual(2,health.Quantity);
+        Assert.IsFalse(inventory.TryUseOutsideCombat(health,member));Assert.AreEqual(2,health.Quantity);
+        Assert.AreEqual(3,inventory.PreviewRecovery(mana,member,out _,out _));
+        Assert.IsTrue(inventory.TryUseOutsideCombat(mana,member));Assert.AreEqual(24,member.StoredMagicPoints);Assert.AreEqual(2,mana.Quantity);
+        unit.Health=0;member.StoreHealth(unit);unit.InitializeMagicPoints(24,0);member.StoreMagicPoints(unit);
+        Assert.IsFalse(inventory.TryUseOutsideCombat(mana,member));
+        Assert.IsTrue(inventory.TryUseOutsideCombat(health,member));Assert.AreEqual(50,member.StoredHealth);
+        health.Quantity=0;unit.Health=1;member.StoreHealth(unit);Assert.IsFalse(inventory.TryUseOutsideCombat(health,member));
+        Assert.IsFalse(inventory.TryUseOutsideCombat(PartyInventory.HealthPotion(),member));
+    }
     [Test] public void AllMembersAndReservesUseOneStockButKeepTheirOwnShortcuts()
     {
         var inventory = new PartyInventory(); var a = Member(inventory); var b = Member(inventory);

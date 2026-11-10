@@ -413,13 +413,18 @@ public sealed class BattleHud : MonoBehaviour
             : accepted ? new Color(0.3f, 1, 0.55f) : new Color(1, 0.25f, 0.2f);
         defenseMarker.anchorMin = new Vector2(progress, 0); defenseMarker.anchorMax = new Vector2(progress, 1);
     }
+    RectTransform contextUse;
+    int contextChoice;
     private void BuildInspection()
     {
         inspectionLayer = Rect("Inspection modal", root); Stretch(inspectionLayer);
         var shade = inspectionLayer.gameObject.AddComponent<Image>(); shade.color = new Color(0, 0, 0, 0.35f);
         var dismiss = inspectionLayer.gameObject.AddComponent<Button>(); dismiss.targetGraphic = shade; dismiss.onClick.AddListener(CloseInspection);
         contextPanel = Rect("Character context menu", inspectionLayer); contextPanel.sizeDelta = new Vector2(140, 30);
-        Button(contextPanel, "Examine", ControllerInspectSubmit);
+        var inspectButton=Rect("Examine",contextPanel);inspectButton.sizeDelta=new Vector2(140,30);inspectButton.anchoredPosition=new Vector2(0,15);
+        Button(inspectButton, "Examine", ()=>{contextChoice=0;ControllerInspectSubmit();});
+        contextUse=Rect("Use",contextPanel);contextUse.sizeDelta=new Vector2(140,30);contextUse.anchoredPosition=new Vector2(0,-17);
+        Button(contextUse,"Use",UseInspectedObject);
         examinePanel = Rect("Examine character", inspectionLayer); examinePanel.gameObject.AddComponent<Image>().color = Dark;
         var panelBlocker = examinePanel.gameObject.AddComponent<Button>(); panelBlocker.targetGraphic = examinePanel.GetComponent<Image>();
         var panelNav = panelBlocker.navigation; panelNav.mode = Navigation.Mode.None; panelBlocker.navigation = panelNav;
@@ -445,11 +450,14 @@ public sealed class BattleHud : MonoBehaviour
     public void ShowTargetContext(BattleTarget target, Vector2 screenPosition)
     {
         if (!battle || battle.ControllerInputLocked || target == null || !target.Alive) return;
+        contextChoice=0; contextUse.gameObject.SetActive(battle.CanUseObject(target));
+        contextUse.GetComponent<Image>().color=Dark;
+        contextPanel.Find("Examine").GetComponent<Image>().color=Dark;
         inspectedTarget = target; inspected = target.ActorIndex; battle.InspectionOpen = true; inspectionLayer.gameObject.SetActive(true);
         contextPanel.gameObject.SetActive(true); examinePanel.gameObject.SetActive(false);
         var canvas = GetComponentInParent<Canvas>();
         RectTransformUtility.ScreenPointToLocalPointInRectangle(root, screenPosition, canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera, out var p);
-        contextPanel.anchoredPosition = new Vector2(Mathf.Clamp(p.x, root.rect.xMin + 70, root.rect.xMax - 70), Mathf.Clamp(p.y, root.rect.yMin + 15, root.rect.yMax - 15));
+        contextPanel.anchoredPosition = new Vector2(Mathf.Clamp(p.x, root.rect.xMin + 70, root.rect.xMax - 70), Mathf.Clamp(p.y, root.rect.yMin + 36, root.rect.yMax - 36));
     }
     public void ShowExamine(int index)
     {
@@ -472,7 +480,16 @@ public sealed class BattleHud : MonoBehaviour
     public void ControllerInspectSubmit()
     {
         if (!battle.InspectionOpen || inspectedTarget == null) return;
+        if(contextChoice==1 && contextPanel.gameObject.activeSelf){UseInspectedObject();return;}
         contextPanel.gameObject.SetActive(false); examinePanel.gameObject.SetActive(true); UpdateExamine();
+    }
+    void UseInspectedObject(){var target=inspectedTarget;CloseInspection();battle.UseObject(target);}
+    public void ControllerContextStep(int step)
+    {
+        if(!contextPanel.gameObject.activeSelf || !contextUse.gameObject.activeSelf || step==0)return;
+        contextChoice=1-contextChoice;
+        contextUse.GetComponent<Image>().color=contextChoice==1?new Color(.2f,.4f,.55f):Dark;
+        contextPanel.Find("Examine").GetComponent<Image>().color=contextChoice==0?new Color(.2f,.4f,.55f):Dark;
     }
     public void ControllerInspectScroll(float direction, float seconds)
     {

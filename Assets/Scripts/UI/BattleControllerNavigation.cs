@@ -234,6 +234,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
             ClearHover();
             if (battle.InspectionOpen)
             {
+                hud.ControllerContextStep(direction.y);
                 if (confirm) hud.ControllerInspectSubmit();
                 hud.ControllerInspectScroll(right.y != 0 ? right.y : pad.dpad.ReadValue().y, dt);
             }

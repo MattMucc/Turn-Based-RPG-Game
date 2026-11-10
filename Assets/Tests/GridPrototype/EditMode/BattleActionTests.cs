@@ -37,6 +37,27 @@ public class BattleActionTests
         for (int i = objects.Count - 1; i >= 0; i--) if (objects[i]) Object.DestroyImmediate(objects[i]);
         objects.Clear(); Physics.SyncTransforms();
     }
+    [Test] public void CombatObjectUseChecksReachTurnAndActionThenInvokesOnceWithoutMovementCost()
+    {
+        var lever=Create("Test lever");lever.transform.position=battle.Grid.Point(new Vector2Int(3,2));
+        var usable=lever.AddComponent<BattleUsable>();usable.OneUseOnly=true;
+        var collider=lever.AddComponent<BoxCollider>();collider.center=Vector3.up;collider.size=new Vector3(.4f,2,.4f);
+        var target=new BattleTarget(lever.GetComponent<BattleHoverInfo>());
+        ((List<BattleTarget>)battle.Targetables).Add(target);Physics.SyncTransforms();
+        int uses=0;usable.OnUse.AddListener(()=>uses++);
+        var unit=battle.Combatants[0];int movement=unit.Movement;
+        Assert.IsTrue(battle.CanUseObject(target),"The lever's own collider must not block Use.");
+        var wall=Create("Blocked access");wall.transform.position=(lever.transform.position+battle.Grid.Point(unit.Position))*.5f+Vector3.up;
+        wall.AddComponent<BoxCollider>();Physics.SyncTransforms();Assert.IsFalse(battle.CanUseObject(target));
+        wall.SetActive(false);Physics.SyncTransforms();
+        usable.AllowDuringCombat=false;Assert.IsFalse(battle.UseObject(target));usable.AllowDuringCombat=true;
+        lever.transform.position=battle.Grid.Point(new Vector2Int(0,0));Assert.IsFalse(battle.UseObject(target));
+        lever.transform.position=battle.Grid.Point(new Vector2Int(3,2));Physics.SyncTransforms();
+        Assert.IsTrue(battle.ChooseAction(battle.Loadout.Options[0]));Assert.IsFalse(battle.UseObject(target));battle.CancelAction();
+        battle.InspectionOpen=true;Assert.IsTrue(battle.UseObject(target));battle.InspectionOpen=false;
+        Assert.AreEqual(1,uses);Assert.AreEqual(movement,unit.Movement);Assert.IsFalse(unit.ActionAvailable);
+        Assert.IsFalse(battle.UseObject(target));unit.EndTurn();unit.BeginTurn();Assert.IsFalse(battle.UseObject(target));
+    }
     [Test] public void DashSkillSpendsOnlyActionAndNeedsNoTarget()
     {
         var dash = new BattleActionOption { Name = "Dash", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash };

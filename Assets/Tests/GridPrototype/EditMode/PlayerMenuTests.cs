@@ -51,6 +51,28 @@ public class PlayerMenuTests
     void Open() => menuType.GetMethod("Open").Invoke(menu, null);
     void Page(string name) => menuType.GetMethod("ShowPage").Invoke(menu, new[] { Enum.Parse(menuType.GetNestedType("Page"), name) });
     Button Find(string name) => menu.GetComponentsInChildren<Button>(true).First(b => b.gameObject.activeInHierarchy && b.name.StartsWith(name));
+    [Test] public void InventoryContextExaminesThenPreviewsReservePotionAndCancelsWithoutConsumption()
+    {
+        var unit=new GridUnit("test",Vector2Int.zero);reserves[0].Configure(unit);unit.Health=0;reserves[0].StoreHealth(unit);
+        var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);
+        Open();Page("Inventory");
+        var itemButton=Find("Health Potion");
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        var pointer=new UnityEngine.EventSystems.PointerEventData(events){button=UnityEngine.EventSystems.PointerEventData.InputButton.Right};
+        UnityEngine.EventSystems.ExecuteEvents.Execute(itemButton.gameObject,pointer,UnityEngine.EventSystems.ExecuteEvents.pointerEnterHandler);
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Item hover tooltip"));
+        UnityEngine.EventSystems.ExecuteEvents.Execute(itemButton.gameObject,pointer,UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+        Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Item hover tooltip"));
+        Find("Examine").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("knocked-out")));
+        menuType.GetMethod("Back").Invoke(menu,null);Find("Use").onClick.Invoke();Find("Member 3").onClick.Invoke();
+        Assert.AreEqual(0,reserves[0].StoredHealth);Assert.AreEqual(3,inventory.Count("health-potion"));
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Recovers 50 HP")));
+        menuType.GetMethod("Back").Invoke(menu,null);Assert.AreEqual(3,inventory.Count("health-potion"));
+        Find("Member 3").onClick.Invoke();Find("Confirm use").onClick.Invoke();
+        Assert.AreEqual(50,reserves[0].StoredHealth);Assert.AreEqual(2,inventory.Count("health-potion"));
+        Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Inventory interaction"));
+    }
     [Test] public void MenuPausesRestoresAndBuildsEveryPageWithoutRuntimePlaytesting()
     {
         Time.timeScale = .75f; Open(); Assert.AreEqual(0, Time.timeScale);

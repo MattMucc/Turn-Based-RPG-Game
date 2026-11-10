@@ -54,7 +54,7 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         bool toggle = (k != null && k.tabKey.wasPressedThisFrame) || (pad != null && pad.startButton.wasPressedThisFrame);
         if (toggle) { if (open) Close(); else if (!Manager.WorldInputBlocked) Open(); return; }
         if (!open) return;
-        if ((shell.rect.size-lastMenuSize).sqrMagnitude>1) Rebuild();
+        if ((shell.rect.size-lastMenuSize).sqrMagnitude>1 && !inventoryModal) Rebuild();
         if(page==Page.Shortcuts && HandleShortcutInput(k,pad)) return;
         if ((k != null && (k.escapeKey.wasPressedThisFrame || k.backspaceKey.wasPressedThisFrame)) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Back(); return; }
         if ((k != null && k.leftBracketKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame)) { Cycle(-1); return; }
@@ -110,14 +110,14 @@ public sealed partial class ProgressionMenu : MonoBehaviour
     public void Close()
     {
         if (!open) return;
-        open = false; closedFrame = Time.frameCount; Time.timeScale = savedTimeScale;
+        CloseInventoryModal(); HideItemTooltip(); open = false; closedFrame = Time.frameCount; Time.timeScale = savedTimeScale;
         if (canvasObject) canvasObject.SetActive(false);
         if (events) { events.sendNavigationEvents = savedNavigation; events.SetSelectedGameObject(savedSelection ? savedSelection : null); }
         Cursor.visible = savedCursor; Cursor.lockState = savedLock;
     }
-    public void Back() { if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
-    void Cycle(int direction) { int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
-    public void ShowPage(Page value) { if (!open) return; page = value; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
+    public void Back() { if (inventoryModal) { InventoryBack(); return; } if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
+    void Cycle(int direction) { if (inventoryModal) return; int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
+    public void ShowPage(Page value) { if (!open) return; CloseInventoryModal(); HideItemTooltip(); page = value; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
     void Clear(Transform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--) { var child = parent.GetChild(i).gameObject; child.SetActive(false); if (Application.isPlaying) Destroy(child); else DestroyImmediate(child); }
