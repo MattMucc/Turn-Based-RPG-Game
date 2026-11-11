@@ -13,6 +13,8 @@ namespace Game.GridPrototype
     }
     [Serializable] public sealed class MenuProgressionEntry
     {
+        [NonSerialized] public EquipmentDefinition Equipment;
+        [NonSerialized] public OwnedEquipment EquipmentCopy;
         public ProgressionEntryKind Kind;
         public string Name;
         public Texture Image;

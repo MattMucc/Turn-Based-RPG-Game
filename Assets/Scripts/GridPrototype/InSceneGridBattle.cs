@@ -578,6 +578,9 @@ namespace Game.GridPrototype
         }
         private IEnumerator ResolveHits(List<List<BattleTarget>> batches, List<Vector2Int> cells, int damage, bool sequential, BattleActionOption action)
         {
+            var masteryWeapon=IsAlly(actorIndex)?actors[actorIndex].GetComponent<CharacterEquipment>()?.Weapon:null;
+            int previousMasteryLevel=WeaponMastery.Level(masteryWeapon);
+            var mastery=new WeaponMasteryUse(masteryWeapon,action);
             for (int i = 0; i < batches.Count; i++)
             {
                 if (closing) yield break;
@@ -601,6 +604,7 @@ namespace Game.GridPrototype
                         else if (action.Effect == ActionEffect.RestoreMagic) {
                             RecentHitFeedback = target.Name + $": +{victim.MagicPoints - magicBefore} MP restored"; RecentHitFeedbackUntil = Time.unscaledTime + 2;
                         }
+                        mastery.Record(landed, target.ActorIndex>=allyCount, victim.Health==0);
                         RecordHit(target.ActorIndex, dealt);
                         if (victim.Health == 0) { Grid.Board.Units.Remove(victim); target.Transform.gameObject.SetActive(false); }
                     }
@@ -619,6 +623,12 @@ namespace Game.GridPrototype
             }
             if (!sequential) yield return new WaitForSeconds(0.4f);
             action.CompleteResourceRecovery(Active);
+            int masteryGain=mastery.Complete(Active);
+            if(masteryGain>0){
+                RecentHitFeedback+=$"\n{masteryWeapon.Definition.DisplayName}: +{masteryGain} mastery XP";
+                if(WeaponMastery.Level(masteryWeapon)>previousMasteryLevel)RecentHitFeedback+=$" - Level {WeaponMastery.Level(masteryWeapon)} unlocked";
+                RecentHitFeedbackUntil=Time.unscaledTime+3;
+            }
             busy = false; CancelAction();
             ActionResolved?.Invoke();
             if (ResolveOutcome()) yield break;

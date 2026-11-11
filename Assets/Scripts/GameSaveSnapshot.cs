@@ -6,7 +6,7 @@ using Game.GridPrototype;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public static class GameSaveSnapshot
+public static partial class GameSaveSnapshot
 {
     static Dictionary<string,SaveIdentity> Identities(IEnumerable<SaveIdentity> scope=null)
     {
@@ -20,16 +20,19 @@ public static class GameSaveSnapshot
     public static GameSaveData Capture(GameManager manager,string checkpoint,IEnumerable<SaveIdentity> scope=null)
     {
         if(scope==null&&string.IsNullOrEmpty(SceneManager.GetActiveScene().path))throw new InvalidDataException("Save this Unity scene before creating game saves.");
-        var ids=Identities(scope);
+        var ids=Identities(scope);manager.BindEquipment();
         var data=new GameSaveData{Scene=SceneManager.GetActiveScene().path,SavedUtc=DateTime.UtcNow.ToString("O"),CheckpointName=checkpoint,
             CaptainName=ProgressionMenu.DisplayName(manager.BattleParty[0]),Controlled=Id(manager.PossessedCharacter),Experience=manager.Progression.Experience,
             Inventory=JsonUtility.FromJson<PartyInventory>(JsonUtility.ToJson(manager.Inventory))};
+        data.HasEquipment=true;
+        data.Equipment=manager.Equipment.Owned.Select(e=>new SavedEquipment{InstanceId=e.InstanceId,MasteryExperience=e.MasteryExperience,DefinitionId=e.Definition?e.Definition.Id:null}).ToList();
         data.Active=manager.BattleParty.Select(Id).ToList();data.Reserve=manager.ReserveParty.Select(Id).ToList();
         foreach(var member in manager.Progression.Members){
             var saved=new SavedCharacter{Id=Id(member),Experience=manager.Progression.ExperienceFor(member),HalfRemainder=manager.Progression.HalfRemainderFor(member)};
+            saved.EquipmentSlots=member.GetComponent<CharacterEquipment>()?.CaptureSlots();
             member.CaptureProgress(saved);var loadout=member.GetComponent<BattleActionLoadout>();loadout.BindInventory(manager.Inventory);loadout.InitializeFavorites();
             saved.PersonalActions=loadout.PersonalOptions.Select(a=>JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(a))).ToList();
-            foreach(var option in loadout.Options)saved.Favorites.Add(new SavedFavorite{Name=option.Name,ItemId=option.ItemId,Category=option.Category,Slot=option.FavoriteSlot});
+            foreach(var option in loadout.Options)saved.Favorites.Add(new SavedFavorite{EquipmentActionId=option.EquipmentActionId,Name=option.Name,ItemId=option.ItemId,Category=option.Category,Slot=option.FavoriteSlot});
             var menu=member.GetComponent<CharacterMenuData>();if(menu)foreach(var entry in menu.Progression)if(entry!=null)saved.Mastery.Add(new SavedMastery{Name=entry.Name,Kind=entry.Kind,Level=entry.Level,Experience=entry.Experience});
             data.Characters.Add(saved);
         }
@@ -57,6 +60,7 @@ public static class GameSaveSnapshot
         if(data.World.Select(w=>w.Id).Distinct().Count()!=data.World.Count||!roster.All(id=>data.World.Any(w=>w.Id==id)))throw new InvalidDataException("Incomplete world data.");
         foreach(var world in data.World)if(!ids.ContainsKey(world.Id)||!Finite(world.Position)||!Finite(world.Scale)||!Finite(new Vector3(world.Rotation.x,world.Rotation.y,world.Rotation.z))||float.IsNaN(world.Rotation.w)||float.IsInfinity(world.Rotation.w))throw new InvalidDataException("Saved objects are missing or invalid.");
         foreach(var group in data.Groups)if(!ids.ContainsKey(group.Id)||!ids[group.Id].GetComponent<BattleGroup>()||group.Positions==null||group.Rotations==null||group.Positions.Count!=group.Rotations.Count||group.Positions.Any(p=>!Finite(p)))throw new InvalidDataException("Invalid encounter data.");
+        ValidateEquipment(data,manager,ids);
         foreach(var group in data.Groups)ids[group.Id].GetComponent<BattleGroup>().ValidateSavedComposition(group);
     }
     static bool Finite(Vector3 v)=>!float.IsNaN(v.x)&&!float.IsNaN(v.y)&&!float.IsNaN(v.z)&&!float.IsInfinity(v.x)&&!float.IsInfinity(v.y)&&!float.IsInfinity(v.z);
@@ -64,6 +68,7 @@ public static class GameSaveSnapshot
     public static void Apply(GameSaveData data,GameManager manager,IEnumerable<SaveIdentity> scope=null)
     {
         Validate(data,manager,scope);var ids=Identities(scope);
+        RestoreEquipment(data,manager,ids);
         manager.Inventory=data.Inventory;manager.Inventory.NotifyChanged();manager.Progression.RestoreTotal(data.Experience);
         foreach(var saved in data.Characters){
             var member=ids[saved.Id].GetComponent<BattleCharacterInfo>();member.RestoreProgress(saved);manager.Progression.RestoreMember(member,saved.Experience,saved.HalfRemainder);

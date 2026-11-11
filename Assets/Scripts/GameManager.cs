@@ -45,6 +45,7 @@ public partial class GameManager : MonoBehaviour
         foreach (var member in BattleParty) Progression.Register(member);
         foreach (var member in ReserveParty) Progression.Register(member);
         foreach (var member in Progression.Members.ToArray()) Progression.Register(member);
+        BindEquipment();
         if (!Input) Input = GetComponent<PlayerInputReader>();
         if (!PlayerRotation) PlayerRotation = Camera.main.transform.root.GetComponent<PlayerRotation>();
         if (!PossessedCharacter) PossessCharacter(GameObject.FindGameObjectWithTag("Player").GetComponent<PlayerMovement>());

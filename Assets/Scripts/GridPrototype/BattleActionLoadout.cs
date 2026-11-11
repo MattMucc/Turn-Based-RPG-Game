@@ -11,6 +11,7 @@ namespace Game.GridPrototype
     public sealed class BattleActionOption
     {
         public string Name;
+        [HideInInspector] public string EquipmentActionId;
         [Range(-1, 3)] public int FavoriteSlot = -1;
         [TextArea] public string Description;
         public BattleActionCategory Category;
@@ -140,7 +141,17 @@ namespace Game.GridPrototype
         {
             personalOptions=saved.PersonalActions;combinedOptions=null;sharedInstances.Clear();itemInstances.Clear();BindInventory(shared);
             foreach(BattleActionCategory category in Enum.GetValues(typeof(BattleActionCategory)))customizedFavoriteCategories.Add(category);
-            foreach(var option in Options){option.FavoriteSlot=-1;var favorite=saved.Favorites.Find(f=>f.Category==option.Category&&(option.Category==BattleActionCategory.Item?f.ItemId==option.ItemId:f.Name==option.Name));if(favorite!=null)option.FavoriteSlot=favorite.Slot;}
+            foreach(var option in Options){option.FavoriteSlot=-1;var favorite=saved.Favorites.Find(f=>f.Category==option.Category&&(option.Category==BattleActionCategory.Item?f.ItemId==option.ItemId:(!string.IsNullOrEmpty(option.EquipmentActionId)?f.EquipmentActionId==option.EquipmentActionId:f.Name==option.Name)));if(favorite!=null)option.FavoriteSlot=favorite.Slot;}
+        }
+        int cachedEquipmentRevision = -1, cachedMasteryExperience = -1;
+        readonly Dictionary<string, BattleActionOption> equipmentInstances = new();
+        public void EquipmentChanged(bool clearWeaponShortcuts)
+        {
+            if(clearWeaponShortcuts){
+                customizedFavoriteCategories.Add(BattleActionCategory.Attack);
+                foreach(var option in equipmentInstances.Values)option.FavoriteSlot=-1;
+            }
+            combinedOptions=null;favoritesInitialized=false;
         }
         private List<BattleActionOption> combinedOptions;
         private SharedBattleActionLibrary cachedLibrary;
@@ -157,19 +168,39 @@ namespace Game.GridPrototype
         {
             get
             {
-                if (!SharedLibrary && inventory == null) return personalOptions;
-                if (combinedOptions != null && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
+                var equipment=GetComponent<CharacterEquipment>();
+                if (!SharedLibrary && inventory == null && !equipment) return personalOptions;
+                if (combinedOptions != null && cachedMasteryExperience == (equipment?.Weapon?.MasteryExperience ?? -1) && cachedEquipmentRevision == (equipment ? equipment.Revision : -1) && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
                 if (cachedLibrary != SharedLibrary) sharedInstances.Clear();
                 combinedOptions = new List<BattleActionOption>();
                 var names = new HashSet<string>();
                 foreach (var definition in SharedLibrary ? SharedLibrary.Actions : new List<BattleActionOption>())
                 {
+                    if (equipment && definition != null && definition.Category == BattleActionCategory.Attack && definition.Effect == ActionEffect.Damage) continue;
                     if (definition == null || definition.Category == BattleActionCategory.Item || string.IsNullOrWhiteSpace(definition.Name) || !names.Add(definition.Name)) continue;
                     var copy = JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(definition));
                     if (sharedInstances.TryGetValue(definition.Name, out var previous)) copy.FavoriteSlot = previous.FavoriteSlot;
                     sharedInstances[definition.Name] = copy; combinedOptions.Add(copy);
                 }
-                foreach (var option in personalOptions) if (option != null && !names.Contains(option.Name) && (inventory == null || option.Category != BattleActionCategory.Item)) combinedOptions.Add(option);
+                foreach (var option in personalOptions) if (!(equipment && option != null && option.Category == BattleActionCategory.Attack && option.Effect == ActionEffect.Damage) && option != null && !names.Contains(option.Name) && (inventory == null || option.Category != BattleActionCategory.Item)) combinedOptions.Add(option);
+                if(equipment){
+                    var weapon=equipment.At(EquipmentSlot.Weapon);
+                    if(weapon)foreach(var definition in WeaponMastery.Attacks(equipment.Weapon)){
+                        if(definition==null||definition.Category!=BattleActionCategory.Attack)continue;
+                        string id=weapon.Id+":"+definition.Name;
+                        var copy=JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(definition));copy.EquipmentActionId=id;
+                        copy.FavoriteSlot=equipmentInstances.TryGetValue(id,out var prior)?prior.FavoriteSlot:-1;
+                        equipmentInstances[id]=copy;combinedOptions.Add(copy);
+                    }
+                    // Unarmed characters retain a basic attack, but never retain the removed weapon's moves.
+                    else {
+                        const string id="unarmed:punch";
+                        if(!equipmentInstances.TryGetValue(id,out var punch))equipmentInstances[id]=punch=new BattleActionOption{Name="Punch",EquipmentActionId=id,Damage=5,Scaling=ScalingStat.Strength,StatScaling=.5f,Description="An unarmed adjacent attack."};
+                        combinedOptions.Add(punch);
+                    }
+                    if(!combinedOptions.Exists(a=>a.Effect==ActionEffect.Push))combinedOptions.Add(new BattleActionOption{Name="Push",Effect=ActionEffect.Push,Damage=0,Description="Push one cell. Requires strictly greater Strength."});
+                }
+                cachedEquipmentRevision=equipment?equipment.Revision:-1;cachedMasteryExperience=equipment?.Weapon?.MasteryExperience??-1;
                 if (inventory != null)
                 {
                     var itemIds = new HashSet<string>();
@@ -221,7 +252,7 @@ namespace Game.GridPrototype
         }
         public void EnsureUniversalAttacks()
         {
-            if (SharedLibrary) { var shared = Options; return; } // Removing a common action must really remove it.
+            if (SharedLibrary || GetComponent<CharacterEquipment>()) { var shared = Options; return; } // Removing a common action must really remove it.
             if (!Options.Exists(o => o != null && o.Effect == ActionEffect.Push))
                 Options.Add(new BattleActionOption { Name = "Push", Effect = ActionEffect.Push, Damage = 0, Description = "Push one cell on clear, level ground. Requires strictly greater Strength." });
             int basics = Options.FindAll(o => o != null && o.Category == BattleActionCategory.Attack && o.Effect == ActionEffect.Damage).Count;

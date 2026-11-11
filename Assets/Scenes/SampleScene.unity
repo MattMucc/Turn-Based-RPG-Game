@@ -196,7 +196,7 @@ Transform:
   m_GameObject: {fileID: 3807549}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.5, z: -14}
+  m_LocalPosition: {x: -13.25, y: 0.5, z: -21.75}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1385,6 +1385,55 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6366ff2e378bec4bbf882b65b11d2e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  Equipment:
+    Catalog:
+    - {fileID: 11400000, guid: 25cf65227d887924382ee72863221c9b, type: 2}
+    - {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+    - {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+    - {fileID: 11400000, guid: 77b2154037b5120498e6863eace0005a, type: 2}
+    - {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    - {fileID: 11400000, guid: af2170474ac981240ba08302a9f18a69, type: 2}
+    - {fileID: 11400000, guid: 40b42f009e2846c41ba3a10db85e30a5, type: 2}
+    - {fileID: 11400000, guid: af1edc47581dbd74ead6295a883cf788, type: 2}
+    Owned:
+    - InstanceId: starter-weapon-0
+      Definition: {fileID: 11400000, guid: 25cf65227d887924382ee72863221c9b, type: 2}
+    - InstanceId: starter-armor-0
+      Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    - InstanceId: starter-weapon-1
+      Definition: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+    - InstanceId: starter-armor-1
+      Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    - InstanceId: starter-weapon-2
+      Definition: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+    - InstanceId: starter-armor-2
+      Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    - InstanceId: starter-weapon-3
+      Definition: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+    - InstanceId: starter-armor-3
+      Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    - InstanceId: starter-weapon-4
+      Definition: {fileID: 11400000, guid: 77b2154037b5120498e6863eace0005a, type: 2}
+    - InstanceId: starter-armor-4
+      Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    - InstanceId: starter-weapon-5
+      Definition: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+    - InstanceId: starter-armor-5
+      Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    - InstanceId: spare-shortsword
+      Definition: {fileID: 11400000, guid: 25cf65227d887924382ee72863221c9b, type: 2}
+    - InstanceId: spare-greatsword
+      Definition: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+    - InstanceId: spare-staff
+      Definition: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+    - InstanceId: spare-bow
+      Definition: {fileID: 11400000, guid: 77b2154037b5120498e6863eace0005a, type: 2}
+    - InstanceId: spare-reinforced-outfit
+      Definition: {fileID: 11400000, guid: af2170474ac981240ba08302a9f18a69, type: 2}
+    - InstanceId: spare-vitality-charm
+      Definition: {fileID: 11400000, guid: 40b42f009e2846c41ba3a10db85e30a5, type: 2}
+    - InstanceId: spare-magic-charm
+      Definition: {fileID: 11400000, guid: af1edc47581dbd74ead6295a883cf788, type: 2}
   characterSwitchDuration: 0.65
   BattleParty:
   - {fileID: 2407421259216672344}
@@ -1397,6 +1446,7 @@ MonoBehaviour:
   Inventory:
     Items:
     - Name: Health Potion
+      EquipmentActionId:
       FavoriteSlot: -1
       Description: Restore health to a living target. Does not revive.
       Category: 2
@@ -1434,6 +1484,7 @@ MonoBehaviour:
       QteDuration: 1.5
       QteBonusDamage: 15
     - Name: Mana Potion
+      EquipmentActionId:
       FavoriteSlot: -1
       Description: Restore Magic Points to a living target.
       Category: 2

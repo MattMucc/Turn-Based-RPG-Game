@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Game.GridPrototype;
@@ -25,6 +25,13 @@ public sealed partial class ProgressionMenu
         }
         var data=Member.GetComponent<CharacterMenuData>();
         var entries=data&&data.Progression!=null?data.Progression.Where(e=>e!=null&&e.Kind==progressionKind).ToList():new List<MenuProgressionEntry>();
+        Manager.BindEquipment();
+        if(progressionKind!=ProgressionEntryKind.Spell)foreach(var copy in Manager.Equipment.Owned.Where(e=>e!=null&&e.Definition)){
+            var definition=copy.Definition;
+            var kind=definition.Kind==EquipmentKind.Weapon?ProgressionEntryKind.Weapon:ProgressionEntryKind.Gear;
+            if(kind!=progressionKind)continue;
+            entries.Add(new MenuProgressionEntry{Kind=kind,Name=definition.DisplayName,Image=definition.Image,Description=definition.Description,Equipment=definition,EquipmentCopy=copy});
+        }
         // A presentation record must never hide other learned spells without records.
         if(progressionKind==ProgressionEntryKind.Spell) {
             var loadout=Loadout();
@@ -45,7 +52,7 @@ public sealed partial class ProgressionMenu
             if(entry.Image){var texture=Rect("Artwork",art,0,0,58,58).gameObject.AddComponent<RawImage>();texture.texture=entry.Image;texture.raycastTarget=false;}
             else Label(Rect("Artwork placeholder",art,0,0,58,58),progressionKind==ProgressionEntryKind.Spell?"S":progressionKind==ProgressionEntryKind.Weapon?"W":"G",24).alignment=TextAlignmentOptions.Center;
             int maximum=Mathf.Max(1,entry.MaximumLevel),level=Mathf.Clamp(entry.Level,1,maximum);
-            string status=maximum==1?"Single level":level>=maximum?$"Lv {level} / {maximum} · Mastered":$"Lv {level} / {maximum} · XP {Mathf.Max(0,entry.Experience)} / {Mathf.Max(1,entry.NextLevelExperience)}";
+            string status=entry.EquipmentCopy!=null?"Copy: "+(Manager.EquipmentOwner(entry.EquipmentCopy.InstanceId)?DisplayName(Manager.EquipmentOwner(entry.EquipmentCopy.InstanceId)):"Unequipped"):maximum==1?"Single level":level>=maximum?$"Lv {level} / {maximum} · Mastered":$"Lv {level} / {maximum} · XP {Mathf.Max(0,entry.Experience)} / {Mathf.Max(1,entry.NextLevelExperience)}";
             Label(Rect("Entry progress",card.transform,78,38,cardWidth-90,24),status,13);
             if(maximum>1) ProgressionBar(card.transform,78,67,cardWidth-94,level>=maximum?1:entry.Experience/(float)Mathf.Max(1,entry.NextLevelExperience));
             progressionCards.Add((entry,card));
@@ -54,11 +61,11 @@ public sealed partial class ProgressionMenu
             string empty=progressionKind==ProgressionEntryKind.Spell?"No spells learned yet.":progressionKind==ProgressionEntryKind.Weapon?"No weapon records available yet.":"No gear records available yet.";
             Label(Rect("Empty collection",list,16,20,width-40,90),empty,18);
             Detail(labels[(int)progressionKind],empty+"\n\nSelect a different character or collection tab. Upgrade milestones will appear here when available.");
-        } else ShowEntry(entries.FirstOrDefault(e=>e.Name==progressionSelection)??entries[0]);
+        } else ShowEntry(entries.FirstOrDefault(e=>EntryKey(e)==progressionSelection)??entries[0]);
     }
     void RestoreProgressionSelection()
     {
-        var selected=progressionCards.Find(c=>c.entry.Name==progressionSelection);
+        var selected=progressionCards.Find(c=>EntryKey(c.entry)==progressionSelection);
         if(selected.button)events.SetSelectedGameObject(selected.button.gameObject);
     }
     void ProgressionBar(Transform parent,float x,float y,float width,float progress)
@@ -72,9 +79,10 @@ public sealed partial class ProgressionMenu
         if(color.HasValue)text.color=color.Value;
         float height=Mathf.Max(24,text.GetPreferredValues(value,width,0).y+6);text.rectTransform.sizeDelta=new Vector2(width,height);return y+height;
     }
+    static string EntryKey(MenuProgressionEntry entry)=>entry.EquipmentCopy?.InstanceId??entry.Name;
     void ShowEntry(MenuProgressionEntry entry)
     {
-        progressionSelection=entry.Name;
+        progressionSelection=EntryKey(entry);
         if(shownProgressionEntry==entry)return; // Hovering the same entry must not reset details scrolling.
         shownProgressionEntry=entry;
         foreach(var card in progressionCards)if(card.button)card.button.image.color=card.entry==entry?new Color(.16f,.36f,.44f):new Color(.08f,.17f,.25f);
@@ -89,6 +97,17 @@ public sealed partial class ProgressionMenu
             var image=art.gameObject.AddComponent<RawImage>();image.texture=entry.Image;image.raycastTarget=false;y+=150;
         }
         y=ProgressionText(content,"Entry description",string.IsNullOrWhiteSpace(entry.Description)?"No description available yet.":entry.Description,y,width,16)+12;
+        if(entry.Equipment){
+            var source=new GridUnit(Member.name,Vector2Int.zero);Member.Configure(source);
+            var current=Member.GetComponent<CharacterEquipment>()?.At(EquipmentSlot.Weapon);
+            if(entry.Equipment.Kind==EquipmentKind.Weapon){
+                source.Strength=Member.StatReplacingEquipment(CharacterStat.Strength,current,entry.Equipment);
+                source.Magic=Member.StatReplacingEquipment(CharacterStat.Magic,current,entry.Equipment);
+                y=DrawEquipmentAttacks(content,entry.Equipment,source,y,width,entry.EquipmentCopy);
+            }
+            y=ProgressionText(content,"Equipment progression pending","Material upgrades and the expanded ability browser are planned for later.",y+12,width,15);
+            content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(((RectTransform)content.parent).rect.height,y+12));return;
+        }
         int maximum=Mathf.Max(1,entry.MaximumLevel),level=Mathf.Clamp(entry.Level,1,maximum);
         bool mastered=level>=maximum;
         string progress=maximum==1?"Single level · No mastery levels":mastered?$"Mastered · Level {level} / {maximum}":$"Level {level} / {maximum}\nXP {Mathf.Max(0,entry.Experience)} / {Mathf.Max(1,entry.NextLevelExperience)}";

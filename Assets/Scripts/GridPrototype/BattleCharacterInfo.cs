@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Game.GridPrototype
 {
-    // Authored stats and prototype formula tuning; level growth and allocated points are applied; equipment modifiers remain future work.
+    // Authored stats and prototype formula tuning; level growth and allocated points are applied; equipped stat modifiers are applied.
     public sealed class BattleCharacterInfo : MonoBehaviour
     {
         public int EffectiveInitiative => Stat(CharacterStat.Initiative);
@@ -26,11 +26,17 @@ namespace Game.GridPrototype
         public void HealOutsideCombat(int amount)
         {
             if (amount <= 0) return;
-            int maximum = Mathf.Max(1, BaseHealth + Stat(CharacterStat.Vitality) * HealthPerVitality);
+            int maximum = EffectiveMaxHealth;
             storedHealth = (int)System.Math.Min(maximum, (long)(storedHealth < 0 ? maximum : storedHealth) + amount);
         }
         public int BaseStat(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : Initiative;
-        public int Stat(CharacterStat stat) => (int)System.Math.Min(int.MaxValue, (long)Mathf.Max(0, BaseStat(stat)) + Mathf.Max(0, AutomaticGrowth.Get(stat)) * (long)Mathf.Max(0, Level - 1) + AllocatedPoints.Get(stat));
+        public int Stat(CharacterStat stat) => StatReplacingEquipment(stat,null,null);
+        public int StatReplacingEquipment(CharacterStat stat, EquipmentDefinition previous, EquipmentDefinition next) => (int)System.Math.Max(0, System.Math.Min(int.MaxValue,
+            (long)Mathf.Max(0, BaseStat(stat)) + Mathf.Max(0, AutomaticGrowth.Get(stat)) * (long)Mathf.Max(0, Level - 1) + AllocatedPoints.Get(stat)
+            + (GetComponent<CharacterEquipment>()?.Bonus(stat) ?? 0) - (previous?.Bonuses?.Get(stat) ?? 0) + (next?.Bonuses?.Get(stat) ?? 0)));
+        public int EffectiveMaxHealth => (int)System.Math.Min(int.MaxValue, System.Math.Max(1, (long)BaseHealth + (long)Stat(CharacterStat.Vitality) * HealthPerVitality));
+        public void MaterializeVitals() { if(storedHealth<0)storedHealth=EffectiveMaxHealth; if(storedMagicPoints<0)storedMagicPoints=EffectiveMaxMagicPoints; }
+        public void ClampStoredVitals() { if(storedHealth>=0)storedHealth=Mathf.Clamp(storedHealth,0,EffectiveMaxHealth); if(storedMagicPoints>=0)storedMagicPoints=Mathf.Clamp(storedMagicPoints,0,EffectiveMaxMagicPoints); }
         public void GrantLevel(int level, int pointsPerLevel)
         {
             Level = Mathf.Max(1, Mathf.Max(Level, level));
@@ -75,7 +81,7 @@ namespace Game.GridPrototype
             unit.InitializeSkillPoints(StartingSkillPoints);
             unit.TurnSkillPointGain = Mathf.Max(0, SkillPointsPerTurn);
             unit.AttackSkillPointGain = Mathf.Max(0, SkillPointsPerBasicAttack);
-            unit.MaxHealth = Mathf.Max(1, BaseHealth + Stat(CharacterStat.Vitality) * HealthPerVitality);
+            unit.MaxHealth = EffectiveMaxHealth;
             unit.Health = unit.MaxHealth;
             unit.Strength = Stat(CharacterStat.Strength); unit.Magic = Stat(CharacterStat.Magic);
             unit.PhysicalDefense = Stat(CharacterStat.PhysicalDefense); unit.MagicalDefense = Stat(CharacterStat.MagicalDefense);

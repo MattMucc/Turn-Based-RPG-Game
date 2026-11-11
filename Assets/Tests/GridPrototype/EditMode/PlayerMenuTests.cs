@@ -12,6 +12,7 @@ using Object = UnityEngine.Object;
 public class PlayerMenuTests
 {
     readonly List<GameObject> owned = new();
+    readonly List<ScriptableObject> equipmentAssets = new();
     Type managerType, menuType;
     Component manager, menu;
     object previousManager;
@@ -45,7 +46,7 @@ public class PlayerMenuTests
     {
         if (menu) menuType.GetMethod("Close").Invoke(menu, null);
         for (int i = owned.Count - 1; i >= 0; i--) if (owned[i]) Object.DestroyImmediate(owned[i]);
-        owned.Clear(); Time.timeScale = previousTime;
+        owned.Clear(); foreach(var asset in equipmentAssets)if(asset)Object.DestroyImmediate(asset);equipmentAssets.Clear(); Time.timeScale = previousTime;
         managerType.GetField("<Instance>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic).SetValue(null, previousManager);
     }
     void Open() => menuType.GetMethod("Open").Invoke(menu, null);
@@ -103,6 +104,32 @@ public class PlayerMenuTests
             Assert.IsFalse(preview.Expired(114.99f));Assert.IsTrue(preview.Expired(115));preview.End();Assert.IsFalse(preview.Expired(120));
         });
     }
+    EquipmentDefinition EquipmentAsset(string id,EquipmentKind kind=EquipmentKind.Weapon,WeaponType type=WeaponType.Shortsword)
+    {
+        var item=ScriptableObject.CreateInstance<EquipmentDefinition>();equipmentAssets.Add(item);item.Id=id;item.DisplayName=id;item.Kind=kind;item.WeaponType=type;item.Bonuses.Strength=3;
+        if(kind==EquipmentKind.Weapon)item.Attacks.Add(new BattleActionOption{Name=id+" hit",Damage=12,Reach=2,Pattern=BattleTargetPattern.Sweep,Radius=1});return item;
+    }
+    [Test] public void EquipmentMenuConfirmsOwnershipAndShowsPatternsWithoutGrantingMastery()
+    {
+        var equipment=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);
+        var sword=EquipmentAsset("Test sword");var bow=EquipmentAsset("Test bow",EquipmentKind.Weapon,WeaponType.Bow);
+        equipment.Catalog.AddRange(new[]{sword,bow});equipment.Owned.Add(new OwnedEquipment{InstanceId="s",Definition=sword});equipment.Owned.Add(new OwnedEquipment{InstanceId="b",Definition=bow});
+        var profile=party[0].gameObject.AddComponent<CharacterEquipment>();profile.AllowedWeaponTypes=new[]{WeaponType.Shortsword};
+        var other=party[1].gameObject.AddComponent<CharacterEquipment>();other.AllowedWeaponTypes=new[]{WeaponType.Shortsword};
+        Open();Page("Equipment");Find("Test sword").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Test sword hit"));
+        Find("Cancel").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
+        Find("Test sword").onClick.Invoke();Find("Confirm equipment").onClick.Invoke();Assert.AreEqual(sword,profile.At(EquipmentSlot.Weapon));
+        object[] request={party[1],EquipmentSlot.Weapon,"s",null};Assert.IsFalse((bool)managerType.GetMethod("TryEquip").Invoke(manager,request));
+        request=new object[]{party[0],EquipmentSlot.Weapon,"b",null};Assert.IsFalse((bool)managerType.GetMethod("TryEquip").Invoke(manager,request));
+        Page("Progression");Find("Weapons").onClick.Invoke();Find("Test sword").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Test sword hit"));
+        Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Mastery experience"));
+        var battleType=Type.GetType("BattleManager, Assembly-CSharp",true);var singleton=battleType.GetField("<Instance>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic);var previous=singleton.GetValue(null);
+        try{var battle=Make("Equipment combat guard").AddComponent(battleType);singleton.SetValue(null,battle);battleType.GetField("<InBattle>k__BackingField",Hidden).SetValue(battle,true);
+            request=new object[]{party[0],EquipmentSlot.Weapon,null,null};Assert.IsFalse((bool)managerType.GetMethod("TryEquip").Invoke(manager,request));Assert.AreEqual(sword,profile.At(EquipmentSlot.Weapon));
+        }finally{singleton.SetValue(null,previous);}
+    }
     [Test] public void SaveSnapshotRoundTripRestoresRosterPoolsXpInventoryAndEmptyShortcuts()
     {
         var members=party.Concat(reserves).ToList();var ids=new List<SaveIdentity>();
@@ -117,12 +144,21 @@ public class PlayerMenuTests
         var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);inventory.Items[0].Quantity=1;
         var loadout=original.GetComponent<BattleActionLoadout>();loadout.BindInventory(inventory);loadout.InitializeFavorites();
         var attack=loadout.Options.First(o=>o.Category==BattleActionCategory.Attack);loadout.AssignFavorite(attack,-1);
+        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var sword=EquipmentAsset("Saved sword");gear.Catalog.Add(sword);gear.Owned.Add(new OwnedEquipment{InstanceId="saved-copy",Definition=sword,MasteryExperience=7});
+        var equipment=original.gameObject.AddComponent<CharacterEquipment>();equipment.AllowedWeaponTypes=new[]{WeaponType.Shortsword};managerType.GetMethod("BindEquipment").Invoke(manager,null);equipment.ApplySlot(EquipmentSlot.Weapon,"saved-copy");
+        loadout.AssignFavorite(loadout.Options.First(a=>a.Name=="Saved sword hit"),2);
+        attack=loadout.Options.First(a=>a.Effect==ActionEffect.Push);loadout.AssignFavorite(attack,-1);
         original.transform.position=new Vector3(40,2,30);
         var snapshotType=Type.GetType("GameSaveSnapshot, Assembly-CSharp",true);
         var data=(GameSaveData)snapshotType.GetMethod("Capture").Invoke(null,new object[]{manager,"Test checkpoint",ids});
         string testScene=data.Scene;data.Scene="Assets/Scenes/SampleScene.unity";data=SaveFileStore.Decode(SaveFileStore.Encode(data));data.Scene=testScene;int points=original.UnspentPoints;long xp=progression.ExperienceFor(original);int allocated=original.AllocatedPoints.Magic;
+        equipment.ApplySlot(EquipmentSlot.Weapon,null);gear.Owned.Clear();
         inventory.Items[0].Quantity=0;progression.AwardExperience(1000);original.transform.position=Vector3.zero;party.Reverse();usable.TryUse();destructible.TakeDamage(50);
         snapshotType.GetMethod("Apply").Invoke(null,new object[]{data,manager,ids});
+        Assert.AreEqual("saved-copy",equipment.InstanceAt(EquipmentSlot.Weapon));Assert.AreEqual(sword,equipment.At(EquipmentSlot.Weapon));Assert.AreEqual(1,gear.Owned.Count);Assert.AreEqual(7,gear.Owned[0].MasteryExperience);
+        Assert.AreEqual("Saved sword hit",loadout.Favorite(BattleActionCategory.Attack,2).Name);
+        var equipmentCopy=data.Characters.First(c=>c.Id==original.GetComponent<SaveIdentity>().Id);string previousSlot=equipmentCopy.EquipmentSlots[0];equipmentCopy.EquipmentSlots[0]="missing-copy";
+        Assert.Throws<TargetInvocationException>(()=>snapshotType.GetMethod("Validate").Invoke(null,new object[]{data,manager,ids}));Assert.AreEqual(sword,equipment.At(EquipmentSlot.Weapon));equipmentCopy.EquipmentSlots[0]=previousSlot;
         Assert.AreEqual(50,destructible.Health);Assert.IsTrue(crate.activeSelf);Assert.IsTrue(usable.Available);
         Assert.AreEqual(0,original.StoredHealth);Assert.AreEqual(7,original.StoredMagicPoints);Assert.AreEqual(points,original.UnspentPoints);Assert.AreEqual(allocated,original.AllocatedPoints.Magic);
         Assert.AreEqual(xp,progression.ExperienceFor(original));Assert.AreEqual(data.Characters[3].HalfRemainder,progression.HalfRemainderFor(members[3]));
@@ -338,7 +374,7 @@ public class PlayerMenuTests
         var other=new MenuProgressionEntry{Name="Second bow",Kind=ProgressionEntryKind.Weapon,Level=1,MaximumLevel=3};data.Progression.Add(other);
         Open();Page("Progression");Find("Weapons").onClick.Invoke();Find("Test bow").onClick.Invoke();
         var text=menu.GetComponentsInChildren<TMP_Text>().Select(t=>t.text).ToList();
-        Assert.IsTrue(text.Any(t=>t.Contains("Unlocked · Level 1")));
+        Assert.IsTrue(text.Any(t=>t.Contains("Unlocked · Level 1")),string.Join("\n",text));
         Assert.IsTrue(text.Any(t=>t.Contains("Next · Level 3")));
         Assert.IsTrue(text.Any(t=>t.Contains("Locked · Level 5")));
         var content=menu.GetComponentsInChildren<ScrollRect>().First(r=>r.name=="Progression details").content;

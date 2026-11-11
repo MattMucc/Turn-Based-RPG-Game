@@ -1,0 +1,155 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a7253fcbb373c74d858f57067b8ffdd, type: 3}
+  m_Name: Training Bow
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.EquipmentDefinition
+  Id: bow
+  DisplayName: Training Bow
+  Description: Prototype equipment for testing. Values and weapon access are provisional.
+  Image: {fileID: 0}
+  Kind: 0
+  WeaponType: 3
+  Bonuses:
+    Vitality: 0
+    Strength: 1
+    Magic: 0
+    PhysicalDefense: 0
+    MagicalDefense: 0
+    Initiative: 0
+  Attacks:
+  - Name: Shot
+    EquipmentActionId: 
+    FavoriteSlot: -1
+    Description: Prototype weapon attack.
+    Category: 0
+    SkillPointCost: 1
+    SkillPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 5
+    Radius: 0
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 10
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 1
+    StatScaling: 0.8
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Triple Shot
+    EquipmentActionId: 
+    FavoriteSlot: -1
+    Description: Prototype weapon attack.
+    Category: 0
+    SkillPointCost: 1
+    SkillPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 3
+    Reach: 5
+    Radius: 0
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 5
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 1
+    StatScaling: 0.4
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  MasteryExperiencePerAttack: 1
+  Mastery:
+  - RequiredExperience: 10
+    Name: Piercing Shot
+    Description: Unlock this additional weapon Attack.
+    Attacks:
+    - Name: Piercing Shot
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: Prototype weapon attack.
+      Category: 0
+      SkillPointCost: 1
+      SkillPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 2
+      Reach: 5
+      Radius: 0
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 12
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 1
+      StatScaling: 1
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    FinisherSkillPoints: 0
+  - RequiredExperience: 25
+    Name: Finisher
+    Description: Gain 1 additional SP when a weapon Attack defeats at least one hostile.
+      Once per action.
+    Attacks: []
+    FinisherSkillPoints: 1

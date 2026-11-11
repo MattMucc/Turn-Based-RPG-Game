@@ -28,7 +28,7 @@ namespace Game.GridPrototype
         {
             current = maximum = 0;
             if (!member || !UsableOutsideCombat(item) || !Items.Contains(item)) return 0;
-            int hpMax = Mathf.Max(1, member.BaseHealth + member.Stat(CharacterStat.Vitality) * member.HealthPerVitality);
+            int hpMax = member.EffectiveMaxHealth;
             int hp = member.StoredHealth < 0 ? hpMax : Mathf.Clamp(member.StoredHealth, 0, hpMax);
             bool health = item.Effect == ActionEffect.Heal;
             maximum = health ? hpMax : member.EffectiveMaxMagicPoints;

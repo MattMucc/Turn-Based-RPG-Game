@@ -274,6 +274,7 @@ GameObject:
   - component: {fileID: 4755640766620171417}
   - component: {fileID: 6714576581853998703}
   - component: {fileID: 8802730022444101226}
+  - component: {fileID: 2390512789562358164}
   m_Layer: 6
   m_Name: Prototype Balanced
   m_TagString: Player
@@ -495,3 +496,20 @@ MonoBehaviour:
   m_DefaultActionMap: World
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
+--- !u!114 &2390512789562358164
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7100641842900395914}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b86def6e7e9fa054a8c61771f33b6ad0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.CharacterEquipment
+  AllowedWeaponTypes: 0000000001000000
+  weapon: starter-weapon-0
+  armor: starter-armor-0
+  accessoryOne:
+  accessoryTwo:

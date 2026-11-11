@@ -154,6 +154,7 @@ GameObject:
   - component: {fileID: 4418546057224845090}
   - component: {fileID: 3003055958351131635}
   - component: {fileID: 9122369598481706316}
+  - component: {fileID: 5959324115514319916}
   m_Layer: 6
   m_Name: Prototype Sentinel
   m_TagString: Untagged
@@ -547,3 +548,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 952925571111150995}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5959324115514319916
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2713249943951413015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b86def6e7e9fa054a8c61771f33b6ad0, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.CharacterEquipment
+  AllowedWeaponTypes: 0100000000000000
+  weapon: starter-weapon-2
+  armor: starter-armor-2
+  accessoryOne:
+  accessoryTwo:

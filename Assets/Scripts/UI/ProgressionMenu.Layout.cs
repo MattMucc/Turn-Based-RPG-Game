@@ -53,7 +53,7 @@ public sealed partial class ProgressionMenu
         title=Label(Rect("Page title",shell,220,20,460,42),"PARTY",26);
         characterLabel=Label(Rect("Selected member",shell,770,24,300,40),"",18);
         Button(shell,"<",720,22,40,()=>Cycle(-1)); Button(shell,">",1100,22,40,()=>Cycle(1));
-        int i=0; foreach(Page value in Enum.GetValues(typeof(Page))) { if(value==Page.Checkpoint)continue; var captured=value; Button(shell,value==Page.SkillTree?"Skill Tree":value.ToString(),24,100+48*i++,170,()=>ShowPage(captured)); }
+        int i=0; foreach(Page value in Enum.GetValues(typeof(Page))) { if(value==Page.Checkpoint)continue; var captured=value; Button(shell,value==Page.SkillTree?"Skill Tree":value.ToString(),24,100+44*i++,170,()=>ShowPage(captured)); }
         Button(shell,"Return to world",24,552,170,Close);
         body=Rect("Page content",shell,220,88,510,510); detailRoot=Rect("Details",shell,750,88,426,510);
         footer=Label(Rect("Controls",shell,24,620,1150,30),"",13);

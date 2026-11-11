@@ -40,6 +40,22 @@ public class BattleActionTests
         objects.Clear(); Physics.SyncTransforms();
         foreach(var pair in savedPreferences){if(pair.Value.HasValue)PlayerPrefs.SetInt(pair.Key,pair.Value.Value);else PlayerPrefs.DeleteKey(pair.Key);}savedPreferences.Clear();PlayerPrefs.Save();
     }
+    [TestCase(100,false,1)]
+    [TestCase(0,false,0)]
+    [TestCase(100,true,0)]
+    public void ActualWeaponMultiHitAwardsOnceOnlyForLandedHostileHits(int chance,bool self,int expected)
+    {
+        var definition=ScriptableObject.CreateInstance<EquipmentDefinition>();
+        try{
+            definition.Id="mastery-test";definition.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=10});
+            definition.Attacks.Add(new BattleActionOption{Name="Practice volley",Damage=1,Pattern=BattleTargetPattern.Multiple,Reach=3,MaxTargets=3,HitChance=chance});
+            var copy=new OwnedEquipment{InstanceId="test-copy",Definition=definition};
+            var equipment=battle.Actor(0).gameObject.AddComponent<CharacterEquipment>();equipment.Bind(new PartyEquipment{Owned=new(){copy}});equipment.RestoreSlots(new[]{"test-copy",null,null,null});
+            var action=battle.Loadout.Options.Find(a=>a.Name=="Practice volley");Assert.IsTrue(battle.ChooseAction(action));
+            for(int i=0;i<3;i++)Assert.IsTrue(battle.ToggleTarget(cells[self?0:1]));
+            Assert.IsTrue(CompletePrepared());Assert.AreEqual(expected,copy.MasteryExperience);
+        }finally{Object.DestroyImmediate(definition);}
+    }
     [Test] public void CombatObjectUseChecksReachTurnAndActionThenInvokesOnceWithoutMovementCost()
     {
         var lever=Create("Test lever");lever.transform.position=battle.Grid.Point(new Vector2Int(3,2));
