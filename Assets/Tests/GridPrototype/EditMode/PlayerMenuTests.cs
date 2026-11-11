@@ -216,6 +216,38 @@ public class PlayerMenuTests
         Assert.IsFalse(scroll.GetComponentsInChildren<Transform>().Any(t=>t.name=="Mastery experience"));
         Find("Weapons").onClick.Invoke();Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No weapon records available yet."));
     }
+    [Test] public void SkillTreeShowsRequirementsAndScrollsToOffscreenNodesWithoutLearning()
+    {
+        var data=party[0].gameObject.AddComponent<CharacterMenuData>();
+        var root=new MenuSkillNode{Id="root",Name="Dash root",ActionName="Dash",Position=new Vector2(-300,-80)};
+        var child=new MenuSkillNode{Id="child",Name="Future Skill",RequiredLevel=5,TrainingPointCost=3,Position=new Vector2(1000,720),Prerequisites=new List<string>{"root"}};
+        data.SkillTree.Add(root);data.SkillTree.Add(child);
+        Open();Page("SkillTree");
+        var scroll=menu.GetComponentsInChildren<ScrollRect>().First(r=>r.name=="Skill tree");
+        Assert.IsTrue(scroll.horizontal);Assert.Greater(scroll.content.rect.width,scroll.viewport.rect.width);
+        var first=Find("Skill node root");var last=Find("Skill node child");
+        Assert.AreEqual(last,first.navigation.selectOnRight);Assert.AreEqual(first,last.navigation.selectOnLeft);
+        last.onClick.Invoke();Canvas.ForceUpdateCanvases();
+        var bounds=RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport,last.transform);
+        Assert.LessOrEqual(bounds.max.x,scroll.viewport.rect.xMax+.1f);Assert.GreaterOrEqual(bounds.min.y,scroll.viewport.rect.yMin-.1f);
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Dash root · Learned")&&t.text.Contains("Training Point cost: 3")&&t.text.Contains("Locked")));
+        menuType.GetMethod("Rebuild",Hidden).Invoke(menu,null);
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        Assert.AreEqual("Skill node child",events.currentSelectedGameObject.name);
+        Assert.IsFalse(party[0].GetComponent<BattleActionLoadout>().Options.Any(o=>o.Name=="Future Skill"));
+    }
+    [Test] public void SkillTreeDoesNotMistakeAttackOrPassiveForLearnedSkillAndHandlesMissingPrerequisites()
+    {
+        var data=party[0].gameObject.AddComponent<CharacterMenuData>();
+        data.SkillTree.Add(new MenuSkillNode{Id="attack",Name="Not a learned Skill",ActionName="Strike",Prerequisites=new List<string>{"missing"}});
+        data.SkillTree.Add(new MenuSkillNode{Id="passive",Name="Future passive",ActionName="Dash",Passive=true,Position=new Vector2(150,150)});
+        Open();Page("SkillTree");Find("Skill node attack").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Unavailable prerequisite")&&t.text.Contains("Locked")));
+        Find("Skill node passive").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Passive · Level and prerequisites met")&&t.text.Contains("Learning is not available yet")));
+        var frame=Find("Skill node passive").transform.Find("Node frame").GetComponent(Type.GetType("SkillTreeNodeGraphic, Assembly-CSharp",true));
+        Assert.IsTrue((bool)frame.GetType().GetField("Passive").GetValue(frame));
+    }
     [Test] public void ProgressionAndTreeRenderAuthoredRecordsWithoutGrantingSkills()
     {
         var data = party[0].gameObject.AddComponent<CharacterMenuData>();

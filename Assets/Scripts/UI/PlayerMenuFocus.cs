@@ -16,6 +16,8 @@ public sealed class PlayerMenuFocus : MonoBehaviour, IPointerEnterHandler, ISele
         var bounds = RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport, transform);
         float offset = bounds.min.y < scroll.viewport.rect.yMin ? scroll.viewport.rect.yMin - bounds.min.y
             : bounds.max.y > scroll.viewport.rect.yMax ? scroll.viewport.rect.yMax - bounds.max.y : 0;
-        scroll.content.anchoredPosition += Vector2.up * offset;
+        float horizontal = !scroll.horizontal ? 0 : bounds.min.x < scroll.viewport.rect.xMin ? scroll.viewport.rect.xMin - bounds.min.x
+            : bounds.max.x > scroll.viewport.rect.xMax ? scroll.viewport.rect.xMax - bounds.max.x : 0;
+        scroll.content.anchoredPosition += new Vector2(horizontal,scroll.vertical ? offset : 0);
     }
 }

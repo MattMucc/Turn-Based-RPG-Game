@@ -77,12 +77,12 @@ public sealed partial class ProgressionMenu : MonoBehaviour
             var selected = events.currentSelectedGameObject ? events.currentSelectedGameObject.GetComponent<Button>() : null;
             if (selected && selected.IsInteractable()) selected.onClick.Invoke();
         }
-        if (pad != null && Mathf.Abs(pad.rightStick.y.ReadValue()) > .2f) ScrollUnderPointer(pad.rightStick.y.ReadValue());
+        if (pad != null && pad.rightStick.ReadValue().sqrMagnitude > .04f) ScrollUnderPointer(pad.rightStick.ReadValue());
         footer.text = pad != null && Manager.Input && Manager.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad
             ? ControllerGlyphs.Adapt("D-pad / left stick: navigate    A: select    controller B: back    LB / RB: character    Right stick: scroll    Menu: close")
             : "Arrow keys: navigate    Enter: select    Backspace / Esc: back    [ / ]: character    Tab: close";
     }
-    void ScrollUnderPointer(float direction)
+    void ScrollUnderPointer(Vector2 direction)
     {
         ScrollRect scroll = null;
         if (Mouse.current != null)
@@ -91,8 +91,10 @@ public sealed partial class ProgressionMenu : MonoBehaviour
             foreach (var hit in hits) { scroll = hit.gameObject.GetComponentInParent<ScrollRect>(); if (scroll) break; }
         }
         if (!scroll && events.currentSelectedGameObject) scroll = events.currentSelectedGameObject.GetComponentInParent<ScrollRect>();
-        if (scroll && scroll.content.rect.height > scroll.viewport.rect.height)
-            scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + direction * Time.unscaledDeltaTime * 600 / (scroll.content.rect.height - scroll.viewport.rect.height));
+        if (scroll && scroll.vertical && scroll.content.rect.height > scroll.viewport.rect.height)
+            scroll.verticalNormalizedPosition = Mathf.Clamp01(scroll.verticalNormalizedPosition + direction.y * Time.unscaledDeltaTime * 600 / (scroll.content.rect.height - scroll.viewport.rect.height));
+        if (scroll && scroll.horizontal && scroll.content.rect.width > scroll.viewport.rect.width)
+            scroll.horizontalNormalizedPosition = Mathf.Clamp01(scroll.horizontalNormalizedPosition + direction.x * Time.unscaledDeltaTime * 600 / (scroll.content.rect.width - scroll.viewport.rect.width));
     }
     public void Open()
     {
@@ -116,8 +118,8 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         Cursor.visible = savedCursor; Cursor.lockState = savedLock;
     }
     public void Back() { if (inventoryModal) { InventoryBack(); return; } if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
-    void Cycle(int direction) { if (inventoryModal) return; int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; progressionSelection=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
-    public void ShowPage(Page value) { if (!open) return; CloseInventoryModal(); HideItemTooltip(); page = value; progressionSelection=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
+    void Cycle(int direction) { if (inventoryModal) return; int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
+    public void ShowPage(Page value) { if (!open) return; CloseInventoryModal(); HideItemTooltip(); page = value; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
     void Clear(Transform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--) { var child = parent.GetChild(i).gameObject; child.SetActive(false); if (Application.isPlaying) Destroy(child); else DestroyImmediate(child); }
@@ -129,12 +131,13 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         title.text = page == Page.SkillTree ? "SKILL TREE" : page.ToString().ToUpperInvariant();
         characterLabel.text = DisplayName(Member); BuildDetails();
         switch (page) { case Page.Party: Party(); break; case Page.Attributes: Attributes(); break; case Page.Shortcuts: Shortcuts(); break; case Page.Progression: Progression(); break; case Page.SkillTree: SkillTree(); break; case Page.Inventory: Inventory(); break; case Page.Settings: Settings(); break; }
-        SelectFirst();
+        if(page!=Page.SkillTree || skillCards.Count==0) SelectFirst();
         if(page==Page.Party) {
             var selected=buttons.Find(b=>b.name==DisplayName(Member));
             if(selected)events.SetSelectedGameObject(selected.gameObject);
         }
         if(page==Page.Progression) RestoreProgressionSelection();
+        if(page==Page.SkillTree) RestoreSkillSelection();
         if(page==Page.Shortcuts) {
             var target=buttons.Find(b=>b.name==shortcutSelection);
             if(target && target.IsInteractable())events.SetSelectedGameObject(target.gameObject);

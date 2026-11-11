@@ -122,30 +122,6 @@ public sealed partial class ProgressionMenu
         var value=Member.GetComponent<BattleActionLoadout>();
         if(value){value.BindInventory(Manager.Inventory);value.InitializeFavorites();}return value;
     }
-    void SkillTree()
-    {
-        Label(Rect("Tree title",body,0,0,500,48),DisplayName(Member)+" · SKILLS",18);
-        var data=Member.GetComponent<CharacterMenuData>(); var loadout=Loadout();
-        if(!data||data.SkillTree.Count==0){Detail("Character Skill Tree","This character's Skill Tree has not been defined yet.\n\nUnique Skills will use Training Points, separately from the SP spent in combat.");return;}
-        var tree=List(body,"Skill tree",0,58,500,444,Mathf.Max(444,data.SkillTree.Max(n=>n.Position.y)+90));
-        foreach(var node in data.SkillTree)
-        {
-            foreach(var prerequisite in node.Prerequisites)
-            {
-                var parent=data.SkillTree.Find(n=>n.Id==prerequisite); if(parent==null)continue;
-                Vector2 from=new Vector2(Mathf.Clamp(parent.Position.x,28,450),parent.Position.y+28),to=new Vector2Int((int)Mathf.Clamp(node.Position.x,28,450),(int)node.Position.y+28);
-                var line=Rect("Connection",tree,from.x,from.y,(to-from).magnitude,2);line.pivot=new Vector2(0,.5f);line.localRotation=Quaternion.Euler(0,0,-Mathf.Atan2(to.y-from.y,to.x-from.x)*Mathf.Rad2Deg);line.gameObject.AddComponent<Image>().color=new Color(.5f,.43f,.25f);
-            }
-        }
-        foreach(var node in data.SkillTree)
-        {
-            var n=node;bool learned=loadout&&loadout.Options.Exists(o=>o.Name==n.ActionName&&!string.IsNullOrEmpty(n.ActionName));
-            Action preview=()=>Detail(n.Name,n.Description+$"\n\nRequired level: {n.RequiredLevel}\nTraining Points: {n.TrainingPointCost}\n"+(learned?"Learned":"Not learned"),n.Icon);
-            var b=Button(tree,n.Passive?"◇":"●",Mathf.Clamp(n.Position.x,28,450)-26,n.Position.y,52,preview,preview,52);
-            b.image.color=learned?new Color(.48f,.38f,.13f):new Color(.13f,.19f,.24f);
-        }
-        Detail("Skill Tree","Select a node to inspect its requirements and effects.\n\nLearning will become available with the character kits.");
-    }
     void Settings()
     {
         Label(Rect("Settings title",body,0,0,500,48),"AUDIO & CONTROLS",20);
