@@ -72,7 +72,7 @@ public class EnemyMovement : MonoBehaviour
     public void Initialize(BattleGroup group)
     {
         battleGroup = group;
-        targetPos = battleGroup.GetRandomPositionInBounds();
+        targetPos = battleGroup.GetRoamingPosition(transform.position);
         lastPos = transform.position;
     }
 
@@ -110,7 +110,7 @@ public class EnemyMovement : MonoBehaviour
         if (stuckTimer >= stuckCheckInterval)
         {
             if (Vector3.Distance(transform.position, lastPos) < stuckMoveThreshold)
-                targetPos = battleGroup.GetRandomPositionInBounds();
+                targetPos = battleGroup.GetRoamingPosition(transform.position);
 
             lastPos = transform.position;
             stuckTimer = 0f;
@@ -179,7 +179,7 @@ public class EnemyMovement : MonoBehaviour
     public void StartRoaming()
     {
         currentState = EnemyState.Roaming;
-        targetPos = battleGroup.GetRandomPositionInBounds();
+        targetPos = battleGroup.GetRoamingPosition(transform.position);
     }
 
     public void StartChasing()

@@ -4,11 +4,12 @@ using UnityEngine;
 [System.Serializable]
 public struct EnemySpawnEntry
 {
+    [HideInInspector] public string SaveKey;
     public GameObject enemyPrefab;
     public int spawnAmount;
 }
 
-public class BattleGroup : MonoBehaviour
+public partial class BattleGroup : MonoBehaviour
 {
     [Header("Prototype victory reward")]
     [SerializeField, Min(0)] private int victoryExperience = 50;
@@ -53,82 +54,6 @@ public class BattleGroup : MonoBehaviour
         if (!spawnArea) spawnArea = GetComponent<BoxCollider>();
     }
 
-    public bool Defeated => experienceClaimed;
-    public Game.GridPrototype.SavedGroup CaptureSave(string id)
-    {var saved=new Game.GridPrototype.SavedGroup{Id=id,Defeated=experienceClaimed};foreach(var enemy in spawnedEnemies)if(enemy){saved.Positions.Add(enemy.transform.position);saved.Rotations.Add(enemy.transform.rotation);}return saved;}
-    public void RestoreSave(Game.GridPrototype.SavedGroup saved)
-    {
-        foreach(var enemy in spawnedEnemies)if(enemy){enemy.SetActive(false);Destroy(enemy);}spawnedEnemies.Clear();enemyMovements.Clear();
-        experienceClaimed=saved.Defeated;battleTriggered=saved.Defeated;retryAfter=Time.time+5;
-        if(saved.Defeated)return;
-        SpawnEnemies();
-        for(int i=0;i<spawnedEnemies.Count&&i<saved.Positions.Count;i++){
-            var enemy=spawnedEnemies[i];var cc=enemy.GetComponent<CharacterController>();bool enabled=cc&&cc.enabled;if(cc)cc.enabled=false;
-            enemy.transform.SetPositionAndRotation(saved.Positions[i],saved.Rotations[i]);if(cc)cc.enabled=enabled;
-        }
-    }
-    private void Start()
-    {
-        SpawnEnemies();
-    }
-
-    private void SpawnEnemies()
-    {
-        foreach (EnemySpawnEntry entry in enemySpawnEntries)
-        {
-            if (!entry.enemyPrefab)
-            {
-                Debug.LogWarning($"[BattleGroup] An enemy entry has no prefab assigned. Skipping...");
-                continue;
-            }
-
-            for (int i = 0; i < entry.spawnAmount; i++)
-            {
-                Vector3 spawnPos = GetRandomPositionInBounds();
-                GameObject enemy = Instantiate(entry.enemyPrefab, spawnPos, Quaternion.identity);
-
-                // Initialize the enemy trigger
-                EnemyTrigger trigger = enemy.GetComponent<EnemyTrigger>();
-                if (trigger != null)
-                    trigger.Initialize(this);
-                else
-                    Debug.LogWarning($"[BattleGroup] {entry.enemyPrefab.name} has no EnemyTrigger attached!");
-
-                // Initialize the enemy movement
-                EnemyMovement movement = enemy.GetComponent<EnemyMovement>();
-                if (movement)
-                {
-                    movement.Initialize(this);
-                    enemyMovements.Add(movement);
-                }
-                else
-                    Debug.LogWarning($"[BattleGroup] {entry.enemyPrefab.name} has no EnemyMovement attached!");
-
-                spawnedEnemies.Add(enemy);
-            }
-        }
-
-        Debug.Log($"[BattleGroup] Spawned {spawnedEnemies.Count} enemies!");
-    }
-
-    public Vector3 GetRandomPositionInBounds()
-    {
-        Bounds bounds = spawnArea.bounds;
-        for (int attempt = 0; attempt < 10; attempt++)
-        {
-            float x = Random.Range(bounds.min.x, bounds.max.x);
-            float z = Random.Range(bounds.min.z, bounds.max.z);
-
-            // Cast a ray downward from above the bounds to find the ground surface
-            Vector3 origin = new Vector3(x, bounds.max.y + 1f, z);
-            if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, bounds.size.y + 2f, groundLayer, QueryTriggerInteraction.Ignore))
-                return hit.point + new Vector3(0f, 1f, 0f);
-        }
-
-        Debug.LogWarning($"[BattleGroup] Could not find a valid surface position. Using bounds center...");
-        return bounds.center;
-    }
-
     public bool IsPlayerInBounds(Vector3 position)
     {
         return spawnArea.bounds.Contains(position);
@@ -153,8 +78,9 @@ public class BattleGroup : MonoBehaviour
         battleTriggered = victory;
         if (victory)
         {
+            experienceClaimed=true;
             foreach (var enemy in spawnedEnemies) if (enemy) Destroy(enemy);
-            spawnedEnemies.Clear(); enemyMovements.Clear();
+            spawnedEnemies.Clear(); enemyMovements.Clear(); spawnedKeys.Clear();
         }
         else foreach (var movement in enemyMovements) if (movement) movement.StartRoaming();
     }

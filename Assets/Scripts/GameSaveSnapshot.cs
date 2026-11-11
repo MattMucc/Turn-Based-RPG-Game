@@ -57,6 +57,7 @@ public static class GameSaveSnapshot
         if(data.World.Select(w=>w.Id).Distinct().Count()!=data.World.Count||!roster.All(id=>data.World.Any(w=>w.Id==id)))throw new InvalidDataException("Incomplete world data.");
         foreach(var world in data.World)if(!ids.ContainsKey(world.Id)||!Finite(world.Position)||!Finite(world.Scale)||!Finite(new Vector3(world.Rotation.x,world.Rotation.y,world.Rotation.z))||float.IsNaN(world.Rotation.w)||float.IsInfinity(world.Rotation.w))throw new InvalidDataException("Saved objects are missing or invalid.");
         foreach(var group in data.Groups)if(!ids.ContainsKey(group.Id)||!ids[group.Id].GetComponent<BattleGroup>()||group.Positions==null||group.Rotations==null||group.Positions.Count!=group.Rotations.Count||group.Positions.Any(p=>!Finite(p)))throw new InvalidDataException("Invalid encounter data.");
+        foreach(var group in data.Groups)ids[group.Id].GetComponent<BattleGroup>().ValidateSavedComposition(group);
     }
     static bool Finite(Vector3 v)=>!float.IsNaN(v.x)&&!float.IsNaN(v.y)&&!float.IsNaN(v.z)&&!float.IsInfinity(v.x)&&!float.IsInfinity(v.y)&&!float.IsInfinity(v.z);
     static int Depth(Transform t){int depth=0;while(t.parent){depth++;t=t.parent;}return depth;}

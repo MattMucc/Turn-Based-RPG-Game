@@ -10,12 +10,26 @@ public sealed class SaveGameService : MonoBehaviour
     public bool Busy {get;private set;}
     public string Notice {get;private set;}="";
     public event Action Changed;
-    float noticeUntil,checkpointCooldown;
+    float noticeUntil;
     SaveFileStore store;
     public SaveFileStore Store => store??(store=new SaveFileStore(Path.Combine(Application.persistentDataPath,"Saves")));
     public bool CanOperate => !Busy && GameManager.Instance && GameManager.Instance.PossessedCharacter && !GameManager.Instance.IsSwitchingCharacter && !(BattleManager.Instance&&BattleManager.Instance.InBattle);
     public void SaveManual(int slot,bool overwrite){if(slot<0||slot>2)return;BeginSave(slot,overwrite,null);}
-    public void Checkpoint(string label){if(Time.unscaledTime<checkpointCooldown||!CanOperate||GameManager.Instance.ProgressionMenu.IsOpen)return;checkpointCooldown=Time.unscaledTime+3;BeginSave(3,true,label);}
+    public void Rest(SaveCheckpoint checkpoint)
+    {
+        if(!CanOperate||!checkpoint||!checkpoint.isActiveAndEnabled||!checkpoint.InRange(GameManager.Instance.PossessedCharacter.transform)){Report("Cannot rest here right now.");return;}
+        StartCoroutine(RestAndSave(checkpoint));
+    }
+    IEnumerator RestAndSave(SaveCheckpoint checkpoint)
+    {
+        Busy=true;Notice="Resting...";Changed?.Invoke();yield return null;
+        string failure=null;GameSaveData before=null;
+        try{before=GameSaveSnapshot.Capture(GameManager.Instance,null);if(CheckpointRest.TryApply(GameManager.Instance,checkpoint,out failure))failure=null;}
+        catch(Exception e){failure=e.Message;if(before!=null)try{GameSaveSnapshot.Apply(before,GameManager.Instance);}catch(Exception restoreError){Debug.LogException(restoreError);}}
+        if(failure!=null){Busy=false;Report("Rest failed: "+failure);yield break;}
+        // Recovery and the chosen enemy compositions are now part of the autosave snapshot.
+        yield return Write(3,true,checkpoint.DisplayName);
+    }
     void BeginSave(int slot,bool overwrite,string checkpoint){if(!CanOperate){Report("Cannot save during battle or a character transition.");return;}StartCoroutine(Write(slot,overwrite,checkpoint));}
     IEnumerator Write(int slot,bool overwrite,string checkpoint)
     {
@@ -38,7 +52,7 @@ public sealed class SaveGameService : MonoBehaviour
             try{rollback=GameSaveSnapshot.Capture(manager,null);GameSaveSnapshot.Apply(data,manager);manager.ProgressionMenu.Close();}
             catch(Exception e){error=e;if(rollback!=null)try{GameSaveSnapshot.Apply(rollback,manager);}catch(Exception rollbackError){Debug.LogException(rollbackError);}}
         }
-        checkpointCooldown=Time.unscaledTime+3;yield return new WaitForSecondsRealtime(.4f);Busy=false;
+        yield return new WaitForSecondsRealtime(.4f);Busy=false;
         Report(error==null?(recovered?"Loaded backup save":"Game loaded"):"Load failed: "+error.Message);
     }
     public void RecoverDefeat()

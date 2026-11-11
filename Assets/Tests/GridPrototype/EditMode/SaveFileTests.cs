@@ -8,6 +8,12 @@ public class SaveFileTests
     [SetUp]public void Setup(){directory=Path.Combine(Path.GetTempPath(),"rpg-save-tests-"+Guid.NewGuid().ToString("N"));store=new SaveFileStore(directory);}
     [TearDown]public void Cleanup(){if(Directory.Exists(directory)){Assert.IsTrue(Path.GetFullPath(directory).StartsWith(Path.GetFullPath(Path.GetTempPath()),StringComparison.OrdinalIgnoreCase));Directory.Delete(directory,true);}}
     GameSaveData Data(string name)=>new GameSaveData{Scene="Assets/Scenes/SampleScene.unity",CaptainName=name,Inventory=new PartyInventory(),Characters=new System.Collections.Generic.List<SavedCharacter>{new SavedCharacter{Id="test"}}};
+    [Test]public void WeightedFormationsIgnoreDisabledEntriesAndKeepBoundarySelectionStable()
+    {
+        Assert.AreEqual(1,EncounterWeights.Pick(new[]{0,1,3},0));Assert.AreEqual(2,EncounterWeights.Pick(new[]{0,1,3},.25));Assert.AreEqual(2,EncounterWeights.Pick(new[]{0,1,3},1));Assert.AreEqual(-1,EncounterWeights.Pick(new[]{0,-1},.5));
+        var data=Data("composition");data.Groups.Add(new SavedGroup{Id="group",HasComposition=true,SpawnKeys=new System.Collections.Generic.List<string>{"wolf","wolf","support"}});
+        CollectionAssert.AreEqual(data.Groups[0].SpawnKeys,SaveFileStore.Decode(SaveFileStore.Encode(data)).Groups[0].SpawnKeys);
+    }
     [Test]public void FourSlotsAreIndependentAndManualOverwriteRequiresConfirmation()
     {
         for(int i=0;i<4;i++)store.Write(i,SaveFileStore.Encode(Data("slot"+i)),false);

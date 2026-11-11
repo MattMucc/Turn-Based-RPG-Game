@@ -151,6 +151,51 @@ public class PlayerMenuTests
             battleType.GetField("<InBattle>k__BackingField",Hidden).SetValue(battle,false);Assert.IsTrue((bool)service.GetType().GetProperty("CanOperate").GetValue(service));
         }finally{singleton.SetValue(null,previous);if(System.IO.Directory.Exists(directory)){Assert.IsTrue(System.IO.Path.GetFullPath(directory).StartsWith(System.IO.Path.GetFullPath(System.IO.Path.GetTempPath()),StringComparison.OrdinalIgnoreCase));System.IO.Directory.Delete(directory,true);}}
     }
+    [Test] public void CheckpointMenuRequiresInteractionAndRestConfirmationWhileSaveDoesNotHeal()
+    {
+        var movementType=Type.GetType("PlayerMovement, Assembly-CSharp",true);managerType.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,party[0].GetComponent(movementType));
+        var unit=new GridUnit("KO",Vector2Int.zero);party[0].Configure(unit);unit.Health=0;party[0].StoreHealth(unit);
+        var checkpoint=Make("Checkpoint UI test").AddComponent(Type.GetType("SaveCheckpoint, Assembly-CSharp",true));
+        menuType.GetMethod("OpenCheckpoint").Invoke(menu,new object[]{checkpoint});Find("Rest").onClick.Invoke();Assert.IsNotNull(Find("Confirm rest"));
+        Assert.AreEqual(0,party[0].StoredHealth);Find("Cancel rest").onClick.Invoke();Find("Save").onClick.Invoke();
+        Assert.IsNotNull(Find("Save slot 3"));Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name.StartsWith("Load slot")));Assert.AreEqual(0,party[0].StoredHealth);
+        menuType.GetMethod("Back").Invoke(menu,null);Find("Leave").onClick.Invoke();Assert.IsFalse((bool)menuType.GetProperty("IsOpen").GetValue(menu));
+    }
+    [Test] public void RestRecoversReservesResetsOnlyRoamingAndRestoresExactSavedComposition()
+    {
+        var randomState=UnityEngine.Random.state;
+        try{
+            var origin=new Vector3(30000,0,30000);foreach(var member in party.Concat(reserves)){
+                member.transform.position=origin;var unit=new GridUnit("KO",Vector2Int.zero);member.Configure(unit);unit.Health=0;unit.InitializeMagicPoints(unit.MaxMagicPoints,0);member.StoreHealth(unit);member.StoreMagicPoints(unit);
+            }
+            var movementType=Type.GetType("PlayerMovement, Assembly-CSharp",true);managerType.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,party[0].GetComponent(movementType));
+            var checkpoint=Make("Rest checkpoint").AddComponent(Type.GetType("SaveCheckpoint, Assembly-CSharp",true));checkpoint.transform.position=origin;
+            var floor=Make("Rest test ground");floor.transform.position=origin+new Vector3(15,-.5f,0);var floorCollider=floor.AddComponent<BoxCollider>();floorCollider.size=new Vector3(40,1,30);
+            var prefab=Make("Test enemy definition");prefab.transform.position=origin+Vector3.up*100;
+            var groupType=Type.GetType("BattleGroup, Assembly-CSharp",true);var formationType=Type.GetType("RoamingFormation, Assembly-CSharp",true);var entryType=Type.GetType("EnemySpawnEntry, Assembly-CSharp",true);
+            var groups=Array.CreateInstance(groupType,3);
+            for(int i=0;i<3;i++){
+                var go=Make("Rest group "+i);go.transform.position=origin+new Vector3(16,1,0);var bounds=go.AddComponent<BoxCollider>();bounds.isTrigger=true;bounds.size=new Vector3(18,4,18);
+                var group=go.AddComponent(groupType);groups.SetValue(group,i);groupType.GetField("Kind").SetValue(group,(EncounterKind)i);groupType.GetField("experienceClaimed",Hidden).SetValue(group,true);
+                var pool=(System.Collections.IList)groupType.GetField("RoamingPool").GetValue(group);
+                for(int count=2;count<=3;count++){
+                    var formation=Activator.CreateInstance(formationType);var entry=Activator.CreateInstance(entryType);entryType.GetField("SaveKey").SetValue(entry,"variant-"+count);entryType.GetField("enemyPrefab").SetValue(entry,prefab);entryType.GetField("spawnAmount").SetValue(entry,count);
+                    var entries=Array.CreateInstance(entryType,1);entries.SetValue(entry,0);formationType.GetField("Enemies").SetValue(formation,entries);pool.Add(formation);
+                }
+            }
+            Physics.SyncTransforms();var rest=Type.GetType("CheckpointRest, Assembly-CSharp",true).GetMethod("TryApply");var args=new object[]{manager,checkpoint,null,groups};
+            Assert.IsTrue((bool)rest.Invoke(null,args),args[2] as string);
+            foreach(var member in party.Concat(reserves)){Assert.Greater(member.StoredHealth,0);Assert.AreEqual(member.EffectiveMaxMagicPoints,member.StoredMagicPoints);}
+            Assert.IsFalse((bool)groupType.GetProperty("Defeated").GetValue(groups.GetValue(0)));Assert.IsTrue((bool)groupType.GetProperty("Defeated").GetValue(groups.GetValue(1)));Assert.IsTrue((bool)groupType.GetProperty("Defeated").GetValue(groups.GetValue(2)));
+            var roaming=groups.GetValue(0);var saved=(SavedGroup)groupType.GetMethod("CaptureSave").Invoke(roaming,new object[]{"test-group"});Assert.That(saved.SpawnKeys.Count,Is.InRange(2,3));
+            foreach(var position in saved.Positions)Assert.Greater(Vector3.Distance(position,origin),5);
+            foreach(var formation in (System.Collections.IList)groupType.GetField("RoamingPool").GetValue(roaming))formationType.GetField("Weight").SetValue(formation,0);
+            groupType.GetMethod("RestoreSave").Invoke(roaming,new object[]{saved});var restored=(SavedGroup)groupType.GetMethod("CaptureSave").Invoke(roaming,new object[]{"test-group"});CollectionAssert.AreEqual(saved.SpawnKeys,restored.SpawnKeys);CollectionAssert.AreEqual(saved.Positions,restored.Positions);
+            Assert.Greater((int)groupType.GetMethod("ClaimVictoryExperience").Invoke(roaming,null),0);Assert.AreEqual(0,(int)groupType.GetMethod("ClaimVictoryExperience").Invoke(roaming,null));
+            // Invalid pools fail before recovery or resetting any encounter.
+            var ko=new GridUnit("KO",Vector2Int.zero){Health=0};party[0].StoreHealth(ko);Assert.IsFalse((bool)rest.Invoke(null,args));Assert.AreEqual(0,party[0].StoredHealth);
+        }finally{UnityEngine.Random.state=randomState;}
+    }
     [Test] public void InventoryContextExaminesThenPreviewsReservePotionAndCancelsWithoutConsumption()
     {
         var unit=new GridUnit("test",Vector2Int.zero);reserves[0].Configure(unit);unit.Health=0;reserves[0].StoreHealth(unit);

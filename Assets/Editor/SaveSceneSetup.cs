@@ -14,6 +14,7 @@ public static class SaveSceneSetup
         var scene=SceneManager.GetActiveScene();var used=new HashSet<string>();
         foreach(var root in scene.GetRootGameObjects())foreach(var component in root.GetComponentsInChildren<MonoBehaviour>(true)){
             if(component is BattleCharacterInfo||component is BattleGroup||component is BattleDestructible||component is BattleUsable||component is SaveCheckpoint)Ensure(component.gameObject);
+            var group=component as BattleGroup;if(group){group.SendMessage("OnValidate",SendMessageOptions.DontRequireReceiver);EditorUtility.SetDirty(group);}
             var usable=component as BattleUsable;if(usable)for(int i=0;i<usable.OnUse.GetPersistentEventCount();i++){
                 var target=usable.OnUse.GetPersistentTarget(i);var go=target as GameObject;var behaviour=target as Component;if(behaviour)go=behaviour.gameObject;
                 if(go&&go.scene==scene)Ensure(go);

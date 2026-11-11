@@ -26,5 +26,5 @@ namespace Game.GridPrototype
     [Serializable] public sealed class SavedFavorite {public string Name,ItemId;public BattleActionCategory Category;public int Slot;}
     [Serializable] public sealed class SavedMastery {public string Name;public ProgressionEntryKind Kind;public int Level,Experience;}
     [Serializable] public sealed class SavedWorldObject {public string Id;public Vector3 Position;public Quaternion Rotation;public Vector3 Scale;public bool Active,Used;public int Health=-1;}
-    [Serializable] public sealed class SavedGroup {public string Id;public bool Defeated;public List<Vector3> Positions=new();public List<Quaternion> Rotations=new();}
+    [Serializable] public sealed class SavedGroup {public string Id;public bool Defeated,HasComposition;public List<string> SpawnKeys=new();public List<Vector3> Positions=new();public List<Quaternion> Rotations=new();}
 }
