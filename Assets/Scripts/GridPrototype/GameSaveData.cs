@@ -11,7 +11,8 @@ namespace Game.GridPrototype
         public string Controlled;
         public List<string> Active=new(), Reserve=new();
         public PartyInventory Inventory;
-        public bool HasEquipment, HasMaterialUpgrades;
+        public bool HasEquipment, HasMaterialUpgrades, HasCoins;
+        public int Coins;
         public List<MaterialStack> Materials=new();
         public List<SavedEquipment> Equipment = new();
         public List<SavedCharacter> Characters=new();

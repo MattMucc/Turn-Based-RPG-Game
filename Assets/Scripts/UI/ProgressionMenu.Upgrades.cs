@@ -1,10 +1,17 @@
-using System;
+﻿using System;
 using System.Linq;
 using Game.GridPrototype;
 using UnityEngine;
 
 public sealed partial class ProgressionMenu
 {
+    Blacksmith blacksmith;
+    public bool BlacksmithServiceAvailable => open&&page==Page.Upgrades&&blacksmith&&blacksmith.CanServe(Manager);
+    public void OpenBlacksmith(Blacksmith smith)
+    {
+        if(!smith||!smith.CanInteract)return;
+        Open();if(!open)return;ShowPage(Page.Upgrades);blacksmith=smith;upgradePending=false;Rebuild();
+    }
     string upgradeSelection,upgradeNotice,upgradeQuote;
     bool upgradePending;
     int upgradeExpectedLevel;
@@ -18,9 +25,9 @@ public sealed partial class ProgressionMenu
     void UpgradesPage()
     {
         upgradeCards.Clear();Manager.BindEquipment();float width=body.rect.width;
-        var copies=Manager.Equipment.Owned.Where(e=>e!=null&&e.Definition&&e.Definition.Kind!=EquipmentKind.Accessory).ToList();
+        var copies=Manager.Equipment.Owned.Where(e=>e!=null&&e.Definition).ToList();
         if(!copies.Any(e=>e.InstanceId==upgradeSelection))upgradeSelection=copies.FirstOrDefault()?.InstanceId;
-        Label(Rect("Upgrade heading",body,0,0,width,40),"WEAPONS AND ARMOR",19);
+        Label(Rect("Upgrade heading",body,0,0,width,40),BlacksmithServiceAvailable?blacksmith.DisplayName+" · "+Manager.Equipment.Coins+" coins":"UPGRADE RECIPES · Visit a blacksmith",19);
         var list=List(body,"Upgrade copies",0,48,width,Mathf.Max(100,body.rect.height-180),copies.Count*58);
         for(int i=0;i<copies.Count;i++){
             var copy=copies[i];var owner=Manager.EquipmentOwner(copy.InstanceId);
@@ -34,23 +41,27 @@ public sealed partial class ProgressionMenu
             bool available=EquipmentUpgrades.Requirements(Manager.Equipment,selected,selected.UpgradeLevel,out _,out var reason);
             Button(body,upgradePending?"Confirm upgrade":"Review upgrade",0,body.rect.height-112,width-120,()=>{
                 if(!open||InBattle)return;
+                if(!BlacksmithServiceAvailable){upgradeNotice="The blacksmith is no longer available.";upgradePending=false;Rebuild();return;}
+                if(!EquipmentUpgrades.Requirements(Manager.Equipment,selected,selected.UpgradeLevel,out _,out upgradeNotice)){upgradePending=false;Rebuild();return;}
                 if(!upgradePending){upgradeExpectedLevel=selected.UpgradeLevel;upgradeQuote=JsonUtility.ToJson(selected.Definition.Upgrades[upgradeExpectedLevel]);upgradePending=true;Rebuild();return;}
                 if(selected.UpgradeLevel!=upgradeExpectedLevel||upgradeExpectedLevel>=selected.Definition.Upgrades.Count||JsonUtility.ToJson(selected.Definition.Upgrades[upgradeExpectedLevel])!=upgradeQuote)upgradeNotice="Recipe changed. Review the upgrade again.";
                 else if(Manager.TryUpgradeEquipment(selected.InstanceId,upgradeExpectedLevel,out upgradeNotice))upgradeNotice=$"Upgraded {selected.Definition.DisplayName} to +{selected.UpgradeLevel}.";
                 upgradePending=false;Rebuild();
-            }).interactable=available;
+            }).interactable=available&&BlacksmithServiceAvailable;
+            if(!upgradePending&&blacksmith)Button(body,"Leave",width-112,body.rect.height-112,112,Close);
             if(upgradePending)Button(body,"Cancel upgrade",width-112,body.rect.height-112,112,()=>{upgradePending=false;Rebuild();});
-            Label(Rect("Upgrade notice",body,0,body.rect.height-66,width,64),upgradeNotice??(available?"Select a copy, review the recipe, then confirm. Materials are shared by the party.":reason),14);
+            Label(Rect("Upgrade notice",body,0,body.rect.height-66,width,64),upgradeNotice??(!BlacksmithServiceAvailable?"Interact with a nearby blacksmith to purchase upgrades.":available?"Select a copy, review the recipe, then confirm. Materials are shared by the party.":reason),14);
             PreviewUpgrade(selected);
-        }else Detail("Upgrades","No owned weapons or armor.");
+        }else Detail("Upgrades","No owned equipment.");
     }
     void PreviewUpgrade(OwnedEquipment copy)
     {
         var owner=Manager.EquipmentOwner(copy.InstanceId);
         bool possible=EquipmentUpgrades.Requirements(Manager.Equipment,copy,copy.UpgradeLevel,out var costs,out var reason);
         bool next=copy.UpgradeLevel>=0&&copy.UpgradeLevel<copy.Definition.Upgrades.Count;
-        string text=copy.Definition.Description+$"\n\nUpgrade +{copy.UpgradeLevel}"+(next?$" → +{copy.UpgradeLevel+1}":" · Maximum")+"\n"+(owner?"Equipped by "+DisplayName(owner):"Unequipped copy");
+        string text=copy.Definition.Description+$"\nUpgrade cap: +{copy.Definition.Upgrades.Count}"+$"\n\nUpgrade +{copy.UpgradeLevel}"+(next?$" → +{copy.UpgradeLevel+1}":" · Maximum")+"\n"+(owner?"Equipped by "+DisplayName(owner):"Unequipped copy");
         if(next){
+            text+=$"\n\nFEE: {copy.Definition.Upgrades[copy.UpgradeLevel].Fee} coins / {Manager.Equipment.Coins} owned";
             text+="\n\nMATERIALS · required / owned";
             foreach(var cost in costs){var material=Manager.Equipment.Materials.Find(m=>m!=null&&m.Id==cost.Key);text+=$"\n{material?.Name??cost.Key}: {cost.Value} / {material?.Quantity??0}";}
             text+="\n\nEQUIPMENT STATS · current → upgraded";

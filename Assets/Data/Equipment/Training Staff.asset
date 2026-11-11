@@ -154,7 +154,8 @@ MonoBehaviour:
     Attacks: []
     FinisherSkillPoints: 1
   Upgrades:
-  - Materials:
+  - Fee: 25
+    Materials:
     - MaterialId: iron
       Quantity: 2
     AddedStats:
@@ -164,9 +165,12 @@ MonoBehaviour:
       PhysicalDefense: 0
       MagicalDefense: 0
       Initiative: 0
-  - Materials:
+  - Fee: 75
+    Materials:
     - MaterialId: iron
       Quantity: 4
+    - MaterialId: hardwood
+      Quantity: 2
     AddedStats:
       Vitality: 0
       Strength: 0
@@ -174,9 +178,12 @@ MonoBehaviour:
       PhysicalDefense: 0
       MagicalDefense: 0
       Initiative: 0
-  - Materials:
-    - MaterialId: iron
+  - Fee: 150
+    Materials:
+    - MaterialId: steel
       Quantity: 6
+    - MaterialId: crystal
+      Quantity: 4
     AddedStats:
       Vitality: 0
       Strength: 0

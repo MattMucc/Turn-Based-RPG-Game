@@ -26,3 +26,43 @@ MonoBehaviour:
     MagicalDefense: 0
     Initiative: 0
   Attacks: []
+  MasteryExperiencePerAttack: 1
+  Mastery: []
+  Upgrades:
+  - Fee: 25
+    Materials:
+    - MaterialId: copper
+      Quantity: 2
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 1
+      PhysicalDefense: 0
+      MagicalDefense: 0
+      Initiative: 0
+  - Fee: 75
+    Materials:
+    - MaterialId: silver
+      Quantity: 4
+    - MaterialId: crystal
+      Quantity: 2
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 1
+      PhysicalDefense: 0
+      MagicalDefense: 0
+      Initiative: 0
+  - Fee: 150
+    Materials:
+    - MaterialId: gold-ore
+      Quantity: 6
+    - MaterialId: crystal
+      Quantity: 4
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 1
+      PhysicalDefense: 0
+      MagicalDefense: 0
+      Initiative: 0

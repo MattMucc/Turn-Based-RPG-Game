@@ -11,6 +11,7 @@ public partial class GameManager
     {
         error="";
         if((BattleManager.Instance&&BattleManager.Instance.InBattle)||IsSwitchingCharacter||(saves&&saves.Busy)){error="Upgrades are only available outside combat and saving.";return false;}
+        if(!ProgressionMenu||!ProgressionMenu.BlacksmithServiceAvailable){error="Interact with a nearby blacksmith to upgrade equipment.";return false;}
         BindEquipment();var item=Equipment.Find(instance);
         if(!EquipmentUpgrades.Requirements(Equipment,item,expectedLevel,out _,out error))return false;
         var owner=EquipmentOwner(instance);if(owner)owner.MaterializeVitals();

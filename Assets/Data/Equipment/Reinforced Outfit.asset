@@ -29,7 +29,8 @@ MonoBehaviour:
   MasteryExperiencePerAttack: 1
   Mastery: []
   Upgrades:
-  - Materials:
+  - Fee: 25
+    Materials:
     - MaterialId: leather
       Quantity: 2
     AddedStats:
@@ -39,9 +40,12 @@ MonoBehaviour:
       PhysicalDefense: 1
       MagicalDefense: 1
       Initiative: 0
-  - Materials:
-    - MaterialId: leather
+  - Fee: 75
+    Materials:
+    - MaterialId: iron
       Quantity: 4
+    - MaterialId: hide
+      Quantity: 2
     AddedStats:
       Vitality: 0
       Strength: 0
@@ -49,9 +53,14 @@ MonoBehaviour:
       PhysicalDefense: 1
       MagicalDefense: 1
       Initiative: 0
-  - Materials:
-    - MaterialId: leather
+  - Fee: 150
+    Materials:
+    - MaterialId: steel
       Quantity: 6
+    - MaterialId: hide
+      Quantity: 4
+    - MaterialId: crystal
+      Quantity: 2
     AddedStats:
       Vitality: 0
       Strength: 0

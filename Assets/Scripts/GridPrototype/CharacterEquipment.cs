@@ -17,6 +17,7 @@ namespace Game.GridPrototype
         public List<EquipmentDefinition> Catalog = new();
         public List<OwnedEquipment> Owned = new();
         public List<MaterialStack> Materials = new();
+        [Min(0)] public int Coins;
         public OwnedEquipment Find(string id) => string.IsNullOrEmpty(id) ? null : Owned.Find(e => e != null && e.InstanceId == id);
     }
     public sealed class CharacterEquipment : MonoBehaviour

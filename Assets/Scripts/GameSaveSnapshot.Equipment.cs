@@ -8,6 +8,7 @@ public static partial class GameSaveSnapshot
 {
     static void ValidateEquipment(GameSaveData data,GameManager manager,Dictionary<string,SaveIdentity> ids)
     {
+        if(data.HasCoins&&data.Coins<0)throw new InvalidDataException("Invalid coin balance.");
         if(!data.HasEquipment)return;
         var catalog=manager.Equipment.Catalog;
         if(data.Equipment==null||data.Equipment.Any(e=>e==null||e.MasteryExperience<0||string.IsNullOrEmpty(e.InstanceId)||string.IsNullOrEmpty(e.DefinitionId))||data.Equipment.Select(e=>e.InstanceId).Distinct().Count()!=data.Equipment.Count)
@@ -15,7 +16,7 @@ public static partial class GameSaveSnapshot
         foreach(var entry in data.Equipment)if(catalog.Count(d=>d&&d.Id==entry.DefinitionId)!=1)throw new InvalidDataException("A saved equipment definition is missing or duplicated.");
         if(data.HasMaterialUpgrades){
             if(data.Materials==null||data.Materials.Any(m=>m==null||string.IsNullOrWhiteSpace(m.Id)||m.Quantity<0)||data.Materials.Select(m=>m.Id).Distinct().Count()!=data.Materials.Count)throw new InvalidDataException("Invalid upgrade materials.");
-            foreach(var entry in data.Equipment){var definition=catalog.Single(d=>d&&d.Id==entry.DefinitionId);if(entry.UpgradeLevel<0||entry.UpgradeLevel>definition.Upgrades.Count||(definition.Kind==EquipmentKind.Accessory&&entry.UpgradeLevel!=0))throw new InvalidDataException("Invalid equipment upgrade level.");}
+            foreach(var entry in data.Equipment){var definition=catalog.Single(d=>d&&d.Id==entry.DefinitionId);if(entry.UpgradeLevel<0||entry.UpgradeLevel>definition.Upgrades.Count)throw new InvalidDataException("Invalid equipment upgrade level.");}
         }
         var used=new HashSet<string>();
         foreach(var saved in data.Characters){
@@ -31,6 +32,7 @@ public static partial class GameSaveSnapshot
     }
     static void RestoreEquipment(GameSaveData data,GameManager manager,Dictionary<string,SaveIdentity> ids)
     {
+        manager.Equipment.Coins=data.HasCoins?data.Coins:0;
         if(data.HasMaterialUpgrades)manager.Equipment.Materials=data.Materials.Select(m=>new MaterialStack{Id=m.Id,Name=m.Name,Quantity=m.Quantity}).ToList();else manager.RestoreInitialMaterials();
         if(!data.HasEquipment){manager.RestoreInitialEquipment();return;}
         manager.Equipment.Owned=data.Equipment.Select(e=>new OwnedEquipment{InstanceId=e.InstanceId,MasteryExperience=e.MasteryExperience,UpgradeLevel=data.HasMaterialUpgrades?e.UpgradeLevel:0,Definition=manager.Equipment.Catalog.Single(d=>d&&d.Id==e.DefinitionId)}).ToList();
