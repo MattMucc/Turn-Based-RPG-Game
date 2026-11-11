@@ -27,6 +27,7 @@ namespace Game.GridPrototype
         public List<BattleActionOption> PersonalActions=new();
         public List<SavedFavorite> Favorites=new();
         public List<SavedMastery> Mastery=new();
+        public List<LearnedSpell> Spells=new();
     }
     [Serializable] public sealed class SavedEquipment { public string InstanceId,DefinitionId; public int MasteryExperience,UpgradeLevel; }
     [Serializable] public sealed class SavedFavorite {public string Name,ItemId,EquipmentActionId;public BattleActionCategory Category;public int Slot;}

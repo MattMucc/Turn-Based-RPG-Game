@@ -56,6 +56,15 @@ public class BattleActionTests
             Assert.IsTrue(CompletePrepared());Assert.AreEqual(expected,copy.MasteryExperience);
         }finally{Object.DestroyImmediate(definition);}
     }
+    [Test] public void ActualSpellAreaAwardsOnceAndPaysTierCost()
+    {
+        battle.Loadout.LearnSpell("fireball");for(int i=0;i<10;i++)battle.Loadout.AwardSpellExperience("fireball");
+        var action=battle.Loadout.Options.Find(a=>a.Name=="Fireball II");
+        int before=battle.Combatants[0].MagicPoints;
+        Assert.IsTrue(battle.ChooseAction(action));Assert.IsTrue(battle.ToggleTarget(cells[1]));Assert.IsTrue(CompletePrepared());
+        Assert.AreEqual(11,battle.Loadout.LearnedSpells[0].Experience);Assert.AreEqual(before-8,battle.Combatants[0].MagicPoints);
+        Assert.Less(battle.Combatants[1].Health,100);Assert.Less(battle.Combatants[2].Health,100);
+    }
     [Test] public void CombatObjectUseChecksReachTurnAndActionThenInvokesOnceWithoutMovementCost()
     {
         var lever=Create("Test lever");lever.transform.position=battle.Grid.Point(new Vector2Int(3,2));
@@ -387,6 +396,13 @@ public class BattleActionTests
             Array.ConvertAll(container.GetComponentsInChildren<Button>(), b => b.GetComponentInChildren<TMP_Text>().text));
         Assert.IsNull(battle.ChosenAction); Assert.AreEqual(0, battle.TargetCount); Assert.IsTrue(battle.ActionReady);
         Assert.AreEqual(3, Find("Block").transform.GetSiblingIndex()); Assert.AreEqual(6, Find("Run").transform.GetSiblingIndex());
+        battle.Loadout.LearnSpell("fireball");for(int i=0;i<10;i++)battle.Loadout.AwardSpellExperience("fireball");
+        Find("Spells").onClick.Invoke();Find("Fireball  ›").onClick.Invoke();
+        Assert.IsNotNull(Find("Fireball I"));Assert.IsNotNull(Find("Fireball II"));
+        Assert.IsFalse(Array.Exists(container.GetComponentsInChildren<TMP_Text>(),t=>t.text=="Focus"||t.text=="Fireball III"));
+        Find("Fireball II").onClick.Invoke();Assert.AreEqual("Fireball II",battle.ChosenAction.Name);
+        Find("Back").onClick.Invoke();Assert.IsNull(battle.ChosenAction);Find("Fireball  ›");
+        Find("Back").onClick.Invoke();Find("Spells");
         menuType.GetMethod("Unbind").Invoke(menu, null); Assert.IsFalse(root.activeSelf);
         menuType.GetMethod("Bind").Invoke(menu, new object[] { battle }); Assert.IsTrue(root.activeSelf);
         Assert.AreEqual(8, container.GetComponentsInChildren<Button>().Length);

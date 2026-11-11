@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using Game.GridPrototype;
 using UnityEngine;
@@ -46,6 +47,7 @@ public class BattleMenuUI : MonoBehaviour
     private int rows, highlighted = -1;
     private bool browsing, moving, initialized;
     private BattleActionCategory category;
+    private string spellFamily;
 
     private void Start() { if (!battle) Hide(); }
     private void Ensure()
@@ -184,6 +186,7 @@ public class BattleMenuUI : MonoBehaviour
     }
     private void Root()
     {
+        spellFamily=null;
         if (!battle) return;
         browsing = moving = editingFavorites = false; assigningFavorite = null; battle.GridInputEnabled = true; battle.KeyboardGridInputEnabled = false;
         BeginList();
@@ -203,22 +206,35 @@ public class BattleMenuUI : MonoBehaviour
         pool[7].SetIcons(endTurnKeyboardIcon, endTurnControllerIcon);
         FinishList();
     }
-    private void Open(BattleActionCategory selectedCategory)
+    private void Open(BattleActionCategory selectedCategory, string family=null)
     {
         if (!battle.ActionReady) return;
         editingFavorites = false; assigningFavorite = null;
         battle.Loadout.InitializeFavorites();
-        category = selectedCategory; browsing = true; moving = false; battle.GridInputEnabled = false; battle.KeyboardGridInputEnabled = false;
+        category = selectedCategory; spellFamily=family; browsing = true; moving = false; battle.GridInputEnabled = false; battle.KeyboardGridInputEnabled = false;
         BeginList();
+        var grouped=new HashSet<string>();
         foreach (var option in battle.Loadout.Options)
         {
             if (option == null || option.Category != category) continue;
+            if(category==BattleActionCategory.Magic) {
+                if(family!=null&&option.SpellId!=family)continue;
+                if(family==null&&!string.IsNullOrEmpty(option.SpellId)) {
+                    var tiers=battle.Loadout.Options.Where(a=>a.Category==category&&a.SpellId==option.SpellId).ToList();
+                    if(tiers.Count>1) {
+                        if(!grouped.Add(option.SpellId))continue;
+                        string id=option.SpellId;var definition=SpellDefinition.Find(id);
+                        Row((definition?definition.DisplayName:option.Name)+"  ›",()=>Open(BattleActionCategory.Magic,id),"Choose a learned tier. Each tier has its own MP cost and shortcut assignment.",()=>battle.ActionReady&&battle.ChosenAction==null);
+                        continue;
+                    }
+                }
+            }
             var captured = option;
             Row(option.Name + (category == BattleActionCategory.Item ? $" ×{option.Quantity}" : ""), () => Select(captured), ActionDetails(option),
                 () => battle.ActionReady && battle.CanAfford(captured) && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
             if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
-        if (category == BattleActionCategory.Magic)
+        if (category == BattleActionCategory.Magic && family==null)
             Row("Focus", () => battle.Focus(), $"Recover up to {battle.Combatants[battle.CurrentActorIndex].FocusRecovery} MP. Uses your action, but costs no SP or MP. Movement remains available.", () => battle.CanFocus);
         if (rows == 0) Row("None available", () => { }, "This character has no available options in this category.", () => false);
         if (battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple)
@@ -300,7 +316,7 @@ public class BattleMenuUI : MonoBehaviour
     {
         if (!battle.ChooseAction(option)) return;
         if (option.Effect == ActionEffect.Dash) { Root(); return; }
-        Open(category);
+        Open(category, category==BattleActionCategory.Magic&&!string.IsNullOrEmpty(option.SpellId)&&battle.Loadout.Options.Count(a=>a.SpellId==option.SpellId)>1?option.SpellId:null);
         battle.GridInputEnabled = battle.KeyboardGridInputEnabled = true;
         highlighted = -1; tooltip.text = ControllerGlyphs.Adapt(ActionDetails(option)); tooltipPanel.SetActive(true);
         for (int i = 0; i < rows; i++) pool[i].SetSelected(previewOptions[i] == option);
@@ -309,14 +325,14 @@ public class BattleMenuUI : MonoBehaviour
     private void CancelSelection()
     {
         if (!battle.PlayerReady) return;
-        if (battle.ChosenAction != null) { battle.CancelAction(); Open(category); }
+        if (battle.ChosenAction != null) { battle.CancelAction(); Open(category,spellFamily); }
         else if (moving) Root();
     }
     private void Back()
     {
         if (!battle.PlayerReady) return;
         if (editingFavorites) { if (assigningFavorite != null) EditFavorites(); else Open(category); return; }
-        battle.CancelAction(); Root();
+        battle.CancelAction(); if(spellFamily!=null){Open(BattleActionCategory.Magic);return;} Root();
     }
     private string ActionDetails(BattleActionOption option) => option.TooltipFor(battle.Combatants[battle.CurrentActorIndex]);
     private void ShowTooltip(int index)

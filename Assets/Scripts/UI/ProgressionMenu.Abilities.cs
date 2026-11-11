@@ -12,7 +12,10 @@ public sealed partial class ProgressionMenu
         public BattleActionOption Action;
         public OwnedEquipment Weapon;
         public WeaponMasteryMilestone Milestone;
-        public bool Unlocked => Milestone == null || Weapon.MasteryExperience >= Milestone.RequiredExperience;
+        public SpellDefinition Spell;
+        public LearnedSpell Learned;
+        public SpellTier Tier;
+        public bool Unlocked => Tier != null ? Learned.Experience >= Tier.RequiredExperience : Milestone == null || Weapon.MasteryExperience >= Milestone.RequiredExperience;
     }
     BattleActionCategory abilityCategory;
     string abilitySelection;
@@ -37,10 +40,18 @@ public sealed partial class ProgressionMenu
         var loadout = Loadout();
         if (loadout) foreach (var action in loadout.Options.Where(a => a != null && a.Category == abilityCategory))
         {
+            if(abilityCategory==BattleActionCategory.Magic&&!string.IsNullOrEmpty(action.SpellId))continue;
             // Owned weapons are expanded below, including their locked milestones. Keep unarmed actions.
             if (abilityCategory == BattleActionCategory.Attack && !string.IsNullOrEmpty(action.EquipmentActionId) &&
                 Manager.Equipment.Owned.Any(w => w?.Definition && w.Definition.Id + ":" + action.Name == action.EquipmentActionId)) continue;
             entries.Add(new AbilityEntry { Key = "learned:" + action.Name, Action = action, Source = "Available to " + DisplayName(Member) });
+        }
+        if(loadout&&abilityCategory==BattleActionCategory.Magic)foreach(var learned in loadout.LearnedSpells) {
+            var spell=SpellDefinition.Find(learned.Id);if(!spell)continue;
+            foreach(var tier in spell.OrderedTiers) {
+                var action=spell.CreateAction(tier);
+                entries.Add(new AbilityEntry{Key="spell:"+spell.Id+":"+action.SpellTier,Action=action,Spell=spell,Learned=learned,Tier=tier,Source=spell.DisplayName+" · "+DisplayName(Member)});
+            }
         }
         if (abilityCategory == BattleActionCategory.Attack)
         {
@@ -96,6 +107,10 @@ public sealed partial class ProgressionMenu
         var source = new GridUnit(Member.name, Vector2Int.zero); Member.Configure(source);
         Texture art = entry.Action.Image;
         string status = entry.Source;
+        if(entry.Spell) {
+            status+="\n"+(entry.Unlocked?"Learned tier":"Locked tier")+" · Requires "+entry.Tier.RequiredExperience+" cumulative Spell XP";
+            status+=entry.Spell.MaximumExperience>0?"\nMastery belongs to this character. Successful casts earn XP once per cast.":"\nSingle-tier Spell · No further mastery unlocks.";
+        }
         if (entry.Weapon != null)
         {
             var equipment = Member.GetComponent<CharacterEquipment>();
@@ -120,6 +135,10 @@ public sealed partial class ProgressionMenu
             image.texture = art; image.raycastTarget = false; y += 124;
         }
         y = ProgressionText(content, "Ability availability", status, y, width, 14) + 8;
+        if(entry.Spell&&entry.Spell.MaximumExperience>0) {
+            y=ProgressionText(content,"Spell mastery XP",$"Spell XP {entry.Learned.Experience} / {entry.Spell.MaximumExperience}",y,width,14);
+            ProgressionBar(content,12,y,width,entry.Learned.Experience/(float)entry.Spell.MaximumExperience);y+=22;
+        }
         if (entry.Weapon != null && WeaponMastery.MaximumExperience(entry.Weapon.Definition) > 0)
         {
             int maximum = WeaponMastery.MaximumExperience(entry.Weapon.Definition);

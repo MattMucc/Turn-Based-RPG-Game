@@ -11,6 +11,10 @@ public sealed partial class ProgressionMenu
     CanvasGroup inventoryBackground;
     string InventoryDescription(BattleActionOption item)
     {
+        if(!string.IsNullOrEmpty(item.LearnSpellId)) {
+            var spell=SpellDefinition.Find(item.LearnSpellId);
+            return spell?$"Teaches {spell.DisplayName} to one party member.\n{spell.Description}\n\nShared stock: {item.Quantity}\nChoose Use, then a learner. Consumes one book on confirmation. Mastery belongs to that character.":"This book's Spell definition is unavailable.";
+        }
         string effect = item.Effect == ActionEffect.Heal ? $"Restores up to {item.Healing} HP. Outside combat, also heals knocked-out party members."
             : item.Effect == ActionEffect.RestoreMagic ? $"Restores up to {item.MagicRestored} MP to a living party member." : item.Description;
         return effect + $"\n\nShared stock: {item.Quantity}\n" + (PartyInventory.UsableOutsideCombat(item) ? "Choose Use to select an active or reserve party member. One item is consumed on confirmation." : "Cannot be used outside combat.");
@@ -68,9 +72,22 @@ public sealed partial class ProgressionMenu
             Label(Rect("Choose target",panel,18,54,404,30),"Choose a party member",17);
             var list=List(panel,"Party targets",18,90,404,304,Manager.Progression.Members.Count*48);
             int i=0;foreach(var member in Manager.Progression.Members) {
+                if(!string.IsNullOrEmpty(inventoryItem.LearnSpellId)) {
+                    var learner=member;bool known=member.GetComponent<BattleActionLoadout>()?.KnowsSpell(inventoryItem.LearnSpellId)==true;
+                    Button(list,$"{DisplayName(member)}   {(known?"Already learned":"Learn spell")}",0,i++*48,390,()=>{inventoryStep=3;DrawInventoryModal(learner);},null,44).interactable=Manager.Inventory.CanLearn(inventoryItem,member);
+                    continue;
+                }
                 var captured=member; int recovery=Manager.Inventory.PreviewRecovery(inventoryItem,member,out int current,out int maximum);
                 Button(list,$"{DisplayName(member)}   {current} / {maximum}   (+{recovery})",0,i++*48,390,()=>{inventoryStep=3;DrawInventoryModal(captured);},null,44);
             }
+        } else if(!string.IsNullOrEmpty(inventoryItem.LearnSpellId)) {
+            var spell=SpellDefinition.Find(inventoryItem.LearnSpellId);
+            Label(Rect("Learning preview",panel,18,60,404,132),$"{DisplayName(target)} will learn {(spell?spell.DisplayName:"Unknown spell")}.\nHigher tiers unlock through this character's successful casts.\nConsumes 1 {inventoryItem.Name} ({inventoryItem.Quantity} carried)",17);
+            bool committed=false;
+            Button(panel,"Confirm learning",18,204,404,()=>{
+                if(committed||!inventoryModal||inventoryStep!=3||InBattle||!Manager.Progression.Members.Contains(target))return;
+                committed=Manager.Inventory.TryLearn(inventoryItem,target);CloseInventoryModal();Rebuild();
+            }).interactable=Manager.Inventory.CanLearn(inventoryItem,target);
         } else {
             int recovery=Manager.Inventory.PreviewRecovery(inventoryItem,target,out int current,out int maximum);
             string resource=inventoryItem.Effect==ActionEffect.Heal?"HP":"MP";

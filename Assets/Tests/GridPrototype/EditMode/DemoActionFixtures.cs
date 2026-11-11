@@ -53,9 +53,10 @@ static class DemoActionFixtures
         };
     public static void Populate(BattleActionLoadout loadout)
     {
-        loadout.Options.AddRange(System.Array.FindAll(CreateStatusPrototypes(), x => x.Category == BattleActionCategory.Magic));
-        loadout.Options.Insert(2, new BattleActionOption { Name="Area Skill", Category=BattleActionCategory.Skill,Pattern=BattleTargetPattern.Area,Reach=4,Damage=18 });
-        loadout.Options.Insert(3, new BattleActionOption { Name="Multi-target Skill",Category=BattleActionCategory.Skill,Pattern=BattleTargetPattern.Multiple,Reach=4,Damage=12 });
-        loadout.Options.AddRange(new[]{DemoActionFixtures.CreatePrototypeSignature(),DemoActionFixtures.CreatePrototypeSequence(),DemoActionFixtures.CreatePrototypeMash(),DemoActionFixtures.CreatePrototypeHold(),DemoActionFixtures.CreatePrototypeStaged(),DemoActionFixtures.CreatePrototypeDual()});
+        loadout.PersonalOptions.AddRange(System.Array.FindAll(CreateStatusPrototypes(), x => x.Category == BattleActionCategory.Magic));
+        loadout.PersonalOptions.Insert(2, new BattleActionOption { Name="Area Skill", Category=BattleActionCategory.Skill,Pattern=BattleTargetPattern.Area,Reach=4,Damage=18 });
+        loadout.PersonalOptions.Insert(3, new BattleActionOption { Name="Multi-target Skill",Category=BattleActionCategory.Skill,Pattern=BattleTargetPattern.Multiple,Reach=4,Damage=12 });
+        loadout.PersonalOptions.AddRange(new[]{DemoActionFixtures.CreatePrototypeSignature(),DemoActionFixtures.CreatePrototypeSequence(),DemoActionFixtures.CreatePrototypeMash(),DemoActionFixtures.CreatePrototypeHold(),DemoActionFixtures.CreatePrototypeStaged(),DemoActionFixtures.CreatePrototypeDual()});
+        loadout.EquipmentChanged(false);
     }
 }

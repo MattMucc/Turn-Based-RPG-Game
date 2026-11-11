@@ -12,6 +12,10 @@ namespace Game.GridPrototype
     {
         public string Name;
         public Texture Image;
+        [HideInInspector] public string SpellId;
+        [HideInInspector] public int SpellTier;
+        [Tooltip("Spell ID taught by this item outside combat. Empty for ordinary items.")]
+        public string LearnSpellId;
         [HideInInspector] public string EquipmentActionId;
         [Range(-1, 3)] public int FavoriteSlot = -1;
         [TextArea] public string Description;
@@ -138,8 +142,27 @@ namespace Game.GridPrototype
         [UnityEngine.Serialization.FormerlySerializedAs("Options")]
         [SerializeField] private List<BattleActionOption> personalOptions = CreateDefaultOptions();
         public List<BattleActionOption> PersonalOptions => personalOptions;
+        public List<LearnedSpell> LearnedSpells = new();
+        readonly Dictionary<string, BattleActionOption> spellInstances = new();
+        public bool KnowsSpell(string id) => LearnedSpells.Exists(s => s != null && s.Id == id);
+        public bool LearnSpell(string id)
+        {
+            var definition = SpellDefinition.Find(id);
+            if (!definition || KnowsSpell(id) || !System.Linq.Enumerable.Any(definition.OrderedTiers, t => t.RequiredExperience == 0)) return false;
+            LearnedSpells.Add(new LearnedSpell { Id = id }); combinedOptions = null; return true;
+        }
+        public int AwardSpellExperience(string id)
+        {
+            var learned = LearnedSpells.Find(s => s != null && s.Id == id); var definition = SpellDefinition.Find(id);
+            if (learned == null || !definition) return 0;
+            int before = learned.Experience;
+            learned.Experience = (int)Math.Min(definition.MaximumExperience, (long)before + Mathf.Max(1, definition.ExperiencePerCast));
+            if (before != learned.Experience) combinedOptions = null;
+            return learned.Experience - before;
+        }
         public void RestoreSavedActions(SavedCharacter saved,PartyInventory shared)
         {
+            LearnedSpells=saved.Spells??new();spellInstances.Clear();
             personalOptions=saved.PersonalActions;combinedOptions=null;sharedInstances.Clear();itemInstances.Clear();BindInventory(shared);
             foreach(BattleActionCategory category in Enum.GetValues(typeof(BattleActionCategory)))customizedFavoriteCategories.Add(category);
             foreach(var option in Options){option.FavoriteSlot=-1;var favorite=saved.Favorites.Find(f=>f.Category==option.Category&&(option.Category==BattleActionCategory.Item?f.ItemId==option.ItemId:(!string.IsNullOrEmpty(option.EquipmentActionId)?f.EquipmentActionId==option.EquipmentActionId:f.Name==option.Name)));if(favorite!=null)option.FavoriteSlot=favorite.Slot;}
@@ -170,7 +193,7 @@ namespace Game.GridPrototype
             get
             {
                 var equipment=GetComponent<CharacterEquipment>();
-                if (!SharedLibrary && inventory == null && !equipment) return personalOptions;
+                if (!SharedLibrary && inventory == null && !equipment && LearnedSpells.Count == 0) return personalOptions;
                 if (combinedOptions != null && cachedMasteryExperience == (equipment?.Weapon?.MasteryExperience ?? -1) && cachedEquipmentRevision == (equipment ? equipment.Revision : -1) && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
                 if (cachedLibrary != SharedLibrary) sharedInstances.Clear();
                 combinedOptions = new List<BattleActionOption>();
@@ -201,13 +224,22 @@ namespace Game.GridPrototype
                     }
                     if(!combinedOptions.Exists(a=>a.Effect==ActionEffect.Push))combinedOptions.Add(new BattleActionOption{Name="Push",Effect=ActionEffect.Push,Damage=0,Description="Push one cell. Requires strictly greater Strength."});
                 }
+                foreach(var learned in LearnedSpells) {
+                    var definition=SpellDefinition.Find(learned.Id);if(!definition)continue;
+                    foreach(var tier in definition.OrderedTiers) {
+                        if(tier.RequiredExperience>learned.Experience)continue;
+                        var copy=definition.CreateAction(tier);string key=copy.SpellId+":"+copy.SpellTier;
+                        if(spellInstances.TryGetValue(key,out var previous))copy.FavoriteSlot=previous.FavoriteSlot;
+                        spellInstances[key]=copy;combinedOptions.Add(copy);
+                    }
+                }
                 cachedEquipmentRevision=equipment?equipment.Revision:-1;cachedMasteryExperience=equipment?.Weapon?.MasteryExperience??-1;
                 if (inventory != null)
                 {
                     var itemIds = new HashSet<string>();
                     foreach (var source in inventory.Items)
                     {
-                        if (source == null || source.Category != BattleActionCategory.Item) continue;
+                        if (source == null || source.Category != BattleActionCategory.Item || !string.IsNullOrEmpty(source.LearnSpellId)) continue;
                         string id = string.IsNullOrEmpty(source.ItemId) ? source.Name : source.ItemId;
                         if (string.IsNullOrEmpty(id) || !itemIds.Add(id)) continue;
                         var copy = JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(source));

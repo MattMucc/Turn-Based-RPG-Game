@@ -143,6 +143,18 @@ public class PlayerMenuTests
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Self only")));
         Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Dash"));
     }
+    [Test] public void SpellBookMenuConfirmsLearnerAndBrowserShowsLockedTiers()
+    {
+        var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);
+        var book=new BattleActionOption{Name="Fireball Spellbook",ItemId="spellbook-fireball",LearnSpellId="fireball",Category=BattleActionCategory.Item,Quantity=2};inventory.Items.Add(book);
+        Open();Page("Inventory");Find("Fireball Spellbook").onClick.Invoke();Find("Use").onClick.Invoke();Find("Member 0   Learn spell").onClick.Invoke();
+        Assert.AreEqual(2,book.Quantity);Find("Back").onClick.Invoke();Assert.AreEqual(2,book.Quantity);
+        Find("Member 0   Learn spell").onClick.Invoke();Find("Confirm learning").onClick.Invoke();
+        Assert.AreEqual(1,book.Quantity);Assert.IsTrue(party[0].GetComponent<BattleActionLoadout>().KnowsSpell("fireball"));Assert.IsFalse(party[1].GetComponent<BattleActionLoadout>().KnowsSpell("fireball"));
+        Page("Abilities");Find("Spells").onClick.Invoke();Find("Fireball III · Locked").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Requires 25 cumulative Spell XP")));
+        Assert.IsFalse(party[0].GetComponent<BattleActionLoadout>().Options.Any(s=>s.Name=="Fireball III"));
+    }
     [Test] public void AbilityPatternUsesLegalCustomAnchorAndRetainsSelfHitWarning()
     {
         var loadout=party[0].GetComponent<BattleActionLoadout>();
@@ -218,14 +230,20 @@ public class PlayerMenuTests
         loadout.AssignFavorite(loadout.Options.First(a=>a.Name=="Saved sword hit"),2);
         attack=loadout.Options.First(a=>a.Effect==ActionEffect.Push);loadout.AssignFavorite(attack,-1);
         original.transform.position=new Vector3(40,2,30);
+        loadout.LearnSpell("fireball");for(int i=0;i<12;i++)loadout.AwardSpellExperience("fireball");
+        loadout.AssignFavorite(loadout.Options.First(a=>a.Name=="Fireball II"),1);
         var snapshotType=Type.GetType("GameSaveSnapshot, Assembly-CSharp",true);
         var data=(GameSaveData)snapshotType.GetMethod("Capture").Invoke(null,new object[]{manager,"Test checkpoint",ids});
         string testScene=data.Scene;data.Scene="Assets/Scenes/SampleScene.unity";data=SaveFileStore.Decode(SaveFileStore.Encode(data));data.Scene=testScene;int points=original.UnspentPoints;long xp=progression.ExperienceFor(original);int allocated=original.AllocatedPoints.Magic;
         equipment.ApplySlot(EquipmentSlot.Weapon,null);gear.Owned.Clear();gear.Materials[0].Quantity=0;gear.Coins=0;
+        loadout.AwardSpellExperience("fireball");
         inventory.Items[0].Quantity=0;progression.AwardExperience(1000);original.transform.position=Vector3.zero;party.Reverse();usable.TryUse();destructible.TakeDamage(50);
         snapshotType.GetMethod("Apply").Invoke(null,new object[]{data,manager,ids});
         Assert.AreEqual("saved-copy",equipment.InstanceAt(EquipmentSlot.Weapon));Assert.AreEqual(sword,equipment.At(EquipmentSlot.Weapon));Assert.AreEqual(1,gear.Owned.Count);Assert.AreEqual(7,gear.Owned[0].MasteryExperience);Assert.AreEqual(1,gear.Owned[0].UpgradeLevel);Assert.AreEqual(7,gear.Materials[0].Quantity);Assert.AreEqual(83,gear.Coins);
         Assert.AreEqual("Saved sword hit",loadout.Favorite(BattleActionCategory.Attack,2).Name);
+        Assert.AreEqual(12,loadout.LearnedSpells.Single(s=>s.Id=="fireball").Experience);
+        Assert.AreEqual("Fireball II",loadout.Favorite(BattleActionCategory.Magic,1).Name);
+        Assert.IsFalse(members[1].GetComponent<BattleActionLoadout>().KnowsSpell("fireball"));
         var equipmentCopy=data.Characters.First(c=>c.Id==original.GetComponent<SaveIdentity>().Id);string previousSlot=equipmentCopy.EquipmentSlots[0];equipmentCopy.EquipmentSlots[0]="missing-copy";
         Assert.Throws<TargetInvocationException>(()=>snapshotType.GetMethod("Validate").Invoke(null,new object[]{data,manager,ids}));Assert.AreEqual(sword,equipment.At(EquipmentSlot.Weapon));equipmentCopy.EquipmentSlots[0]=previousSlot;
         Assert.AreEqual(50,destructible.Health);Assert.IsTrue(crate.activeSelf);Assert.IsTrue(usable.Available);

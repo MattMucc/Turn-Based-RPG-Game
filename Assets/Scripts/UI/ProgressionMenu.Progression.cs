@@ -35,9 +35,17 @@ public sealed partial class ProgressionMenu
         // A presentation record must never hide other learned spells without records.
         if(progressionKind==ProgressionEntryKind.Spell) {
             var loadout=Loadout();
-            if(loadout)foreach(var spell in loadout.Options.Where(o=>o!=null&&o.Category==BattleActionCategory.Magic))
+            if(loadout)foreach(var spell in loadout.Options.Where(o=>o!=null&&o.Category==BattleActionCategory.Magic&&string.IsNullOrEmpty(o.SpellId)))
                 if(!entries.Any(e=>string.Equals(e.Name,spell.Name,StringComparison.OrdinalIgnoreCase)))
                     entries.Add(new MenuProgressionEntry{Kind=ProgressionEntryKind.Spell,Name=spell.Name,Description=spell.Description});
+            if(loadout)foreach(var learned in loadout.LearnedSpells) {
+                var spell=SpellDefinition.Find(learned.Id);if(!spell)continue;
+                entries.RemoveAll(e=>e.Name==spell.DisplayName);
+                var tiers=spell.OrderedTiers.ToList();var next=tiers.FirstOrDefault(t=>t.RequiredExperience>learned.Experience);
+                entries.Add(new MenuProgressionEntry{Kind=ProgressionEntryKind.Spell,Name=spell.DisplayName,Image=spell.Image,Description=spell.Description+"\nMastery belongs to this character. View Abilities for tier patterns and calculated effects.",
+                    Level=tiers.Count(t=>t.RequiredExperience<=learned.Experience),MaximumLevel=tiers.Count,Experience=learned.Experience,NextLevelExperience=next?.RequiredExperience??spell.MaximumExperience,
+                    Milestones=tiers.Select((t,i)=>new UpgradeMilestone{Level=i+1,Name=spell.CreateAction(t).Name,Description=$"Requires {t.RequiredExperience} cumulative Spell XP · {t.Action.MagicPointCost} MP\n{t.Action.Description}"}).ToList()});
+            }
         }
         Label(Rect("Collection count",body,0,48,width,28),$"{DisplayName(Member)} · {entries.Count} entries",15);
         var list=List(body,"Progression entries",0,84,width,Mathf.Max(180,body.rect.height-84),entries.Count*88);

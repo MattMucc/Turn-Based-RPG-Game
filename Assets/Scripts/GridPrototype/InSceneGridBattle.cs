@@ -581,6 +581,7 @@ namespace Game.GridPrototype
             var masteryWeapon=IsAlly(actorIndex)?actors[actorIndex].GetComponent<CharacterEquipment>()?.Weapon:null;
             int previousMasteryLevel=WeaponMastery.Level(masteryWeapon);
             var mastery=new WeaponMasteryUse(masteryWeapon,action);
+            var spellMastery=new SpellMasteryUse(IsAlly(actorIndex)?actors[actorIndex].GetComponent<BattleActionLoadout>():null,action);
             for (int i = 0; i < batches.Count; i++)
             {
                 if (closing) yield break;
@@ -605,6 +606,7 @@ namespace Game.GridPrototype
                             RecentHitFeedback = target.Name + $": +{victim.MagicPoints - magicBefore} MP restored"; RecentHitFeedbackUntil = Time.unscaledTime + 2;
                         }
                         mastery.Record(landed, target.ActorIndex>=allyCount, victim.Health==0);
+                        spellMastery.Record(landed, target.ActorIndex>=allyCount, dealt);
                         RecordHit(target.ActorIndex, dealt);
                         if (victim.Health == 0) { Grid.Board.Units.Remove(victim); target.Transform.gameObject.SetActive(false); }
                     }
@@ -624,6 +626,8 @@ namespace Game.GridPrototype
             if (!sequential) yield return new WaitForSeconds(0.4f);
             action.CompleteResourceRecovery(Active);
             int masteryGain=mastery.Complete(Active);
+            int spellGain=spellMastery.Complete();
+            if(spellGain>0){RecentHitFeedback+=$"\n{SpellDefinition.Find(action.SpellId).DisplayName}: +{spellGain} mastery XP";RecentHitFeedbackUntil=Time.unscaledTime+3;}
             if(masteryGain>0){
                 RecentHitFeedback+=$"\n{masteryWeapon.Definition.DisplayName}: +{masteryGain} mastery XP";
                 if(WeaponMastery.Level(masteryWeapon)>previousMasteryLevel)RecentHitFeedback+=$" - Level {WeaponMastery.Level(masteryWeapon)} unlocked";

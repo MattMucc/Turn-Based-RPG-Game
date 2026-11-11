@@ -33,6 +33,7 @@ public static partial class GameSaveSnapshot
             saved.EquipmentSlots=member.GetComponent<CharacterEquipment>()?.CaptureSlots();
             member.CaptureProgress(saved);var loadout=member.GetComponent<BattleActionLoadout>();loadout.BindInventory(manager.Inventory);loadout.InitializeFavorites();
             saved.PersonalActions=loadout.PersonalOptions.Select(a=>JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(a))).ToList();
+            saved.Spells=loadout.LearnedSpells.Select(s=>new LearnedSpell{Id=s.Id,Experience=s.Experience}).ToList();
             foreach(var option in loadout.Options)saved.Favorites.Add(new SavedFavorite{EquipmentActionId=option.EquipmentActionId,Name=option.Name,ItemId=option.ItemId,Category=option.Category,Slot=option.FavoriteSlot});
             var menu=member.GetComponent<CharacterMenuData>();if(menu)foreach(var entry in menu.Progression)if(entry!=null)saved.Mastery.Add(new SavedMastery{Name=entry.Name,Kind=entry.Kind,Level=entry.Level,Experience=entry.Experience});
             data.Characters.Add(saved);
@@ -55,6 +56,7 @@ public static partial class GameSaveSnapshot
             if(!ids.TryGetValue(member.Id,out var identity)||!identity.GetComponent<BattleCharacterInfo>()||!members.Contains(identity.GetComponent<BattleCharacterInfo>())||!identity.GetComponent<PlayerMovement>()||!identity.GetComponent<BattleActionLoadout>())throw new InvalidDataException("A saved character is unavailable.");
             if(member.Level<1||member.Level>100||member.Unspent<0||member.Rewarded<1||member.Experience<0||member.HalfRemainder<0||member.HalfRemainder>1||member.Health< -1||member.Magic< -1||member.Allocated==null||member.PersonalActions==null||member.PersonalActions.Any(a=>a==null)||member.Favorites==null||member.Mastery==null)throw new InvalidDataException("Invalid character progression.");
             foreach(CharacterStat stat in Enum.GetValues(typeof(CharacterStat)))if(member.Allocated.Get(stat)<0)throw new InvalidDataException("Invalid allocated stats.");
+            if(member.Spells!=null&&(member.Spells.Any(s=>s==null||!SpellDefinition.Find(s.Id)||s.Experience<0||s.Experience>SpellDefinition.Find(s.Id).MaximumExperience)||member.Spells.Select(s=>s.Id).Distinct().Count()!=member.Spells.Count))throw new InvalidDataException("Invalid learned spell mastery.");
             if(member.Favorites.Any(f=>f==null||f.Slot< -1||f.Slot>3||!Enum.IsDefined(typeof(BattleActionCategory),f.Category)))throw new InvalidDataException("Invalid saved shortcuts.");
         }
         if(data.Inventory==null||data.Inventory.Items==null||data.Inventory.Items.Any(i=>i==null||i.Category!=BattleActionCategory.Item)||data.Experience<0||data.World==null||data.Groups==null)throw new InvalidDataException("Invalid inventory or world data.");

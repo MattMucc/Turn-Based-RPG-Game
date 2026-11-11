@@ -23,11 +23,19 @@ namespace Game.GridPrototype
             Reach = 3, Pattern = BattleTargetPattern.Single, Quantity = quantity
         };
         public static bool UsableOutsideCombat(BattleActionOption item) => item != null && item.Category == BattleActionCategory.Item
-            && (item.Effect == ActionEffect.Heal || item.Effect == ActionEffect.RestoreMagic);
+            && (!string.IsNullOrEmpty(item.LearnSpellId) || item.Effect == ActionEffect.Heal || item.Effect == ActionEffect.RestoreMagic);
+        public bool CanLearn(BattleActionOption item, BattleCharacterInfo member) => member && item != null && Items.Contains(item)
+            && item.Category == BattleActionCategory.Item && item.Quantity > 0 && SpellDefinition.Find(item.LearnSpellId)
+            && member.GetComponent<BattleActionLoadout>() && !member.GetComponent<BattleActionLoadout>().KnowsSpell(item.LearnSpellId);
+        public bool TryLearn(BattleActionOption item, BattleCharacterInfo member)
+        {
+            if(!CanLearn(item,member) || !member.GetComponent<BattleActionLoadout>().LearnSpell(item.LearnSpellId))return false;
+            item.Quantity--;NotifyChanged();return true;
+        }
         public int PreviewRecovery(BattleActionOption item, BattleCharacterInfo member, out int current, out int maximum)
         {
             current = maximum = 0;
-            if (!member || !UsableOutsideCombat(item) || !Items.Contains(item)) return 0;
+            if (!member || !UsableOutsideCombat(item) || !Items.Contains(item) || !string.IsNullOrEmpty(item.LearnSpellId)) return 0;
             int hpMax = member.EffectiveMaxHealth;
             int hp = member.StoredHealth < 0 ? hpMax : Mathf.Clamp(member.StoredHealth, 0, hpMax);
             bool health = item.Effect == ActionEffect.Heal;
