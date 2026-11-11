@@ -109,6 +109,53 @@ public class PlayerMenuTests
         var item=ScriptableObject.CreateInstance<EquipmentDefinition>();equipmentAssets.Add(item);item.Id=id;item.DisplayName=id;item.Kind=kind;item.WeaponType=type;item.Bonuses.Strength=3;
         if(kind==EquipmentKind.Weapon)item.Attacks.Add(new BattleActionOption{Name=id+" hit",Damage=12,Reach=2,Pattern=BattleTargetPattern.Sweep,Radius=1});return item;
     }
+    [Test] public void AbilityBrowserShowsLockedAttacksPerCopyWithoutGrantingThem()
+    {
+        var inventory=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);
+        var sword=EquipmentAsset("Browser sword");
+        sword.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=10,Name="Technique",Attacks=new(){new BattleActionOption{Name="Locked sweep",Pattern=BattleTargetPattern.Sweep,Reach=2,Radius=1}}});
+        inventory.Catalog.Add(sword);
+        inventory.Owned.Add(new OwnedEquipment{InstanceId="new",Definition=sword});
+        inventory.Owned.Add(new OwnedEquipment{InstanceId="mastered",Definition=sword,MasteryExperience=10});
+        var equipment=party[0].gameObject.AddComponent<CharacterEquipment>();equipment.AllowedWeaponTypes=new[]{WeaponType.Shortsword};
+        managerType.GetMethod("BindEquipment").Invoke(manager,null);equipment.ApplySlot(EquipmentSlot.Weapon,"new");
+        var loadout=party[0].GetComponent<BattleActionLoadout>();
+        Open();Page("Abilities");Find("Locked sweep · Locked").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Requires 10 cumulative weapon XP")));
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Locked sweep"));
+        Assert.IsFalse(loadout.Options.Any(a=>a.Name=="Locked sweep"));
+        Assert.AreEqual(0,inventory.Owned[0].MasteryExperience);
+        Find("Locked sweep · Unlocked").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Weapon XP 10 / 10")));
+        Assert.AreEqual("new",equipment.InstanceAt(EquipmentSlot.Weapon));
+    }
+    [Test] public void AbilityBrowserShowsSkillsSpellsAndEmptyCategoryWithoutChangingFavorites()
+    {
+        var loadout=party[0].GetComponent<BattleActionLoadout>();
+        loadout.PersonalOptions.Add(new BattleActionOption{Name="Browser spell",Category=BattleActionCategory.Magic,FavoriteSlot=2});
+        Open();Page("Abilities");Find("Spells").onClick.Invoke();Find("Browser spell").onClick.Invoke();
+        Assert.AreEqual(2,loadout.PersonalOptions.First(a=>a.Name=="Browser spell").FavoriteSlot);
+        menuType.GetMethod("Cycle",Hidden).Invoke(menu,new object[]{1});
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No spells available"));
+        Find("Skills").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<Button>().Any(b=>b.name.StartsWith("Dash")));
+        Find("Dash").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Self only")));
+        Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Dash"));
+    }
+    [Test] public void AbilityPatternUsesLegalCustomAnchorAndRetainsSelfHitWarning()
+    {
+        var loadout=party[0].GetComponent<BattleActionLoadout>();
+        var action=new BattleActionOption{Name="Custom preview",Category=BattleActionCategory.Skill,Pattern=BattleTargetPattern.CustomSingle,Reach=1};
+        for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)if(x!=1||y!=0)action.DisabledPatternCells.Add(new Vector2Int(x,y));
+        loadout.PersonalOptions.Add(action);
+        Open();Page("Abilities");Find("Skills").onClick.Invoke();Find("Custom preview").onClick.Invoke();
+        var frame=menu.GetComponentsInChildren<Transform>().Single(t=>t.name=="Pattern Custom preview");
+        var aim=frame.GetComponentsInChildren<Transform>().Single(t=>t.name=="Aim marker");
+        var tile=(RectTransform)aim.parent;
+        Assert.Greater(tile.anchoredPosition.x,frame.GetComponentsInChildren<Transform>().Single(t=>t.name=="User marker").parent.GetComponent<RectTransform>().anchoredPosition.x);
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("self-hit is possible")));
+    }
     [Test] public void UpgradeMenuPreviewsCancelsAndConfirmsOneCopyWithoutHealing()
     {
         var inventory=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var item=EquipmentAsset("Upgrade sword");

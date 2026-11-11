@@ -105,7 +105,7 @@ public sealed partial class ProgressionMenu
                 source.Magic=Member.StatReplacingCopy(CharacterStat.Magic,current,entry.EquipmentCopy);
                 y=DrawEquipmentAttacks(content,entry.Equipment,source,y,width,entry.EquipmentCopy);
             }
-            y=ProgressionText(content,"Equipment progression pending","Material upgrades are available on the Upgrades page. The expanded ability browser is planned for later.",y+12,width,15);
+            y=ProgressionText(content,"Equipment progression pending","Visit Abilities to inspect all owned weapon Attacks, including locked mastery unlocks. Upgrade requirements are listed on the Upgrades page; a blacksmith performs upgrades.",y+12,width,15);
             content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(((RectTransform)content.parent).rect.height,y+12));return;
         }
         int maximum=Mathf.Max(1,entry.MaximumLevel),level=Mathf.Clamp(entry.Level,1,maximum);

@@ -12,7 +12,7 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(-50)]
 public sealed partial class ProgressionMenu : MonoBehaviour
 {
-    public enum Page { Party, Attributes, Shortcuts, Progression, SkillTree, Inventory, Settings, Saves, Checkpoint, Equipment, Upgrades }
+    public enum Page { Party, Attributes, Shortcuts, Progression, SkillTree, Inventory, Settings, Saves, Checkpoint, Equipment, Upgrades, Abilities }
     GameObject canvasObject, ownedEvents;
     RectTransform shell, body, detailRoot;
     TMP_Text title, characterLabel, detailText, footer;
@@ -130,10 +130,10 @@ public sealed partial class ProgressionMenu : MonoBehaviour
     void Rebuild()
     {
         Canvas.ForceUpdateCanvases(); lastMenuSize=shell.rect.size;
-        shownProgressionEntry=null; events.SetSelectedGameObject(null); Clear(body); Clear(detailRoot); buttons.Clear();
+        shownAbility=null; shownProgressionEntry=null; events.SetSelectedGameObject(null); Clear(body); Clear(detailRoot); buttons.Clear();
         title.text = page == Page.SkillTree ? "SKILL TREE" : page.ToString().ToUpperInvariant();
         characterLabel.text = DisplayName(Member); BuildDetails();
-        switch (page) { case Page.Party: Party(); break; case Page.Attributes: Attributes(); break; case Page.Shortcuts: Shortcuts(); break; case Page.Progression: Progression(); break; case Page.SkillTree: SkillTree(); break; case Page.Inventory: Inventory(); break; case Page.Settings: Settings(); break; case Page.Saves: Saves(); break; case Page.Checkpoint: CheckpointPage(); break; case Page.Equipment: EquipmentPage(); break; case Page.Upgrades: UpgradesPage(); break; }
+        switch (page) { case Page.Party: Party(); break; case Page.Attributes: Attributes(); break; case Page.Shortcuts: Shortcuts(); break; case Page.Progression: Progression(); break; case Page.SkillTree: SkillTree(); break; case Page.Inventory: Inventory(); break; case Page.Settings: Settings(); break; case Page.Saves: Saves(); break; case Page.Checkpoint: CheckpointPage(); break; case Page.Equipment: EquipmentPage(); break; case Page.Upgrades: UpgradesPage(); break; case Page.Abilities: AbilitiesPage(); break; }
         if(page!=Page.SkillTree || skillCards.Count==0) SelectFirst();
         if(page==Page.Party) {
             var selected=buttons.Find(b=>b.name==DisplayName(Member));
@@ -141,6 +141,7 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         }
         if(page==Page.Settings) RestoreSettingsSelection();
         if(page==Page.Progression) RestoreProgressionSelection();
+        if(page==Page.Abilities) RestoreAbilitySelection();
         if(page==Page.Upgrades) RestoreUpgradeSelection();
         if(page==Page.SkillTree) RestoreSkillSelection();
         if(page==Page.Shortcuts) {

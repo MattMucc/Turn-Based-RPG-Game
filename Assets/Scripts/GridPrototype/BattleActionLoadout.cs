@@ -11,6 +11,7 @@ namespace Game.GridPrototype
     public sealed class BattleActionOption
     {
         public string Name;
+        public Texture Image;
         [HideInInspector] public string EquipmentActionId;
         [Range(-1, 3)] public int FavoriteSlot = -1;
         [TextArea] public string Description;
