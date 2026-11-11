@@ -36,6 +36,9 @@ namespace Game.GridPrototype
             if (record == null) { record = new MemberExperience { Member = member, Experience = experience }; memberExperience.Add(record); }
             return record;
         }
+        public int HalfRemainderFor(BattleCharacterInfo member)=>Record(member).HalfRemainder;
+        public void RestoreTotal(long total){experience=total;memberExperience.Clear();}
+        public void RestoreMember(BattleCharacterInfo member,long xp,int half){var record=Record(member);record.Experience=xp;record.HalfRemainder=half;}
         public long ExperienceFor(BattleCharacterInfo member) => Record(member).Experience;
         public long ProgressFor(BattleCharacterInfo member) { Evaluate(ExperienceFor(member), out _, out long remaining); return remaining; }
         public long Experience => experience;

@@ -53,6 +53,20 @@ public class BattleGroup : MonoBehaviour
         if (!spawnArea) spawnArea = GetComponent<BoxCollider>();
     }
 
+    public bool Defeated => experienceClaimed;
+    public Game.GridPrototype.SavedGroup CaptureSave(string id)
+    {var saved=new Game.GridPrototype.SavedGroup{Id=id,Defeated=experienceClaimed};foreach(var enemy in spawnedEnemies)if(enemy){saved.Positions.Add(enemy.transform.position);saved.Rotations.Add(enemy.transform.rotation);}return saved;}
+    public void RestoreSave(Game.GridPrototype.SavedGroup saved)
+    {
+        foreach(var enemy in spawnedEnemies)if(enemy){enemy.SetActive(false);Destroy(enemy);}spawnedEnemies.Clear();enemyMovements.Clear();
+        experienceClaimed=saved.Defeated;battleTriggered=saved.Defeated;retryAfter=Time.time+5;
+        if(saved.Defeated)return;
+        SpawnEnemies();
+        for(int i=0;i<spawnedEnemies.Count&&i<saved.Positions.Count;i++){
+            var enemy=spawnedEnemies[i];var cc=enemy.GetComponent<CharacterController>();bool enabled=cc&&cc.enabled;if(cc)cc.enabled=false;
+            enemy.transform.SetPositionAndRotation(saved.Positions[i],saved.Rotations[i]);if(cc)cc.enabled=enabled;
+        }
+    }
     private void Start()
     {
         SpawnEnemies();

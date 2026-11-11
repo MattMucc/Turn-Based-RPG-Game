@@ -22,7 +22,9 @@ public partial class GameManager : MonoBehaviour
     public PartyProgression Progression = new PartyProgression();
     public ProgressionMenu ProgressionMenu { get; private set; }
     public WorldManipulationController WorldTools { get; private set; }
-    public bool WorldInputBlocked => (WorldTools && WorldTools.BlocksWorldInput) || IsSwitchingCharacter || switchCompletedFrame == Time.frameCount || (ProgressionMenu && ProgressionMenu.BlocksWorldInput);
+    SaveGameService saves;
+    public SaveGameService Saves => saves?saves:(saves=GetComponent<SaveGameService>()??gameObject.AddComponent<SaveGameService>());
+    public bool WorldInputBlocked => (saves&&saves.Busy) || (WorldTools && WorldTools.BlocksWorldInput) || IsSwitchingCharacter || switchCompletedFrame == Time.frameCount || (ProgressionMenu && ProgressionMenu.BlocksWorldInput);
     public static GameManager Instance { get; private set; }
     public PlayerInputReader Input { get; private set; }
     public PlayerMovement PossessedCharacter { get; private set; }

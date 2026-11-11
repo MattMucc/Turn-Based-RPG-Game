@@ -103,6 +103,54 @@ public class PlayerMenuTests
             Assert.IsFalse(preview.Expired(114.99f));Assert.IsTrue(preview.Expired(115));preview.End();Assert.IsFalse(preview.Expired(120));
         });
     }
+    [Test] public void SaveSnapshotRoundTripRestoresRosterPoolsXpInventoryAndEmptyShortcuts()
+    {
+        var members=party.Concat(reserves).ToList();var ids=new List<SaveIdentity>();
+        foreach(var member in members){var identity=member.gameObject.AddComponent<SaveIdentity>();identity.AssignEditorId(Guid.NewGuid().ToString("N"));ids.Add(identity);}
+        var crate=Make("Saved crate");var crateId=crate.AddComponent<SaveIdentity>();crateId.AssignEditorId(Guid.NewGuid().ToString("N"));ids.Add(crateId);
+        var destructible=crate.AddComponent<BattleDestructible>();var usable=crate.AddComponent<BattleUsable>();usable.OneUseOnly=true;
+        var movementType=Type.GetType("PlayerMovement, Assembly-CSharp",true);
+        managerType.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,members[1].GetComponent(movementType));
+        var progression=(PartyProgression)managerType.GetField("Progression").GetValue(manager);progression.AwardExperience(201,party);progression.AwardExperience(1,party);
+        var original=members[0];original.SpendPoint(CharacterStat.Magic);
+        var unit=new GridUnit("Saved",Vector2Int.zero);original.Configure(unit);unit.Health=0;unit.InitializeMagicPoints(unit.MaxMagicPoints,7);original.StoreHealth(unit);original.StoreMagicPoints(unit);
+        var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);inventory.Items[0].Quantity=1;
+        var loadout=original.GetComponent<BattleActionLoadout>();loadout.BindInventory(inventory);loadout.InitializeFavorites();
+        var attack=loadout.Options.First(o=>o.Category==BattleActionCategory.Attack);loadout.AssignFavorite(attack,-1);
+        original.transform.position=new Vector3(40,2,30);
+        var snapshotType=Type.GetType("GameSaveSnapshot, Assembly-CSharp",true);
+        var data=(GameSaveData)snapshotType.GetMethod("Capture").Invoke(null,new object[]{manager,"Test checkpoint",ids});
+        string testScene=data.Scene;data.Scene="Assets/Scenes/SampleScene.unity";data=SaveFileStore.Decode(SaveFileStore.Encode(data));data.Scene=testScene;int points=original.UnspentPoints;long xp=progression.ExperienceFor(original);int allocated=original.AllocatedPoints.Magic;
+        inventory.Items[0].Quantity=0;progression.AwardExperience(1000);original.transform.position=Vector3.zero;party.Reverse();usable.TryUse();destructible.TakeDamage(50);
+        snapshotType.GetMethod("Apply").Invoke(null,new object[]{data,manager,ids});
+        Assert.AreEqual(50,destructible.Health);Assert.IsTrue(crate.activeSelf);Assert.IsTrue(usable.Available);
+        Assert.AreEqual(0,original.StoredHealth);Assert.AreEqual(7,original.StoredMagicPoints);Assert.AreEqual(points,original.UnspentPoints);Assert.AreEqual(allocated,original.AllocatedPoints.Magic);
+        Assert.AreEqual(xp,progression.ExperienceFor(original));Assert.AreEqual(data.Characters[3].HalfRemainder,progression.HalfRemainderFor(members[3]));
+        Assert.AreEqual(new Vector3(40,2,30),original.transform.position);
+        var restoredParty=(List<BattleCharacterInfo>)managerType.GetField("BattleParty").GetValue(manager);Assert.AreEqual(original,restoredParty[0]);
+        Assert.AreEqual(members[1].GetComponent(movementType),managerType.GetProperty("PossessedCharacter").GetValue(manager));
+        var restoredInventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);Assert.AreEqual(1,restoredInventory.Count("health-potion"));
+        Assert.AreEqual(-1,loadout.Options.First(o=>o.Name==attack.Name).FavoriteSlot);loadout.InitializeFavorites();Assert.AreEqual(-1,loadout.Options.First(o=>o.Name==attack.Name).FavoriteSlot);
+        progression.Register(original);Assert.AreEqual(points,original.UnspentPoints,"Loading must not grant level rewards a second time.");
+        data.Active[0]="missing";Assert.Throws<TargetInvocationException>(()=>snapshotType.GetMethod("Apply").Invoke(null,new object[]{data,manager,ids}));Assert.AreEqual(1,restoredInventory.Count("health-potion"));
+    }
+    [Test] public void SavesPageConfirmsOverwriteAndLoadAndServiceRejectsBattle()
+    {
+        string directory=System.IO.Path.Combine(System.IO.Path.GetTempPath(),"rpg-menu-save-test-"+Guid.NewGuid().ToString("N"));
+        var store=new SaveFileStore(directory);var saved=new GameSaveData{Scene="Assets/Scenes/SampleScene.unity",CaptainName="Test captain",SavedUtc=DateTime.UtcNow.ToString("O"),Inventory=new PartyInventory()};saved.Characters.Add(new SavedCharacter{Id="test"});
+        store.Write(0,SaveFileStore.Encode(saved),false);
+        var movementType=Type.GetType("PlayerMovement, Assembly-CSharp",true);managerType.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,party[0].GetComponent(movementType));
+        var service=(Component)managerType.GetProperty("Saves").GetValue(manager);service.GetType().GetField("store",Hidden).SetValue(service,store);
+        var battleType=Type.GetType("BattleManager, Assembly-CSharp",true);var singleton=battleType.GetField("<Instance>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic);var previous=singleton.GetValue(null);
+        try{
+            Open();Page("Saves");Assert.IsFalse(Find("Load checkpoint").interactable);Find("Save slot 1").onClick.Invoke();
+            Assert.IsNotNull(Find("Confirm overwrite"));Find("Cancel save/load").onClick.Invoke();Assert.AreEqual("Test captain",store.Read(0,out _).CaptainName);
+            Find("Load slot 1").onClick.Invoke();Assert.IsNotNull(Find("Confirm load"));menuType.GetMethod("Back").Invoke(menu,null);
+            var battle=Make("Test save guard").AddComponent(battleType);singleton.SetValue(null,battle);battleType.GetField("<InBattle>k__BackingField",Hidden).SetValue(battle,true);
+            Assert.IsFalse((bool)service.GetType().GetProperty("CanOperate").GetValue(service));
+            battleType.GetField("<InBattle>k__BackingField",Hidden).SetValue(battle,false);Assert.IsTrue((bool)service.GetType().GetProperty("CanOperate").GetValue(service));
+        }finally{singleton.SetValue(null,previous);if(System.IO.Directory.Exists(directory)){Assert.IsTrue(System.IO.Path.GetFullPath(directory).StartsWith(System.IO.Path.GetFullPath(System.IO.Path.GetTempPath()),StringComparison.OrdinalIgnoreCase));System.IO.Directory.Delete(directory,true);}}
+    }
     [Test] public void InventoryContextExaminesThenPreviewsReservePotionAndCancelsWithoutConsumption()
     {
         var unit=new GridUnit("test",Vector2Int.zero);reserves[0].Configure(unit);unit.Health=0;reserves[0].StoreHealth(unit);

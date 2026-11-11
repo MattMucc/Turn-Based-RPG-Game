@@ -12,10 +12,12 @@ public class BattleActionTests
 {
     private readonly List<GameObject> objects = new();
     private InSceneGridBattle battle;
+    readonly Dictionary<string,int?> savedPreferences=new();
     private readonly Vector2Int[] cells = { new(3, 3), new(4, 3), new(5, 3), new(4, 4), new(5, 5) };
     private GameObject Create(string name) { var obj = new GameObject(name); objects.Add(obj); return obj; }
     [SetUp] public void Setup()
     {
+        foreach(var key in new[]{"PlayerMenu.OrderTop","PlayerMenu.AutoCamera","PlayerMenu.Assisted"}){savedPreferences[key]=PlayerPrefs.HasKey(key)?(int?)PlayerPrefs.GetInt(key):null;PlayerPrefs.DeleteKey(key);}
         var origin = new Vector3(20000, 0, 20000);
         var floor = GameObject.CreatePrimitive(PrimitiveType.Cube); objects.Add(floor);
         floor.transform.position = origin - Vector3.up * 0.5f; floor.transform.localScale = new Vector3(30, 1, 30);
@@ -36,6 +38,7 @@ public class BattleActionTests
     {
         for (int i = objects.Count - 1; i >= 0; i--) if (objects[i]) Object.DestroyImmediate(objects[i]);
         objects.Clear(); Physics.SyncTransforms();
+        foreach(var pair in savedPreferences){if(pair.Value.HasValue)PlayerPrefs.SetInt(pair.Key,pair.Value.Value);else PlayerPrefs.DeleteKey(pair.Key);}savedPreferences.Clear();PlayerPrefs.Save();
     }
     [Test] public void CombatObjectUseChecksReachTurnAndActionThenInvokesOnceWithoutMovementCost()
     {

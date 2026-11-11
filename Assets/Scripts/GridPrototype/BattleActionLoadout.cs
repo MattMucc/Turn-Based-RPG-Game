@@ -136,6 +136,12 @@ namespace Game.GridPrototype
         [UnityEngine.Serialization.FormerlySerializedAs("Options")]
         [SerializeField] private List<BattleActionOption> personalOptions = CreateDefaultOptions();
         public List<BattleActionOption> PersonalOptions => personalOptions;
+        public void RestoreSavedActions(SavedCharacter saved,PartyInventory shared)
+        {
+            personalOptions=saved.PersonalActions;combinedOptions=null;sharedInstances.Clear();itemInstances.Clear();BindInventory(shared);
+            foreach(BattleActionCategory category in Enum.GetValues(typeof(BattleActionCategory)))customizedFavoriteCategories.Add(category);
+            foreach(var option in Options){option.FavoriteSlot=-1;var favorite=saved.Favorites.Find(f=>f.Category==option.Category&&(option.Category==BattleActionCategory.Item?f.ItemId==option.ItemId:f.Name==option.Name));if(favorite!=null)option.FavoriteSlot=favorite.Slot;}
+        }
         private List<BattleActionOption> combinedOptions;
         private SharedBattleActionLibrary cachedLibrary;
         private int cachedRevision = -1, cachedInventoryRevision = -1, cachedItemCount = -1;

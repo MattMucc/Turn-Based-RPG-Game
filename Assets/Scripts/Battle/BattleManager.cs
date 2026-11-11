@@ -202,7 +202,8 @@ public class BattleManager : MonoBehaviour
         if (group) group.CompleteEncounter(victory);
         actors.Clear(); group = null; InBattle = false;
         if (GameManager.Instance) GameManager.Instance.ConfigureFollowers();
-        Notify(victory ? $"Victory: {experienceReward} XP for participants; half for unused reserves." + (gainedLevels > 0 ? " Level-ups available: spend points with Tab / Y / Triangle." : " Back in the overworld.") : totalDefeat ? "Party defeated. Checkpoint loading is not implemented; prototype returned to the overworld." : "Back in the overworld. Encounter reset; re-entry cooldown active.");
+        if(totalDefeat && GameManager.Instance)GameManager.Instance.Saves.RecoverDefeat();
+        Notify(victory ? $"Victory: {experienceReward} XP for participants; half for unused reserves." + (gainedLevels > 0 ? " Level-ups available: spend points with Tab / Y / Triangle." : " Back in the overworld.") : totalDefeat ? "Party defeated. Restoring your checkpoint or latest manual save." : "Back in the overworld. Encounter reset; re-entry cooldown active.");
     }
 
     private void Notify(string text) { notice = text; noticeUntil = Time.unscaledTime + 7; Debug.Log("[Battle] " + text); }
