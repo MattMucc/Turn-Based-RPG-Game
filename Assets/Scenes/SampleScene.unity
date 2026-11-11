@@ -1398,42 +1398,87 @@ MonoBehaviour:
     Owned:
     - InstanceId: starter-weapon-0
       Definition: {fileID: 11400000, guid: 25cf65227d887924382ee72863221c9b, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-armor-0
       Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-weapon-1
       Definition: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-armor-1
       Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-weapon-2
       Definition: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-armor-2
       Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-weapon-3
       Definition: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-armor-3
       Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-weapon-4
       Definition: {fileID: 11400000, guid: 77b2154037b5120498e6863eace0005a, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-armor-4
       Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-weapon-5
       Definition: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: starter-armor-5
       Definition: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: spare-shortsword
       Definition: {fileID: 11400000, guid: 25cf65227d887924382ee72863221c9b, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: spare-greatsword
       Definition: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: spare-staff
       Definition: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: spare-bow
       Definition: {fileID: 11400000, guid: 77b2154037b5120498e6863eace0005a, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: spare-reinforced-outfit
       Definition: {fileID: 11400000, guid: af2170474ac981240ba08302a9f18a69, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: spare-vitality-charm
       Definition: {fileID: 11400000, guid: 40b42f009e2846c41ba3a10db85e30a5, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
     - InstanceId: spare-magic-charm
       Definition: {fileID: 11400000, guid: af1edc47581dbd74ead6295a883cf788, type: 2}
+      MasteryExperience: 0
+      UpgradeLevel: 0
+    Materials:
+    - Id: iron
+      Name: Iron
+      Quantity: 12
+    - Id: leather
+      Name: Leather
+      Quantity: 12
   characterSwitchDuration: 0.65
   BattleParty:
   - {fileID: 2407421259216672344}

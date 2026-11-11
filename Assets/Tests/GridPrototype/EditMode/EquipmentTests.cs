@@ -10,6 +10,25 @@ public class EquipmentTests
     EquipmentDefinition Item(string id,WeaponType type=WeaponType.Shortsword){var d=ScriptableObject.CreateInstance<EquipmentDefinition>();cleanup.Add(d);d.Id=id;d.WeaponType=type;d.Attacks.Add(new BattleActionOption{Name=id+" slash",Damage=10,Scaling=ScalingStat.Strength,StatScaling=1});return d;}
     CharacterEquipment Character(PartyEquipment inventory){var go=new GameObject("Equipment test");cleanup.Add(go);go.AddComponent<BattleCharacterInfo>();go.AddComponent<BattleActionLoadout>();var c=go.AddComponent<CharacterEquipment>();c.AllowedWeaponTypes=new[]{WeaponType.Shortsword,WeaponType.Bow};c.Bind(inventory);return c;}
     [TearDown]public void Clear(){for(int i=cleanup.Count-1;i>=0;i--)if(cleanup[i])Object.DestroyImmediate(cleanup[i]);cleanup.Clear();}
+    [Test]public void UpgradesAggregateCostsAndChangeOnlyOneCopyWithoutChangingMastery()
+    {
+        var sword=Item("sword");sword.Upgrades.Add(new EquipmentUpgradeStep{Materials=new(){new(){MaterialId="iron",Quantity=2},new(){MaterialId="iron",Quantity=3}},AddedStats=new StatValues{Strength=4}});
+        var one=new OwnedEquipment{InstanceId="one",Definition=sword,MasteryExperience=12};var two=new OwnedEquipment{InstanceId="two",Definition=sword};
+        var inventory=new PartyEquipment{Owned=new(){one,two},Materials=new(){new(){Id="iron",Quantity=4}}};
+        Assert.IsFalse(EquipmentUpgrades.TryApply(inventory,one,0,out _));Assert.AreEqual(4,inventory.Materials[0].Quantity);Assert.AreEqual(0,one.UpgradeLevel);
+        inventory.Materials[0].Quantity=5;Assert.IsTrue(EquipmentUpgrades.TryApply(inventory,one,0,out _));
+        Assert.AreEqual(0,inventory.Materials[0].Quantity);Assert.AreEqual(4,EquipmentUpgrades.Bonus(one,CharacterStat.Strength));Assert.AreEqual(0,EquipmentUpgrades.Bonus(two,CharacterStat.Strength));Assert.AreEqual(12,one.MasteryExperience);
+        inventory.Materials[0].Quantity=5;Assert.IsFalse(EquipmentUpgrades.TryApply(inventory,one,0,out _));Assert.IsFalse(EquipmentUpgrades.TryApply(inventory,one,1,out _));Assert.AreEqual(5,inventory.Materials[0].Quantity);
+        var profile=Character(inventory);profile.RestoreSlots(new[]{"one",null,null,null});Assert.AreEqual(4,profile.GetComponent<BattleCharacterInfo>().Stat(CharacterStat.Strength));
+        profile.ApplySlot(EquipmentSlot.Weapon,"two");Assert.AreEqual(0,profile.GetComponent<BattleCharacterInfo>().Stat(CharacterStat.Strength));
+    }
+    [Test]public void InvalidRecipesAndAccessoriesCannotSpendMaterials()
+    {
+        var item=Item("accessory");item.Kind=EquipmentKind.Accessory;item.Upgrades.Add(new EquipmentUpgradeStep{Materials=new(){new(){MaterialId="iron",Quantity=1}}});
+        var owned=new OwnedEquipment{Definition=item};var inventory=new PartyEquipment{Owned=new(){owned},Materials=new(){new(){Id="iron",Quantity=9}}};
+        Assert.IsFalse(EquipmentUpgrades.TryApply(inventory,owned,0,out _));item.Kind=EquipmentKind.Armor;item.Upgrades[0].Materials[0].Quantity=-1;
+        Assert.IsFalse(EquipmentUpgrades.TryApply(inventory,owned,0,out _));Assert.AreEqual(9,inventory.Materials[0].Quantity);
+    }
     [Test]public void MasteryTravelsWithCopyUnlocksWithoutRefillingShortcutsAndLeavesDuplicatesUntrained()
     {
         var sword=Item("sword");sword.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=1,Attacks=new(){new BattleActionOption{Name="Master cut"}}});

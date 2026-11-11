@@ -5,14 +5,27 @@ using Game.GridPrototype;
 public partial class GameManager
 {
     public PartyEquipment Equipment = new();
+    System.Collections.Generic.List<MaterialStack> initialMaterials;
+    public void RestoreInitialMaterials(){BindEquipment();Equipment.Materials=initialMaterials.Select(m=>new MaterialStack{Id=m.Id,Name=m.Name,Quantity=m.Quantity}).ToList();}
+    public bool TryUpgradeEquipment(string instance,int expectedLevel,out string error)
+    {
+        error="";
+        if((BattleManager.Instance&&BattleManager.Instance.InBattle)||IsSwitchingCharacter||(saves&&saves.Busy)){error="Upgrades are only available outside combat and saving.";return false;}
+        BindEquipment();var item=Equipment.Find(instance);
+        if(!EquipmentUpgrades.Requirements(Equipment,item,expectedLevel,out _,out error))return false;
+        var owner=EquipmentOwner(instance);if(owner)owner.MaterializeVitals();
+        if(!EquipmentUpgrades.TryApply(Equipment,item,expectedLevel,out error))return false;
+        if(owner)owner.ClampStoredVitals();return true;
+    }
     System.Collections.Generic.List<OwnedEquipment> initialEquipment;
     readonly System.Collections.Generic.Dictionary<CharacterEquipment,string[]> initialSlots = new();
     public void BindEquipment()
     {
-        if(initialEquipment==null)initialEquipment=Equipment.Owned.Select(e=>new OwnedEquipment{InstanceId=e.InstanceId,Definition=e.Definition,MasteryExperience=e.MasteryExperience}).ToList();
+        if(initialMaterials==null)initialMaterials=Equipment.Materials.Select(m=>new MaterialStack{Id=m.Id,Name=m.Name,Quantity=m.Quantity}).ToList();
+        if(initialEquipment==null)initialEquipment=Equipment.Owned.Select(e=>new OwnedEquipment{InstanceId=e.InstanceId,Definition=e.Definition,MasteryExperience=e.MasteryExperience,UpgradeLevel=e.UpgradeLevel}).ToList();
         foreach(var member in Progression.Members)if(member){var profile=member.GetComponent<CharacterEquipment>();if(profile){if(!initialSlots.ContainsKey(profile))initialSlots.Add(profile,profile.CaptureSlots());profile.Bind(Equipment);}}
     }
-    public void RestoreInitialEquipment(){BindEquipment();Equipment.Owned=initialEquipment.Select(e=>new OwnedEquipment{InstanceId=e.InstanceId,Definition=e.Definition,MasteryExperience=e.MasteryExperience}).ToList();foreach(var pair in initialSlots)if(pair.Key)pair.Key.RestoreSlots(pair.Value);}
+    public void RestoreInitialEquipment(){BindEquipment();Equipment.Owned=initialEquipment.Select(e=>new OwnedEquipment{InstanceId=e.InstanceId,Definition=e.Definition,MasteryExperience=e.MasteryExperience,UpgradeLevel=e.UpgradeLevel}).ToList();foreach(var pair in initialSlots)if(pair.Key)pair.Key.RestoreSlots(pair.Value);}
     public BattleCharacterInfo EquipmentOwner(string instance)
     {
         if(string.IsNullOrEmpty(instance))return null;

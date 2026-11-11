@@ -22,6 +22,7 @@ namespace Game.GridPrototype
         public List<BattleActionOption> Attacks = new();
         [Min(1)] public int MasteryExperiencePerAttack = 1;
         public List<WeaponMasteryMilestone> Mastery = new();
+        public List<EquipmentUpgradeStep> Upgrades = new();
         public bool Fits(EquipmentSlot slot) => slot == EquipmentSlot.Weapon ? Kind == EquipmentKind.Weapon : slot == EquipmentSlot.Armor ? Kind == EquipmentKind.Armor : Kind == EquipmentKind.Accessory;
     }
 }

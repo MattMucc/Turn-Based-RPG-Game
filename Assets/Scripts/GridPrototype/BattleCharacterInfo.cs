@@ -31,6 +31,9 @@ namespace Game.GridPrototype
         }
         public int BaseStat(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : Initiative;
         public int Stat(CharacterStat stat) => StatReplacingEquipment(stat,null,null);
+        public int StatReplacingCopy(CharacterStat stat,OwnedEquipment previous,OwnedEquipment next) => (int)System.Math.Max(0,System.Math.Min(int.MaxValue,
+            (long)Mathf.Max(0,BaseStat(stat))+Mathf.Max(0,AutomaticGrowth.Get(stat))*(long)Mathf.Max(0,Level-1)+AllocatedPoints.Get(stat)
+            +(GetComponent<CharacterEquipment>()?.Bonus(stat)??0)-EquipmentUpgrades.Bonus(previous,stat)+EquipmentUpgrades.Bonus(next,stat)));
         public int StatReplacingEquipment(CharacterStat stat, EquipmentDefinition previous, EquipmentDefinition next) => (int)System.Math.Max(0, System.Math.Min(int.MaxValue,
             (long)Mathf.Max(0, BaseStat(stat)) + Mathf.Max(0, AutomaticGrowth.Get(stat)) * (long)Mathf.Max(0, Level - 1) + AllocatedPoints.Get(stat)
             + (GetComponent<CharacterEquipment>()?.Bonus(stat) ?? 0) - (previous?.Bonuses?.Get(stat) ?? 0) + (next?.Bonuses?.Get(stat) ?? 0)));

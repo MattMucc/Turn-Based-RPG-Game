@@ -24,8 +24,9 @@ public static partial class GameSaveSnapshot
         var data=new GameSaveData{Scene=SceneManager.GetActiveScene().path,SavedUtc=DateTime.UtcNow.ToString("O"),CheckpointName=checkpoint,
             CaptainName=ProgressionMenu.DisplayName(manager.BattleParty[0]),Controlled=Id(manager.PossessedCharacter),Experience=manager.Progression.Experience,
             Inventory=JsonUtility.FromJson<PartyInventory>(JsonUtility.ToJson(manager.Inventory))};
-        data.HasEquipment=true;
-        data.Equipment=manager.Equipment.Owned.Select(e=>new SavedEquipment{InstanceId=e.InstanceId,MasteryExperience=e.MasteryExperience,DefinitionId=e.Definition?e.Definition.Id:null}).ToList();
+        data.HasEquipment=true;data.HasMaterialUpgrades=true;
+        data.Materials=manager.Equipment.Materials.Select(m=>new MaterialStack{Id=m.Id,Name=m.Name,Quantity=m.Quantity}).ToList();
+        data.Equipment=manager.Equipment.Owned.Select(e=>new SavedEquipment{InstanceId=e.InstanceId,MasteryExperience=e.MasteryExperience,UpgradeLevel=e.UpgradeLevel,DefinitionId=e.Definition?e.Definition.Id:null}).ToList();
         data.Active=manager.BattleParty.Select(Id).ToList();data.Reserve=manager.ReserveParty.Select(Id).ToList();
         foreach(var member in manager.Progression.Members){
             var saved=new SavedCharacter{Id=Id(member),Experience=manager.Progression.ExperienceFor(member),HalfRemainder=manager.Progression.HalfRemainderFor(member)};

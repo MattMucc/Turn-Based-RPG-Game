@@ -109,6 +109,21 @@ public class PlayerMenuTests
         var item=ScriptableObject.CreateInstance<EquipmentDefinition>();equipmentAssets.Add(item);item.Id=id;item.DisplayName=id;item.Kind=kind;item.WeaponType=type;item.Bonuses.Strength=3;
         if(kind==EquipmentKind.Weapon)item.Attacks.Add(new BattleActionOption{Name=id+" hit",Damage=12,Reach=2,Pattern=BattleTargetPattern.Sweep,Radius=1});return item;
     }
+    [Test] public void UpgradeMenuPreviewsCancelsAndConfirmsOneCopyWithoutHealing()
+    {
+        var inventory=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var item=EquipmentAsset("Upgrade sword");
+        item.Upgrades.Add(new EquipmentUpgradeStep{Materials=new(){new(){MaterialId="iron",Quantity=2}},AddedStats=new StatValues{Vitality=2,Magic=2,Strength=1}});
+        inventory.Catalog.Add(item);inventory.Materials.Add(new MaterialStack{Id="iron",Name="Iron",Quantity=3});
+        inventory.Owned.Add(new OwnedEquipment{InstanceId="one",Definition=item});inventory.Owned.Add(new OwnedEquipment{InstanceId="two",Definition=item});
+        var profile=party[0].gameObject.AddComponent<CharacterEquipment>();profile.AllowedWeaponTypes=new[]{WeaponType.Shortsword};profile.RestoreSlots(new[]{"one",null,null,null});
+        managerType.GetMethod("BindEquipment").Invoke(manager,null);party[0].MaterializeVitals();int hp=party[0].StoredHealth,mp=party[0].StoredMagicPoints;
+        Open();Page("Upgrades");Find("Review upgrade").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Iron: 2 / 3")));
+        Assert.AreEqual(0,inventory.Owned[0].UpgradeLevel);Find("Cancel upgrade").onClick.Invoke();Assert.AreEqual(3,inventory.Materials[0].Quantity);
+        Find("Review upgrade").onClick.Invoke();Find("Confirm upgrade").onClick.Invoke();
+        Assert.AreEqual(1,inventory.Owned[0].UpgradeLevel);Assert.AreEqual(0,inventory.Owned[1].UpgradeLevel);Assert.AreEqual(1,inventory.Materials[0].Quantity);
+        Assert.AreEqual(hp,party[0].StoredHealth);Assert.AreEqual(mp,party[0].StoredMagicPoints);Assert.IsFalse(Find("Review upgrade").interactable);
+    }
     [Test] public void EquipmentMenuConfirmsOwnershipAndShowsPatternsWithoutGrantingMastery()
     {
         var equipment=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);
@@ -144,7 +159,7 @@ public class PlayerMenuTests
         var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);inventory.Items[0].Quantity=1;
         var loadout=original.GetComponent<BattleActionLoadout>();loadout.BindInventory(inventory);loadout.InitializeFavorites();
         var attack=loadout.Options.First(o=>o.Category==BattleActionCategory.Attack);loadout.AssignFavorite(attack,-1);
-        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var sword=EquipmentAsset("Saved sword");gear.Catalog.Add(sword);gear.Owned.Add(new OwnedEquipment{InstanceId="saved-copy",Definition=sword,MasteryExperience=7});
+        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var sword=EquipmentAsset("Saved sword");sword.Upgrades.Add(new EquipmentUpgradeStep{AddedStats=new StatValues{Strength=2}});gear.Materials.Add(new MaterialStack{Id="iron",Name="Iron",Quantity=7});gear.Catalog.Add(sword);gear.Owned.Add(new OwnedEquipment{InstanceId="saved-copy",Definition=sword,MasteryExperience=7,UpgradeLevel=1});
         var equipment=original.gameObject.AddComponent<CharacterEquipment>();equipment.AllowedWeaponTypes=new[]{WeaponType.Shortsword};managerType.GetMethod("BindEquipment").Invoke(manager,null);equipment.ApplySlot(EquipmentSlot.Weapon,"saved-copy");
         loadout.AssignFavorite(loadout.Options.First(a=>a.Name=="Saved sword hit"),2);
         attack=loadout.Options.First(a=>a.Effect==ActionEffect.Push);loadout.AssignFavorite(attack,-1);
@@ -152,10 +167,10 @@ public class PlayerMenuTests
         var snapshotType=Type.GetType("GameSaveSnapshot, Assembly-CSharp",true);
         var data=(GameSaveData)snapshotType.GetMethod("Capture").Invoke(null,new object[]{manager,"Test checkpoint",ids});
         string testScene=data.Scene;data.Scene="Assets/Scenes/SampleScene.unity";data=SaveFileStore.Decode(SaveFileStore.Encode(data));data.Scene=testScene;int points=original.UnspentPoints;long xp=progression.ExperienceFor(original);int allocated=original.AllocatedPoints.Magic;
-        equipment.ApplySlot(EquipmentSlot.Weapon,null);gear.Owned.Clear();
+        equipment.ApplySlot(EquipmentSlot.Weapon,null);gear.Owned.Clear();gear.Materials[0].Quantity=0;
         inventory.Items[0].Quantity=0;progression.AwardExperience(1000);original.transform.position=Vector3.zero;party.Reverse();usable.TryUse();destructible.TakeDamage(50);
         snapshotType.GetMethod("Apply").Invoke(null,new object[]{data,manager,ids});
-        Assert.AreEqual("saved-copy",equipment.InstanceAt(EquipmentSlot.Weapon));Assert.AreEqual(sword,equipment.At(EquipmentSlot.Weapon));Assert.AreEqual(1,gear.Owned.Count);Assert.AreEqual(7,gear.Owned[0].MasteryExperience);
+        Assert.AreEqual("saved-copy",equipment.InstanceAt(EquipmentSlot.Weapon));Assert.AreEqual(sword,equipment.At(EquipmentSlot.Weapon));Assert.AreEqual(1,gear.Owned.Count);Assert.AreEqual(7,gear.Owned[0].MasteryExperience);Assert.AreEqual(1,gear.Owned[0].UpgradeLevel);Assert.AreEqual(7,gear.Materials[0].Quantity);
         Assert.AreEqual("Saved sword hit",loadout.Favorite(BattleActionCategory.Attack,2).Name);
         var equipmentCopy=data.Characters.First(c=>c.Id==original.GetComponent<SaveIdentity>().Id);string previousSlot=equipmentCopy.EquipmentSlots[0];equipmentCopy.EquipmentSlots[0]="missing-copy";
         Assert.Throws<TargetInvocationException>(()=>snapshotType.GetMethod("Validate").Invoke(null,new object[]{data,manager,ids}));Assert.AreEqual(sword,equipment.At(EquipmentSlot.Weapon));equipmentCopy.EquipmentSlots[0]=previousSlot;

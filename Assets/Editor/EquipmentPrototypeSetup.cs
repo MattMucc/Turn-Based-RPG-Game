@@ -76,4 +76,20 @@ public static class EquipmentPrototypeSetup
         string path="Assets/Data/Equipment/"+name+".asset";var item=AssetDatabase.LoadAssetAtPath<EquipmentDefinition>(path);if(item)return item;
         item=ScriptableObject.CreateInstance<EquipmentDefinition>();item.Id=id;item.DisplayName=name;item.Description="Prototype equipment for testing. Values and weapon access are provisional.";item.Kind=kind;item.WeaponType=type;item.Bonuses=stats;item.Attacks=attacks.ToList();AssetDatabase.CreateAsset(item,path);return item;
     }
+    [MenuItem("Tools/Game/Prepare prototype material upgrades")]
+    public static void PrepareUpgrades()
+    {
+        if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Exit Play Mode first.");
+        foreach(var guid in AssetDatabase.FindAssets("t:EquipmentDefinition",new[]{"Assets/Data/Equipment"})){
+            var item=AssetDatabase.LoadAssetAtPath<EquipmentDefinition>(AssetDatabase.GUIDToAssetPath(guid));
+            if(item.Kind==EquipmentKind.Accessory||item.Upgrades.Count>0)continue;
+            for(int i=1;i<=3;i++)item.Upgrades.Add(new EquipmentUpgradeStep{
+                Materials=new List<UpgradeMaterialCost>{new UpgradeMaterialCost{MaterialId=item.Kind==EquipmentKind.Weapon?"iron":"leather",Quantity=i*2}},
+                AddedStats=item.Kind==EquipmentKind.Armor?new StatValues{PhysicalDefense=1,MagicalDefense=1}:item.WeaponType==WeaponType.Staff?new StatValues{Magic=1}:new StatValues{Strength=1}
+            });EditorUtility.SetDirty(item);
+        }
+        var manager=UnityEngine.Object.FindFirstObjectByType<GameManager>();
+        if(manager&&manager.Equipment.Materials.Count==0){manager.Equipment.Materials.Add(new MaterialStack{Id="iron",Name="Iron",Quantity=12});manager.Equipment.Materials.Add(new MaterialStack{Id="leather",Name="Leather",Quantity=12});EditorUtility.SetDirty(manager);EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);}
+        AssetDatabase.SaveAssets();
+    }
 }

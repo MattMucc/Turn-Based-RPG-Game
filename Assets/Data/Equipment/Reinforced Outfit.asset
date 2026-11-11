@@ -26,3 +26,36 @@ MonoBehaviour:
     MagicalDefense: 0
     Initiative: 0
   Attacks: []
+  MasteryExperiencePerAttack: 1
+  Mastery: []
+  Upgrades:
+  - Materials:
+    - MaterialId: leather
+      Quantity: 2
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 0
+      PhysicalDefense: 1
+      MagicalDefense: 1
+      Initiative: 0
+  - Materials:
+    - MaterialId: leather
+      Quantity: 4
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 0
+      PhysicalDefense: 1
+      MagicalDefense: 1
+      Initiative: 0
+  - Materials:
+    - MaterialId: leather
+      Quantity: 6
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 0
+      PhysicalDefense: 1
+      MagicalDefense: 1
+      Initiative: 0

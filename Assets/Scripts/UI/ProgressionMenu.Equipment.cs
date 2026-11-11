@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using Game.GridPrototype;
 using UnityEngine;
@@ -51,19 +51,19 @@ public sealed partial class ProgressionMenu
     void PreviewEquipment(string id)
     {
         for(int i=detailContent.childCount-1;i>=0;i--){var child=detailContent.GetChild(i);if(child==detailText.transform)continue;child.gameObject.SetActive(false);if(Application.isPlaying)Destroy(child.gameObject);else DestroyImmediate(child.gameObject);}
-        var profile=Member.GetComponent<CharacterEquipment>();var candidate=Manager.Equipment.Find(id)?.Definition;var current=profile.At(equipmentSlot);
+        var profile=Member.GetComponent<CharacterEquipment>();var candidate=Manager.Equipment.Find(id)?.Definition;var current=profile.CopyAt(equipmentSlot);
         string text=candidate?candidate.Description:"Remove this equipment. An empty weapon slot provides Punch and the common Push action.";
         text+="\n\nSTATS · current → equipped";
         foreach(CharacterStat stat in Enum.GetValues(typeof(CharacterStat))){
-            int before=Member.Stat(stat), after=Member.StatReplacingEquipment(stat,current,candidate);
+            int before=Member.Stat(stat), after=Member.StatReplacingCopy(stat,current,Manager.Equipment.Find(id));
             text+=$"\n{AttributePreview.Name(stat)}: {before} → {after}";
         }
         text+="\n\nChanging equipment never heals HP/MP. Removing maximum-pool bonuses clamps current values. Removed weapon shortcuts become empty; assign new ones under Shortcuts.";
         Detail(candidate?candidate.DisplayName:"Unequip",text,candidate?candidate.Image:null);
         if(candidate&&candidate.Kind==EquipmentKind.Weapon){
             var source=new GridUnit(Member.name,Vector2Int.zero);Member.Configure(source);
-            source.Strength=Member.StatReplacingEquipment(CharacterStat.Strength,current,candidate);
-            source.Magic=Member.StatReplacingEquipment(CharacterStat.Magic,current,candidate);
+            source.Strength=Member.StatReplacingCopy(CharacterStat.Strength,current,Manager.Equipment.Find(id));
+            source.Magic=Member.StatReplacingCopy(CharacterStat.Magic,current,Manager.Equipment.Find(id));
             float y=detailText.rectTransform.sizeDelta.y+24;
             y=DrawEquipmentAttacks(detailContent,candidate,source,y,376,Manager.Equipment.Find(id));
             detailContent.sizeDelta=new Vector2(detailContent.sizeDelta.x,y+12);

@@ -11,7 +11,8 @@ namespace Game.GridPrototype
         public string Controlled;
         public List<string> Active=new(), Reserve=new();
         public PartyInventory Inventory;
-        public bool HasEquipment;
+        public bool HasEquipment, HasMaterialUpgrades;
+        public List<MaterialStack> Materials=new();
         public List<SavedEquipment> Equipment = new();
         public List<SavedCharacter> Characters=new();
         public List<SavedWorldObject> World=new();
@@ -26,7 +27,7 @@ namespace Game.GridPrototype
         public List<SavedFavorite> Favorites=new();
         public List<SavedMastery> Mastery=new();
     }
-    [Serializable] public sealed class SavedEquipment { public string InstanceId,DefinitionId; public int MasteryExperience; }
+    [Serializable] public sealed class SavedEquipment { public string InstanceId,DefinitionId; public int MasteryExperience,UpgradeLevel; }
     [Serializable] public sealed class SavedFavorite {public string Name,ItemId,EquipmentActionId;public BattleActionCategory Category;public int Slot;}
     [Serializable] public sealed class SavedMastery {public string Name;public ProgressionEntryKind Kind;public int Level,Experience;}
     [Serializable] public sealed class SavedWorldObject {public string Id;public Vector3 Position;public Quaternion Rotation;public Vector3 Scale;public bool Active,Used;public int Health=-1;}

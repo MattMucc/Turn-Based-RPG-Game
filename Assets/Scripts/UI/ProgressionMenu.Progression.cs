@@ -99,13 +99,13 @@ public sealed partial class ProgressionMenu
         y=ProgressionText(content,"Entry description",string.IsNullOrWhiteSpace(entry.Description)?"No description available yet.":entry.Description,y,width,16)+12;
         if(entry.Equipment){
             var source=new GridUnit(Member.name,Vector2Int.zero);Member.Configure(source);
-            var current=Member.GetComponent<CharacterEquipment>()?.At(EquipmentSlot.Weapon);
+            var current=Member.GetComponent<CharacterEquipment>()?.CopyAt(EquipmentSlot.Weapon);
             if(entry.Equipment.Kind==EquipmentKind.Weapon){
-                source.Strength=Member.StatReplacingEquipment(CharacterStat.Strength,current,entry.Equipment);
-                source.Magic=Member.StatReplacingEquipment(CharacterStat.Magic,current,entry.Equipment);
+                source.Strength=Member.StatReplacingCopy(CharacterStat.Strength,current,entry.EquipmentCopy);
+                source.Magic=Member.StatReplacingCopy(CharacterStat.Magic,current,entry.EquipmentCopy);
                 y=DrawEquipmentAttacks(content,entry.Equipment,source,y,width,entry.EquipmentCopy);
             }
-            y=ProgressionText(content,"Equipment progression pending","Material upgrades and the expanded ability browser are planned for later.",y+12,width,15);
+            y=ProgressionText(content,"Equipment progression pending","Material upgrades are available on the Upgrades page. The expanded ability browser is planned for later.",y+12,width,15);
             content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(((RectTransform)content.parent).rect.height,y+12));return;
         }
         int maximum=Mathf.Max(1,entry.MaximumLevel),level=Mathf.Clamp(entry.Level,1,maximum);

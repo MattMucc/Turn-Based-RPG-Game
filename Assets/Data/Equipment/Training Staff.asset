@@ -153,3 +153,34 @@ MonoBehaviour:
       Once per action.
     Attacks: []
     FinisherSkillPoints: 1
+  Upgrades:
+  - Materials:
+    - MaterialId: iron
+      Quantity: 2
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 1
+      PhysicalDefense: 0
+      MagicalDefense: 0
+      Initiative: 0
+  - Materials:
+    - MaterialId: iron
+      Quantity: 4
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 1
+      PhysicalDefense: 0
+      MagicalDefense: 0
+      Initiative: 0
+  - Materials:
+    - MaterialId: iron
+      Quantity: 6
+    AddedStats:
+      Vitality: 0
+      Strength: 0
+      Magic: 1
+      PhysicalDefense: 0
+      MagicalDefense: 0
+      Initiative: 0

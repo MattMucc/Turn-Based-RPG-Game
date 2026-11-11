@@ -10,11 +10,13 @@ namespace Game.GridPrototype
         public string InstanceId;
         public EquipmentDefinition Definition;
         [Min(0)] public int MasteryExperience;
+        [Min(0)] public int UpgradeLevel;
     }
     [Serializable] public sealed class PartyEquipment
     {
         public List<EquipmentDefinition> Catalog = new();
         public List<OwnedEquipment> Owned = new();
+        public List<MaterialStack> Materials = new();
         public OwnedEquipment Find(string id) => string.IsNullOrEmpty(id) ? null : Owned.Find(e => e != null && e.InstanceId == id);
     }
     public sealed class CharacterEquipment : MonoBehaviour
@@ -25,13 +27,14 @@ namespace Game.GridPrototype
         public int Revision { get; private set; }
         public string InstanceAt(EquipmentSlot slot) => slot switch { EquipmentSlot.Weapon => weapon, EquipmentSlot.Armor => armor, EquipmentSlot.AccessoryOne => accessoryOne, _ => accessoryTwo };
         public EquipmentDefinition At(EquipmentSlot slot) => inventory?.Find(InstanceAt(slot))?.Definition;
+        public OwnedEquipment CopyAt(EquipmentSlot slot) => inventory?.Find(InstanceAt(slot));
         public OwnedEquipment Weapon => inventory?.Find(weapon);
         public void Bind(PartyEquipment shared) { if (ReferenceEquals(inventory, shared)) return; inventory = shared; Revision++; GetComponent<BattleActionLoadout>()?.EquipmentChanged(false); }
         public bool Accepts(EquipmentSlot slot, EquipmentDefinition item) => item && item.Fits(slot) && (slot != EquipmentSlot.Weapon || AllowedWeaponTypes.Contains(item.WeaponType));
         public int Bonus(CharacterStat stat)
         {
             long total = 0;
-            foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot))) total += At(slot)?.Bonuses?.Get(stat) ?? 0;
+            foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot))) total += EquipmentUpgrades.Bonus(CopyAt(slot),stat);
             return (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, total));
         }
         // Called by the guarded party equipment service, or while restoring a validated save.
