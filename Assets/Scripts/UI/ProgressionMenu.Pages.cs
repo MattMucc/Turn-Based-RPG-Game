@@ -122,30 +122,6 @@ public sealed partial class ProgressionMenu
         var value=Member.GetComponent<BattleActionLoadout>();
         if(value){value.BindInventory(Manager.Inventory);value.InitializeFavorites();}return value;
     }
-    void Progression()
-    {
-        var kinds=new[]{ProgressionEntryKind.Spell,ProgressionEntryKind.Weapon,ProgressionEntryKind.Gear};var labels=new[]{"Spells","Weapons","Gear"};
-        for(int i=0;i<3;i++){var kind=kinds[i];Button(body,labels[i],i*166,0,158,()=>{progressionKind=kind;Rebuild();});}
-        var data=Member.GetComponent<CharacterMenuData>();
-        var entries=data?data.Progression.Where(e=>e!=null&&e.Kind==progressionKind).ToList():new System.Collections.Generic.List<MenuProgressionEntry>();
-        var list=List(body,"Progression entries",0,60,500,440,entries.Count*48);
-        for(int i=0;i<entries.Count;i++){var entry=entries[i];Button(list,entry.Name+(entry.MaximumLevel>1?$"   Lv {entry.Level}":""),0,i*48,486,()=>ShowEntry(entry),()=>ShowEntry(entry),44);}
-        if(entries.Count==0 && progressionKind==ProgressionEntryKind.Spell)
-        {
-            var loadout=Loadout();var spells=loadout?loadout.Options.Where(x=>x!=null&&x.Category==BattleActionCategory.Magic).ToList():new System.Collections.Generic.List<BattleActionOption>();
-            list.sizeDelta=new Vector2(list.sizeDelta.x,Mathf.Max(440,spells.Count*48));
-            for(int i=0;i<spells.Count;i++){var spell=spells[i];Button(list,spell.Name,0,i*48,486,()=>Detail(spell.Name,spell.Tooltip),()=>Detail(spell.Name,spell.Tooltip),44);}
-        }
-        if (entries.Count > 0) ShowEntry(entries[0]);
-        else Detail(labels[(int)progressionKind],"No upgrade milestones available yet.\n\nOwned entries and their future bonuses will appear here as your collection grows.");
-    }
-    void ShowEntry(MenuProgressionEntry entry)
-    {
-        bool leveled=entry.MaximumLevel>1; bool mastered=entry.Level>=entry.MaximumLevel;
-        string progress=!leveled?"":mastered?"Mastered":$"Level {entry.Level} / {entry.MaximumLevel}   ·   XP {entry.Experience} / {entry.NextLevelExperience}";
-        string milestones=string.Join("\n\n",entry.Milestones.OrderBy(x=>x.Level).Select(m=>$"{(m.Level<=entry.Level?"Unlocked":m.Level==entry.Level+1?"Next":"Locked")} · Level {m.Level} · {m.Name}\n{m.Description}"));
-        Detail(entry.Name,entry.Description+"\n\n"+progress+"\n\n"+milestones,entry.Image,!leveled?-1:mastered?1:entry.Experience/(float)Mathf.Max(1,entry.NextLevelExperience));
-    }
     void SkillTree()
     {
         Label(Rect("Tree title",body,0,0,500,48),DisplayName(Member)+" · SKILLS",18);

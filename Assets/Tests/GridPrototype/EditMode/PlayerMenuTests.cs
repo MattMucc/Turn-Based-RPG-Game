@@ -182,6 +182,40 @@ public class PlayerMenuTests
         Assert.AreEqual(actual.Strength,preview.Strength);Assert.AreEqual(actual.Magic,preview.Magic);
         Assert.AreEqual(actual.PhysicalDefense,preview.PhysicalDefense);Assert.AreEqual(actual.MagicalDefense,preview.MagicalDefense);
     }
+    [Test] public void ProgressionShowsOrderedMilestonesAndPreservesSelectionWithoutGrantingUpgrades()
+    {
+        var data=party[0].gameObject.AddComponent<CharacterMenuData>();
+        var entry=new MenuProgressionEntry{Name="Test bow",Kind=ProgressionEntryKind.Weapon,Level=2,MaximumLevel=5,Experience=25,NextLevelExperience=100};
+        entry.Milestones.Add(new UpgradeMilestone{Level=5,Name="Final bonus",Description="Later"});
+        entry.Milestones.Add(new UpgradeMilestone{Level=1,Name="Base attack",Description="Already available"});
+        entry.Milestones.Add(new UpgradeMilestone{Level=3,Name="Triple Shot",Description="Future attack"});
+        data.Progression.Add(entry);
+        var other=new MenuProgressionEntry{Name="Second bow",Kind=ProgressionEntryKind.Weapon,Level=1,MaximumLevel=3};data.Progression.Add(other);
+        Open();Page("Progression");Find("Weapons").onClick.Invoke();Find("Test bow").onClick.Invoke();
+        var text=menu.GetComponentsInChildren<TMP_Text>().Select(t=>t.text).ToList();
+        Assert.IsTrue(text.Any(t=>t.Contains("Unlocked · Level 1")));
+        Assert.IsTrue(text.Any(t=>t.Contains("Next · Level 3")));
+        Assert.IsTrue(text.Any(t=>t.Contains("Locked · Level 5")));
+        var content=menu.GetComponentsInChildren<ScrollRect>().First(r=>r.name=="Progression details").content;
+        CollectionAssert.AreEqual(new[]{"Milestone 1","Milestone 3","Milestone 5"},content.Cast<Transform>().Where(t=>t.name.StartsWith("Milestone ")&&t.GetComponent<Image>()).Select(t=>t.name));
+        var fill=content.GetComponentsInChildren<RectTransform>().First(r=>r.name=="Mastery fill");
+        Assert.AreEqual(.25f,fill.rect.width/((RectTransform)fill.parent).rect.width,.001f);
+        Assert.IsFalse(party[0].GetComponent<BattleActionLoadout>().Options.Any(o=>o.Name=="Triple Shot"));
+        Find("Second bow").onClick.Invoke();menuType.GetMethod("Rebuild",Hidden).Invoke(menu,null);
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.name=="Progression name"&&t.text=="Second bow"));
+        Assert.AreEqual(2,entry.Level);Assert.AreEqual(25,entry.Experience);
+    }
+    [Test] public void ProgressionIncludesUnrecordedLearnedSpellsAndHidesXPForSingleLevelEntries()
+    {
+        var data=party[0].gameObject.AddComponent<CharacterMenuData>();
+        data.Progression.Add(new MenuProgressionEntry{Name="Recorded spell",Kind=ProgressionEntryKind.Spell});
+        party[0].GetComponent<BattleActionLoadout>().PersonalOptions.Add(new BattleActionOption{Name="Other learned spell",Category=BattleActionCategory.Magic,Description="A spell without milestones"});
+        Open();Page("Progression");Find("Other learned spell").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="A spell without milestones"));
+        var scroll=menu.GetComponentsInChildren<ScrollRect>().First(r=>r.name=="Progression details");
+        Assert.IsFalse(scroll.GetComponentsInChildren<Transform>().Any(t=>t.name=="Mastery experience"));
+        Find("Weapons").onClick.Invoke();Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No weapon records available yet."));
+    }
     [Test] public void ProgressionAndTreeRenderAuthoredRecordsWithoutGrantingSkills()
     {
         var data = party[0].gameObject.AddComponent<CharacterMenuData>();
