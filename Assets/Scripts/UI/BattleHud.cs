@@ -71,14 +71,22 @@ public sealed class BattleHud : MonoBehaviour
             portraits.Add(info && info.Portrait ? info.Portrait : capture.Capture(battle.Actor(i), i));
             cards.Add(MakeCard());
         }
-        layoutLabel = Setting("Order placement", new Vector2(-12, 42), () => { top = !top; ApplyLayout(); });
+        top=PlayerPrefs.GetInt("PlayerMenu.OrderTop",1)!=0;
+        autoCamera=PlayerPrefs.GetInt("PlayerMenu.AutoCamera",1)!=0;
+        if(PlayerPrefs.HasKey("PlayerMenu.Assisted"))ApplyPartyAssistance(PlayerPrefs.GetInt("PlayerMenu.Assisted")!=0);
+        layoutLabel = Setting("Order placement", new Vector2(-12, 42), () => { top = !top; PlayerPrefs.SetInt("PlayerMenu.OrderTop",top?1:0);PlayerPrefs.Save();ApplyLayout(); });
         cameraLabel = Setting("Automatic camera", new Vector2(-12, 12), () =>
-        { autoCamera = !autoCamera; battle.SetAutoCamera(autoCamera); cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off"); });
+        { autoCamera = !autoCamera; PlayerPrefs.SetInt("PlayerMenu.AutoCamera",autoCamera?1:0);PlayerPrefs.Save();battle.SetAutoCamera(autoCamera); cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off"); });
         cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off");
         assistanceLabel = Setting("Defense timing", new Vector2(-12, 72), () =>
-        { if (!battle.DefenseActive && !battle.SignatureActive) battle.DefenseSettings.Assisted = !battle.DefenseSettings.Assisted; });
+        { if (!battle.DefenseActive && !battle.SignatureActive) {bool assisted=!battle.DefenseSettings.Assisted;ApplyPartyAssistance(assisted);PlayerPrefs.SetInt("PlayerMenu.Assisted",assisted?1:0);PlayerPrefs.Save();} });
         BuildDefense(); BuildSignature(); BuildTargetDetails(); BuildInspection(); battle.ContextRequested += ShowContext; battle.TargetContextRequested += ShowTargetContext;
         battle.SetAutoCamera(autoCamera); ApplyLayout(); Render();
+    }
+    void ApplyPartyAssistance(bool assisted)
+    {
+        if(Application.isPlaying && GameManager.Instance)foreach(var member in GameManager.Instance.Progression.Members){if(!member)continue;var settings=member.GetComponent<DefensePrototypeSettings>();if(settings)settings.Assisted=assisted;}
+        for(int i=0;i<battle.Combatants.Count;i++)if(battle.IsAlly(i)){var settings=battle.Actor(i).GetComponent<DefensePrototypeSettings>();if(settings)settings.Assisted=assisted;}
     }
     private static void Remove(GameObject obj)
     { obj.SetActive(false); if (Application.isPlaying) Destroy(obj); else DestroyImmediate(obj); }

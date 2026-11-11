@@ -122,25 +122,4 @@ public sealed partial class ProgressionMenu
         var value=Member.GetComponent<BattleActionLoadout>();
         if(value){value.BindInventory(Manager.Inventory);value.InitializeFavorites();}return value;
     }
-    void Settings()
-    {
-        Label(Rect("Settings title",body,0,0,500,48),"AUDIO & CONTROLS",20);
-        Button(body,$"Master volume: {Mathf.RoundToInt(AudioListener.volume*100)}%   −",0,60,366,()=>SetVolume(-.1f));
-        Button(body,"+",380,60,110,()=>SetVolume(.1f));
-        Button(body,"Display: "+(Screen.fullScreen?"Fullscreen":"Windowed"),0,112,490,()=>{Screen.fullScreen=!Screen.fullScreen;Rebuild();});
-        Button(body,"Controller icons: "+(Manager.Input?Manager.Input.ControllerIcons.ToString():"Auto"),0,164,490,()=>{
-            if(Manager.Input){Manager.Input.ControllerIcons=(ControllerIconStyle)(((int)Manager.Input.ControllerIcons+1)%3);PlayerPrefs.SetInt("PlayerMenu.Icons",(int)Manager.Input.ControllerIcons);PlayerPrefs.Save();}Rebuild();});
-        var defense=Member.GetComponent<DefensePrototypeSettings>();
-        Button(body,"Defense timing: "+(defense&&defense.Assisted?"Assisted":"Standard"),0,216,490,()=>{
-            bool assisted=!(defense&&defense.Assisted);foreach(var member in Manager.Progression.Members){var d=member.GetComponent<DefensePrototypeSettings>();if(d)d.Assisted=assisted;}
-            PlayerPrefs.SetInt("PlayerMenu.Assisted",assisted?1:0);PlayerPrefs.Save();Rebuild();});
-        Detail("Settings","Changes take effect immediately.\n\nAssisted timing widens dodge/parry windows for the party.\n\nController icons can follow the detected controller or use your preferred style.\n\nVolume, icon style and timing assistance are remembered between sessions.");
-    }
-    void SetVolume(float delta){AudioListener.volume=Mathf.Clamp01(AudioListener.volume+delta);PlayerPrefs.SetFloat("PlayerMenu.Volume",AudioListener.volume);PlayerPrefs.Save();Rebuild();}
-    void Start()
-    {
-        if(!Manager)return;
-        if(Manager.Input&&PlayerPrefs.HasKey("PlayerMenu.Icons"))Manager.Input.ControllerIcons=(ControllerIconStyle)Mathf.Clamp(PlayerPrefs.GetInt("PlayerMenu.Icons"),0,2);
-        if(PlayerPrefs.HasKey("PlayerMenu.Assisted"))foreach(var member in Manager.Progression.Members){var d=member.GetComponent<DefensePrototypeSettings>();if(d)d.Assisted=PlayerPrefs.GetInt("PlayerMenu.Assisted")!=0;}
-    }
 }

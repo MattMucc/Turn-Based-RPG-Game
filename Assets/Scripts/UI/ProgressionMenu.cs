@@ -44,9 +44,10 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         ? Manager.Progression.Members[memberIndex = Mathf.Clamp(memberIndex, 0, Manager.Progression.Members.Count - 1)] : null;
     public static string DisplayName(BattleCharacterInfo member) => !member ? "No character" :
         string.IsNullOrWhiteSpace(member.DisplayName) ? member.name.Replace("(Clone)", "") : member.DisplayName;
-    void Awake() { if (PlayerPrefs.HasKey("PlayerMenu.Volume")) AudioListener.volume = PlayerPrefs.GetFloat("PlayerMenu.Volume"); }
+    void Awake() { if (PlayerPrefs.HasKey("PlayerMenu.Volume")) AudioListener.volume = Mathf.Clamp01(PlayerPrefs.GetFloat("PlayerMenu.Volume")); }
     void Update()
     {
+        TickDisplayPreview();
         if (!Manager) return;
         if (InBattle) { Close(); return; }
         if (!Application.isFocused) return;
@@ -112,14 +113,14 @@ public sealed partial class ProgressionMenu : MonoBehaviour
     public void Close()
     {
         if (!open) return;
-        CloseInventoryModal(); HideItemTooltip(); open = false; closedFrame = Time.frameCount; Time.timeScale = savedTimeScale;
+        CancelDisplayChange(); resetSettingsPending=false; CloseInventoryModal(); HideItemTooltip(); open = false; closedFrame = Time.frameCount; Time.timeScale = savedTimeScale;
         if (canvasObject) canvasObject.SetActive(false);
         if (events) { events.sendNavigationEvents = savedNavigation; events.SetSelectedGameObject(savedSelection ? savedSelection : null); }
         Cursor.visible = savedCursor; Cursor.lockState = savedLock;
     }
-    public void Back() { if (inventoryModal) { InventoryBack(); return; } if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
-    void Cycle(int direction) { if (inventoryModal) return; int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
-    public void ShowPage(Page value) { if (!open) return; CloseInventoryModal(); HideItemTooltip(); page = value; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
+    public void Back() { if(BackFromSettings())return; if (inventoryModal) { InventoryBack(); return; } if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
+    void Cycle(int direction) { if (inventoryModal || displayPreview.Active || resetSettingsPending) return; int count = Manager.Progression.Members.Count; memberIndex = (memberIndex + direction + count) % count; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
+    public void ShowPage(Page value) { if (!open) return; CancelDisplayChange(); resetSettingsPending=false; settingsSelection=null; CloseInventoryModal(); HideItemTooltip(); page = value; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
     void Clear(Transform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--) { var child = parent.GetChild(i).gameObject; child.SetActive(false); if (Application.isPlaying) Destroy(child); else DestroyImmediate(child); }
@@ -136,6 +137,7 @@ public sealed partial class ProgressionMenu : MonoBehaviour
             var selected=buttons.Find(b=>b.name==DisplayName(Member));
             if(selected)events.SetSelectedGameObject(selected.gameObject);
         }
+        if(page==Page.Settings) RestoreSettingsSelection();
         if(page==Page.Progression) RestoreProgressionSelection();
         if(page==Page.SkillTree) RestoreSkillSelection();
         if(page==Page.Shortcuts) {

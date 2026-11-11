@@ -51,6 +51,58 @@ public class PlayerMenuTests
     void Open() => menuType.GetMethod("Open").Invoke(menu, null);
     void Page(string name) => menuType.GetMethod("ShowPage").Invoke(menu, new[] { Enum.Parse(menuType.GetNestedType("Page"), name) });
     Button Find(string name) => menu.GetComponentsInChildren<Button>(true).First(b => b.gameObject.activeInHierarchy && b.name.StartsWith(name));
+    void WithSettingsSnapshot(Action action)
+    {
+        var keys=new[]{"PlayerMenu.Icons","PlayerMenu.Assisted","PlayerMenu.AutoCamera","PlayerMenu.OrderTop","PlayerMenu.Fullscreen"};
+        var saved=keys.ToDictionary(k=>k,k=>PlayerPrefs.HasKey(k)?(int?)PlayerPrefs.GetInt(k):null);
+        float volume=AudioListener.volume;float? savedVolume=PlayerPrefs.HasKey("PlayerMenu.Volume")?(float?)PlayerPrefs.GetFloat("PlayerMenu.Volume"):null;
+        try{action();}finally{
+            foreach(var pair in saved){if(pair.Value.HasValue)PlayerPrefs.SetInt(pair.Key,pair.Value.Value);else PlayerPrefs.DeleteKey(pair.Key);}
+            if(savedVolume.HasValue)PlayerPrefs.SetFloat("PlayerMenu.Volume",savedVolume.Value);else PlayerPrefs.DeleteKey("PlayerMenu.Volume");
+            AudioListener.volume=volume;PlayerPrefs.Save();
+        }
+    }
+    [Test] public void SettingsVolumeRetainsFocusAndDefaultsRequireConfirmation()
+    {
+        WithSettingsSnapshot(()=>{
+            Open();Page("Settings");Find("Audio").onClick.Invoke();AudioListener.volume=.5f;
+            Find("Volume -").onClick.Invoke();Assert.AreEqual(.45f,AudioListener.volume,.001f);Assert.AreEqual(.45f,PlayerPrefs.GetFloat("PlayerMenu.Volume"),.001f);
+            var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+            Assert.AreEqual("Volume -",events.currentSelectedGameObject.name);
+            Find("Restore defaults").onClick.Invoke();Assert.AreEqual(.45f,AudioListener.volume,.001f);
+            Find("Cancel defaults").onClick.Invoke();Assert.AreEqual(.45f,AudioListener.volume,.001f);
+            Find("Restore defaults").onClick.Invoke();Find("Confirm defaults").onClick.Invoke();Assert.AreEqual(1,AudioListener.volume);
+            Find("Volume +").onClick.Invoke();Assert.AreEqual(1,AudioListener.volume);
+        });
+    }
+    [Test] public void SettingsBattleAppliesToWholeRosterAndSavedPreferencesReload()
+    {
+        WithSettingsSnapshot(()=>{
+            PlayerPrefs.SetInt("PlayerMenu.Assisted",0);PlayerPrefs.SetInt("PlayerMenu.AutoCamera",1);PlayerPrefs.SetInt("PlayerMenu.OrderTop",1);
+            Open();Page("Settings");Find("Battle").onClick.Invoke();Find("Defense timing").onClick.Invoke();
+            foreach(var member in party.Concat(reserves))Assert.IsTrue(member.GetComponent<DefensePrototypeSettings>().Assisted);
+            Find("Automatic battle camera").onClick.Invoke();Find("Turn order").onClick.Invoke();
+            Assert.AreEqual(0,PlayerPrefs.GetInt("PlayerMenu.AutoCamera"));Assert.AreEqual(0,PlayerPrefs.GetInt("PlayerMenu.OrderTop"));
+            foreach(var member in party.Concat(reserves))member.GetComponent<DefensePrototypeSettings>().Assisted=false;
+            menuType.GetMethod("ApplySavedMenuSettings",Hidden).Invoke(menu,null);
+            foreach(var member in party.Concat(reserves))Assert.IsTrue(member.GetComponent<DefensePrototypeSettings>().Assisted);
+            Find("Restore defaults").onClick.Invoke();Find("Confirm defaults").onClick.Invoke();
+            foreach(var member in party.Concat(reserves))Assert.IsFalse(member.GetComponent<DefensePrototypeSettings>().Assisted);
+            Assert.AreEqual(1,PlayerPrefs.GetInt("PlayerMenu.AutoCamera"));Assert.AreEqual(1,PlayerPrefs.GetInt("PlayerMenu.OrderTop"));
+        });
+    }
+    [Test] public void DisplaySelectionIsStagedAndBackDoesNotChangeTheScreen()
+    {
+        WithSettingsSnapshot(()=>{
+            bool original=Screen.fullScreen;Open();Page("Settings");Find("Display").onClick.Invoke();
+            Find("Display mode").onClick.Invoke();Assert.AreEqual(original,Screen.fullScreen);Assert.IsTrue(Find("Apply display change").interactable);
+            menuType.GetMethod("Back").Invoke(menu,null);Assert.AreEqual(original,Screen.fullScreen);Assert.IsFalse(Find("Apply display change").interactable);
+            // Validate the deadline independently; never exercise Screen setters in editor tests.
+            var preview=new DisplayChangePreview();preview.Begin(false,true,100);
+            Assert.IsTrue(preview.Active);Assert.IsFalse(preview.Original);Assert.IsTrue(preview.Requested);
+            Assert.IsFalse(preview.Expired(114.99f));Assert.IsTrue(preview.Expired(115));preview.End();Assert.IsFalse(preview.Expired(120));
+        });
+    }
     [Test] public void InventoryContextExaminesThenPreviewsReservePotionAndCancelsWithoutConsumption()
     {
         var unit=new GridUnit("test",Vector2Int.zero);reserves[0].Configure(unit);unit.Health=0;reserves[0].StoreHealth(unit);
