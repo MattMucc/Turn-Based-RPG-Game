@@ -6,7 +6,10 @@ public sealed partial class ProgressionMenu
 {
     SaveGameService menuSaveService;
     int savePendingSlot=-1;bool pendingLoad;
-    void SaveMenuChanged(){if(open&&(page==Page.Saves||page==Page.Checkpoint))Rebuild();}
+    enum SaveView { Home, Save, Load }
+    SaveView saveView;
+    bool BackFromSaves(){if(saveView==SaveView.Home||!(page==Page.Saves||page==Page.System&&systemTab==SystemTab.Saves))return false;saveView=SaveView.Home;Rebuild();return true;}
+    void SaveMenuChanged(){if(open&&(page==Page.Saves||page==Page.Checkpoint||(page==Page.System&&systemTab==SystemTab.Saves)))Rebuild();}
     void Saves()
     {
         if(!menuSaveService){menuSaveService=Manager.Saves;menuSaveService.Changed+=SaveMenuChanged;}
@@ -19,15 +22,24 @@ public sealed partial class ProgressionMenu
             Button(body,"Cancel save/load",0,226,width,()=>{savePendingSlot=-1;Rebuild();});
             Detail("Confirmation",pendingLoad?"Your party and world state will return to this save. Loading is unavailable during combat.":"The previous file is kept as a recovery backup. This slot will now represent your current progress.");return;
         }
-        var list=List(body,"Save slots",0,52,width,Mathf.Max(260,body.rect.height-52),440);
-        for(int i=0;i<(checkpointContext?3:4);i++){
-            int slot=i;string name=i==3?"Checkpoint autosave":"Manual slot "+(i+1);bool exists=menuSaveService.Store.Exists(i);GameSaveData data=null;string description="Empty";
-            if(exists)try{data=menuSaveService.Store.Read(i,out bool backup);description=data.CaptainName+" · "+(DateTime.TryParse(data.SavedUtc,out var date)?date.ToLocalTime().ToString("g"):data.SavedUtc)+(backup?" · backup":"");}catch(Exception){description="Unreadable save";}
-            Label(Rect(name,list,10,i*110,width-24,30),name,18);
-            Label(Rect("Slot details",list,10,i*110+30,width-24,26),description,13);
-            if(i<3)Button(list,"Save slot "+(i+1),10,i*110+60,(width-32)/2,()=>{if(menuSaveService.Store.Exists(slot)){savePendingSlot=slot;pendingLoad=false;Rebuild();}else menuSaveService.SaveManual(slot,false);}).interactable=menuSaveService.CanOperate;
-            if(!checkpointContext)Button(list,i==3?"Load checkpoint":"Load slot "+(i+1),i==3?10:18+(width-32)/2,i*110+60,i==3?width-24:(width-32)/2,()=>{savePendingSlot=slot;pendingLoad=true;Rebuild();}).interactable=data!=null&&menuSaveService.CanOperate;
+        if(saveView==SaveView.Home&&!checkpointContext){
+            Button(body,"Save Game",0,60,width,()=>{saveView=SaveView.Save;Rebuild();}).interactable=menuSaveService.CanOperate;
+            Button(body,"Load Game",0,110,width,()=>{saveView=SaveView.Load;Rebuild();}).interactable=menuSaveService.CanOperate;
+            Button(body,"Load Last Checkpoint",0,160,width,()=>{savePendingSlot=3;pendingLoad=true;Rebuild();}).interactable=menuSaveService.CanOperate&&menuSaveService.HasCheckpoint;
+            Detail("Save / Load",(menuSaveService.ActiveSlot<0?"No active manual slot":"Current slot: "+(menuSaveService.ActiveSlot+1))+"\n\nThree manual slots. Each slot keeps its own last checkpoint.\n\n"+menuSaveService.Notice);return;
         }
-        Detail("Saving your progress","Three manual slots and a separate checkpoint autosave.\n\nRest at a checkpoint to recover and auto-save. Saving and loading are unavailable during combat or character switching.\n\nThis prototype restores saves in their original scene; load them while that scene is open.\n\n"+menuSaveService.Notice);
+        bool loading=saveView==SaveView.Load&&!checkpointContext;
+        var list=List(body,"Save slots",0,52,width,Mathf.Max(230,body.rect.height-52),380);
+        for(int i=0;i<3;i++){
+            int slot=i;bool exists=menuSaveService.Store.Exists(i);GameSaveData data=null;string description="Empty";
+            if(exists)try{data=menuSaveService.Store.Read(i,out bool backup);description=data.CaptainName+" · "+(DateTime.TryParse(data.SavedUtc,out var date)?date.ToLocalTime().ToString("g"):data.SavedUtc)+(backup?" · backup":"");}catch(Exception){description="Unreadable save";}
+            Button(list,(loading?"Load slot ":"Save slot ")+(i+1),10,i*100,width-24,()=>{
+                if(loading||menuSaveService.Store.Exists(slot)){savePendingSlot=slot;pendingLoad=loading;Rebuild();}
+                else menuSaveService.SaveManual(slot,false);
+            }).interactable=menuSaveService.CanOperate&&(!loading||data!=null);
+            Label(Rect("Slot details",list,10,i*100+42,width-24,50),description,13);
+        }
+        Button(list,"Back",10,310,width-24,()=>{if(checkpointContext)ShowPage(Page.Checkpoint);else{saveView=SaveView.Home;Rebuild();}});
+        Detail(loading?"Load Game":"Save Game",loading?"Choose a manual save. Unsaved progress will be replaced after confirmation.":"Choose a destination. Existing saves require overwrite confirmation.\n\n"+menuSaveService.Notice);
     }
 }

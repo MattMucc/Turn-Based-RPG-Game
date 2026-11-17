@@ -34,11 +34,12 @@ public sealed partial class ProgressionMenu
         inventoryRows.Clear();inventoryButtons.Clear();
         float width=Mathf.Max(300,body.rect.width);
         var all=InventoryEntries();
-        float filterWidth=(width-12)/3;
+        Label(Rect("Inventory heading",body,0,0,width,30),"SHARED INVENTORY",18);
+        float filterWidth=(width-18)/4;
         var filters=System.Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().ToArray();
         for(int i=0;i<filters.Length;i++) {
             var filter=filters[i];
-            var tab=Button(body,InventoryCategoryName(filter),(i%3)*(filterWidth+6),(i/3)*34,filterWidth,()=>{inventoryCategory=filter;HideItemTooltip();Rebuild();},null,30);
+            var tab=Button(body,InventoryCategoryName(filter),(i%4)*(filterWidth+6),40+(i/4)*36,filterWidth,()=>{inventoryCategory=filter;HideItemTooltip();Rebuild();},null,30);
             tab.GetComponentInChildren<TMPro.TMP_Text>().fontSize=13;
             if(filter==inventoryCategory)tab.image.color=new Color(.16f,.36f,.44f);
         }
@@ -68,7 +69,7 @@ public sealed partial class ProgressionMenu
             var pointer=button.gameObject.AddComponent<PlayerInventoryPointer>();
             inventoryRows[pointer]=item;inventoryButtons[item]=button;
             var outline=button.gameObject.AddComponent<Outline>();outline.effectColor=Accent;outline.effectDistance=new Vector2(2,-2);outline.enabled=false;
-            pointer.Context=()=>OpenItemContext(item);pointer.Hover=()=>ShowItemTooltip(item,button.transform);pointer.Exit=HideItemTooltip;
+            pointer.Context=()=>OpenItemContext(item);pointer.PointerContext=data=>OpenItemContextAt(item,data.position,data.pressEventCamera);pointer.Hover=()=>ShowItemTooltip(item,button.transform);pointer.Exit=HideItemTooltip;
             pointer.Select=()=>SelectInventoryItem(item);
             pointer.Begin=data=>BeginInventoryDrag(pointer,item,data);pointer.Move=MoveInventoryDrag;pointer.End=data=>EndInventoryDrag();pointer.Cancel=CancelInventoryDrag;
             pointer.Drop=source=>{if(source==inventoryDragSource&&inventoryRows.ContainsKey(source))droppedInventoryItem=item;};
@@ -81,7 +82,7 @@ public sealed partial class ProgressionMenu
         if(inventoryModal||inventoryDragSource||!inventoryButtons.ContainsKey(item))return;
         selectedInventoryItem=item;
         foreach(var row in inventoryButtons)if(row.Value)row.Value.image.color=row.Key==item?new Color(.16f,.36f,.44f):new Color(.08f,.17f,.25f);
-        Detail(item.Name,InventoryDescription(item),item.Image);
+        InventoryDetails(item);
     }
     void RestoreInventorySelection()
     {
@@ -143,7 +144,14 @@ public sealed partial class ProgressionMenu
         itemTooltip.anchoredPosition=new Vector2(Mathf.Clamp(x,8,shell.rect.width-308),-Mathf.Clamp(y,8,shell.rect.height-height-8));
     }
     void HideItemTooltip() { if(itemTooltip){itemTooltip.gameObject.SetActive(false);if(Application.isPlaying)Destroy(itemTooltip.gameObject);else DestroyImmediate(itemTooltip.gameObject);} itemTooltip=null; }
-    void OpenItemContext(BattleActionOption item) { if(inventoryDragSource)return;SelectInventoryItem(item);inventoryItem=item; inventoryStep=0; DrawInventoryModal(); }
+    void OpenItemContext(BattleActionOption item)
+    {
+        if(!inventoryButtons.TryGetValue(item,out var button)||!button)return;
+        // Keyboard/controller navigation anchors the popup to the selected item, never the stale mouse position.
+        var rect=(RectTransform)button.transform;
+        var screen=RectTransformUtility.WorldToScreenPoint(null,rect.TransformPoint(new Vector3(rect.rect.xMax,rect.rect.yMax,0)));
+        OpenItemContextAt(item,screen,null);
+    }
     void CloseInventoryModal()
     {
         if(inventoryModal){inventoryModal.gameObject.SetActive(false);if(Application.isPlaying)Destroy(inventoryModal.gameObject);else DestroyImmediate(inventoryModal.gameObject);}
@@ -159,16 +167,13 @@ public sealed partial class ProgressionMenu
         inventoryModal=Rect("Inventory interaction",canvasObject.transform,0,0,0,0);inventoryModal.anchorMin=Vector2.zero;inventoryModal.anchorMax=Vector2.one;inventoryModal.offsetMin=inventoryModal.offsetMax=Vector2.zero;
         var shade=inventoryModal.gameObject.AddComponent<Image>();shade.color=new Color(0,0,0,.6f);
         var dismiss=inventoryModal.gameObject.AddComponent<Button>();dismiss.onClick.AddListener(InventoryBack);var nav=dismiss.navigation;nav.mode=Navigation.Mode.None;dismiss.navigation=nav;
+        if(inventoryStep==0){DrawInventoryContextPopup();return;}
         var panel=Rect("Item context",inventoryModal,0,0,440,inventoryStep>=4?500:inventoryStep==2?460:330);panel.anchorMin=panel.anchorMax=panel.pivot=new Vector2(.5f,.5f);panel.anchoredPosition=Vector2.zero;
         panel.gameObject.AddComponent<Image>().color=Panel;
         Label(Rect("Item name",panel,18,14,404,36),inventoryItem.Name,22);
         int start=buttons.Count;
         if(inventoryStep>=4) DrawInventoryEquipment(panel);
-        else if(inventoryStep==0) {
-            Button(panel,"Examine",18,64,404,()=>{inventoryStep=1;DrawInventoryModal();});
-            if(inventoryEquipment.TryGetValue(inventoryItem,out var gear))DrawInventoryEquipmentContext(panel,gear);
-            if(PartyInventory.UsableOutsideCombat(inventoryItem))Button(panel,"Use",18,110,404,()=>{inventoryStep=2;DrawInventoryModal();}).interactable=inventoryItem.Quantity>0;
-        } else if(inventoryStep==1) {
+         else if(inventoryStep==1) {
             var content=List(panel,"Item examination",18,60,404,204,204);
             float height=ProgressionText(content,"Item description",InventoryDescription(inventoryItem),4,372,16);
             content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(204,height+8));

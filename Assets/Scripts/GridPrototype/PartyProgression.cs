@@ -11,11 +11,13 @@ namespace Game.GridPrototype
         [UnityEngine.Serialization.FormerlySerializedAs("Initiative")] public int Speed;
         public int Get(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : stat == CharacterStat.Soul ? Soul : Speed;
         public void Add(CharacterStat stat)
+            => Increase(stat, 1);
+        public void Increase(CharacterStat stat, int amount)
         {
             switch (stat) {
-                case CharacterStat.Vitality: Vitality++; break; case CharacterStat.Strength: Strength++; break;
-                case CharacterStat.Magic: Magic++; break; case CharacterStat.PhysicalDefense: PhysicalDefense++; break;
-                case CharacterStat.MagicalDefense: MagicalDefense++; break; case CharacterStat.Speed: Speed++; break; case CharacterStat.Soul: Soul++; break;
+                case CharacterStat.Vitality: Vitality += amount; break; case CharacterStat.Strength: Strength += amount; break;
+                case CharacterStat.Magic: Magic += amount; break; case CharacterStat.PhysicalDefense: PhysicalDefense += amount; break;
+                case CharacterStat.MagicalDefense: MagicalDefense += amount; break; case CharacterStat.Speed: Speed += amount; break; case CharacterStat.Soul: Soul += amount; break;
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Game.GridPrototype;
 using UnityEngine;
@@ -52,16 +52,17 @@ public sealed partial class ProgressionMenu
     {
         for(int i=detailContent.childCount-1;i>=0;i--){var child=detailContent.GetChild(i);if(child==detailText.transform)continue;child.gameObject.SetActive(false);if(Application.isPlaying)Destroy(child.gameObject);else DestroyImmediate(child.gameObject);}
         var profile=Member.GetComponent<CharacterEquipment>();var candidate=Manager.Equipment.Find(id)?.Definition;var current=profile.CopyAt(equipmentSlot);
-        string text=candidate?candidate.Description:"Remove this equipment. An empty weapon slot provides Punch and the common Push action.";
+        string text=candidate?candidate.Description:"An empty weapon slot provides Punch and Push.";
         text+="\n\nSTATS · current → equipped";
         foreach(CharacterStat stat in Enum.GetValues(typeof(CharacterStat))){
             int before=Member.Stat(stat), after=Member.StatReplacingCopy(stat,current,Manager.Equipment.Find(id));
             text+=$"\n{AttributePreview.Name(stat)}: {before} → {after}";
         }
-        text+="\n\nChanging equipment never heals HP/MP. Removing maximum-pool bonuses clamps current values. Removed weapon shortcuts become empty; assign new ones under Shortcuts.";
+        text+="\n\nHP/MP are not restored. Lower maximum pools clamp current values. Removed weapon shortcuts become empty.";
         Detail(candidate?candidate.DisplayName:"Unequip",text,candidate?candidate.Image:null);
         if(candidate&&candidate.Kind==EquipmentKind.Weapon){
             var source=new GridUnit(Member.name,Vector2Int.zero);Member.Configure(source);
+            source.Soul=Member.StatReplacingCopy(CharacterStat.Soul,current,Manager.Equipment.Find(id));
             source.Strength=Member.StatReplacingCopy(CharacterStat.Strength,current,Manager.Equipment.Find(id));
             source.Magic=Member.StatReplacingCopy(CharacterStat.Magic,current,Manager.Equipment.Find(id));
             float y=detailText.rectTransform.sizeDelta.y+24;

@@ -5,6 +5,20 @@ namespace Game.GridPrototype
 {
     public static class AttributePreview
     {
+        public static GridUnit AfterPoints(BattleCharacterInfo member, System.Collections.Generic.IReadOnlyDictionary<CharacterStat, int> allocation)
+        {
+            var unit = new GridUnit(member.name, Vector2Int.zero); member.Configure(unit);
+            long Count(CharacterStat stat) => allocation != null && allocation.TryGetValue(stat, out int value) ? Math.Max(0, value) : 0;
+            int Sum(int value, long delta) => (int)Math.Min(int.MaxValue, (long)value + Math.Max(0L, delta));
+            unit.MaxHealth = Sum(unit.MaxHealth, Count(CharacterStat.Vitality) * member.HealthPerVitality);
+            unit.Strength = Sum(unit.Strength, Count(CharacterStat.Strength));
+            unit.Magic = Sum(unit.Magic, Count(CharacterStat.Magic));
+            unit.Soul = Sum(unit.Soul, Count(CharacterStat.Soul));
+            unit.PhysicalDefense = Sum(unit.PhysicalDefense, Count(CharacterStat.PhysicalDefense));
+            unit.MagicalDefense = Sum(unit.MagicalDefense, Count(CharacterStat.MagicalDefense));
+            unit.InitializeMagicPoints(Sum(unit.MaxMagicPoints, Count(CharacterStat.Magic) * member.MagicPointsPerMagic), unit.MagicPoints);
+            return unit;
+        }
         public static GridUnit AfterPoint(BattleCharacterInfo member, CharacterStat stat)
         {
             var unit = new GridUnit(member.name, Vector2Int.zero); member.Configure(unit);

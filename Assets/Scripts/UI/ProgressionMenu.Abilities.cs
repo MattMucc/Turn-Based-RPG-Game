@@ -26,17 +26,16 @@ public sealed partial class ProgressionMenu
     {
         abilityCards.Clear();
         Manager.BindEquipment();
-        float width = Mathf.Max(300, body.rect.width), tabWidth = (width - 16) / 3;
-        var categories = new[] { BattleActionCategory.Attack, BattleActionCategory.Skill, BattleActionCategory.Magic };
-        var labels = new[] { "Attacks", "Skills", "Spells" };
+        float width = Mathf.Max(300, body.rect.width), tabWidth = (width - 24) / 4;
+        var categories = new[] { BattleActionCategory.Attack, BattleActionCategory.Skill, BattleActionCategory.Magic, BattleActionCategory.Item };
+        var labels = new[] { "Attacks", "Skills", "Spells", "Items" };
         for (int i = 0; i < categories.Length; i++)
         {
             var selected = categories[i];
             var tab = Button(body, labels[i], i * (tabWidth + 8), 0, tabWidth,
-                () => { abilityCategory = selected; abilitySelection = null; Rebuild(); });
+                () => { abilityCategory = selected; abilitySelection = null; abilitySearch = ""; abilityFamily = null; Rebuild(); });
             if (selected == abilityCategory) tab.image.color = new Color(.16f, .36f, .44f);
         }
-        Button(body,"Mastery & milestones",0,body.rect.height-38,width,()=>ShowPage(Page.Progression));
         var entries = new List<AbilityEntry>();
         var loadout = Loadout();
         if (loadout) foreach (var action in loadout.Options.Where(a => a != null && a.Category == abilityCategory))
@@ -72,27 +71,13 @@ public sealed partial class ProgressionMenu
                     foreach (var action in milestone.Attacks ?? new()) Add(action, milestone);
             }
         }
-        Label(Rect("Ability collection", body, 0, 46, width, 40), abilityCategory == BattleActionCategory.Attack
-            ? "Character attacks and all owned weapons · select to inspect" : "Abilities available to " + DisplayName(Member), 14);
-        var list = List(body, "Ability entries", 0, 92, width, Mathf.Max(150, body.rect.height - 140), entries.Count * 78);
-        foreach (var entry in entries)
-        {
-            var button = Button(list, entry.Action.Name + " · " + (entry.Unlocked ? "Unlocked" : "Locked"), 0,
-                abilityCards.Count * 78, width - 8, () => ShowAbility(entry), () => ShowAbility(entry), 70);
-            var label = button.transform.Find("Label").GetComponent<TMPro.TMP_Text>();
-            label.text += "\n<size=12>" + entry.Source + "</size>";
-            label.enableAutoSizing = true; label.fontSizeMin = 12; label.fontSizeMax = 16;
-            abilityCards.Add((entry, button));
-        }
-        if (entries.Count == 0)
-            Detail("No " + labels[System.Array.IndexOf(categories, abilityCategory)].ToLowerInvariant() + " available",
-                "This character has no abilities in this category yet. Learned abilities will appear here automatically.");
-        else ShowAbility(entries.FirstOrDefault(e => e.Key == abilitySelection) ?? entries[0]);
+        BuildAbilityWorkspace(entries, width);
     }
 
     void RestoreAbilitySelection()
     {
         var card = abilityCards.Find(c => c.entry.Key == abilitySelection);
+        if (abilitySearchField && abilitySearchField.isFocused) return;
         if (card.button) events.SetSelectedGameObject(card.button.gameObject);
     }
 
@@ -101,6 +86,7 @@ public sealed partial class ProgressionMenu
         abilitySelection = entry.Key;
         if (shownAbility == entry) return;
         shownAbility = entry;
+        RefreshAbilityShortcuts();
         foreach (var card in abilityCards) card.button.image.color = card.entry == entry ? new Color(.16f, .36f, .44f) : new Color(.08f, .17f, .25f);
         Clear(detailRoot);
         var content = List(detailRoot, "Ability details", 0, 0, detailRoot.rect.width, detailRoot.rect.height, 300);
@@ -149,6 +135,12 @@ public sealed partial class ProgressionMenu
         }
         y = ProgressionText(content, "Ability description", entry.Action.TooltipFor(source), y, width, 16) + 8;
         y = DrawAttackPattern(content, entry.Action, y, width, 26);
+        if (entry.Weapon != null) foreach (var milestone in WeaponMastery.Milestones(entry.Weapon.Definition))
+            y = ProgressionText(content, "Mastery milestone", (entry.Weapon.MasteryExperience >= milestone.RequiredExperience ? "Unlocked" : "Locked") +
+                $" · {milestone.RequiredExperience} XP · {milestone.Name}\n{milestone.Description}", y + 10, width, 14);
+        if (entry.Spell) foreach (var tier in entry.Spell.OrderedTiers)
+            y = ProgressionText(content, "Spell milestone", entry.Spell.CreateAction(tier).Name + $" · {tier.RequiredExperience} XP" +
+                (entry.Learned.Experience >= tier.RequiredExperience ? " · Learned" : " · Locked"), y + 6, width, 14);
         content.sizeDelta = new Vector2(content.sizeDelta.x, Mathf.Max(((RectTransform)content.parent).rect.height, y + 12));
     }
 }

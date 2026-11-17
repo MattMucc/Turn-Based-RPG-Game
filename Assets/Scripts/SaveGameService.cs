@@ -8,6 +8,15 @@ using UnityEngine;
 public sealed class SaveGameService : MonoBehaviour
 {
     public bool Busy {get;private set;}
+    public int ActiveSlot {get;private set;}=-1;
+    public GameSaveData ReadCheckpoint(out bool recovered)
+    {
+        if(ActiveSlot<0)return Store.Read(3,out recovered);
+        var data=Store.Read(ActiveSlot,out recovered);
+        if(string.IsNullOrEmpty(data.CheckpointPayload))throw new InvalidDataException("This save slot has no checkpoint yet.");
+        return SaveFileStore.Decode(data.CheckpointPayload);
+    }
+    public bool HasCheckpoint {get {try{ReadCheckpoint(out _);return true;}catch(Exception){return false;}}}
     public string Notice {get;private set;}="";
     public event Action Changed;
     float noticeUntil;
@@ -35,9 +44,14 @@ public sealed class SaveGameService : MonoBehaviour
     {
         Busy=true;Notice=slot==3?"Auto-saving...":"Saving...";Changed?.Invoke();yield return null;
         string encoded=null;Exception error=null;
-        try{encoded=SaveFileStore.Encode(GameSaveSnapshot.Capture(GameManager.Instance,checkpoint));}catch(Exception e){error=e;}
-        if(error==null){var store=Store;var task=Task.Run(()=>store.Write(slot,encoded,overwrite));while(!task.IsCompleted)yield return null;if(task.IsFaulted)error=task.Exception.GetBaseException();}
+        try{
+            var snapshot=GameSaveSnapshot.Capture(GameManager.Instance,checkpoint);
+            if(slot==3&&ActiveSlot>=0){var manual=Store.Read(ActiveSlot,out _);manual.CheckpointPayload=SaveFileStore.Encode(snapshot);encoded=SaveFileStore.Encode(manual);}
+            else {if(slot<3){try{snapshot.CheckpointPayload=SaveFileStore.Encode(ReadCheckpoint(out _));}catch(Exception){snapshot.CheckpointPayload=null;}}encoded=SaveFileStore.Encode(snapshot);}
+        }catch(Exception e){error=e;}
+        if(error==null){var store=Store;int destination=slot==3&&ActiveSlot>=0?ActiveSlot:slot;var task=Task.Run(()=>store.Write(destination,encoded,overwrite));while(!task.IsCompleted)yield return null;if(task.IsFaulted)error=task.Exception.GetBaseException();}
         yield return new WaitForSecondsRealtime(.4f);
+        if(error==null&&slot<3)ActiveSlot=slot;
         Busy=false;Report(error==null?(slot==3?"Checkpoint saved":"Game saved"):"Save failed: "+error.Message);
     }
     public void Load(int slot){if(slot<0||slot>3||!CanOperate){Report("Cannot load during battle or a character transition.");return;}StartCoroutine(Read(slot));}
@@ -46,10 +60,10 @@ public sealed class SaveGameService : MonoBehaviour
         Busy=true;Notice="Loading...";Changed?.Invoke();yield return null;
         Exception error=null;bool recovered=false;GameSaveData data=null;
         // Decode and validate fully before altering any gameplay state.
-        try{data=Store.Read(slot,out recovered);GameSaveSnapshot.Validate(data,GameManager.Instance);}catch(Exception e){error=e;}
+        try{data=slot==3?ReadCheckpoint(out recovered):Store.Read(slot,out recovered);GameSaveSnapshot.Validate(data,GameManager.Instance);}catch(Exception e){error=e;}
         if(error==null){
             var manager=GameManager.Instance;GameSaveData rollback=null;
-            try{rollback=GameSaveSnapshot.Capture(manager,null);GameSaveSnapshot.Apply(data,manager);manager.ProgressionMenu.Close();}
+            try{rollback=GameSaveSnapshot.Capture(manager,null);GameSaveSnapshot.Apply(data,manager);if(slot<3)ActiveSlot=slot;manager.ProgressionMenu.Close();}
             catch(Exception e){error=e;if(rollback!=null)try{GameSaveSnapshot.Apply(rollback,manager);}catch(Exception rollbackError){Debug.LogException(rollbackError);}}
         }
         yield return new WaitForSecondsRealtime(.4f);Busy=false;
@@ -57,7 +71,8 @@ public sealed class SaveGameService : MonoBehaviour
     }
     public void RecoverDefeat()
     {
-        try{var checkpoint=Store.Read(3,out _);GameSaveSnapshot.Validate(checkpoint,GameManager.Instance);Load(3);return;}catch(Exception){}
+        try{var checkpoint=ReadCheckpoint(out _);GameSaveSnapshot.Validate(checkpoint,GameManager.Instance);Load(3);return;}catch(Exception){}
+        if(ActiveSlot>=0){Load(ActiveSlot);return;}
         int latest=-1;string time="";
         for(int i=0;i<3;i++)try{var data=Store.Read(i,out _);GameSaveSnapshot.Validate(data,GameManager.Instance);if(string.CompareOrdinal(data.SavedUtc,time)>0){time=data.SavedUtc;latest=i;}}catch(Exception){}
         if(latest>=0)Load(latest);else Report("Party defeated. No usable checkpoint or manual save was found.");

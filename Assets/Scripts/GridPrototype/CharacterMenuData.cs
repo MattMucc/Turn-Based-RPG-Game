@@ -30,6 +30,7 @@ namespace Game.GridPrototype
         [TextArea] public string Description;
         public bool Passive;
         public Texture Icon;
+        [Tooltip("Tree layout: X runs left to right; increasing Y places a node higher above the starting node.")]
         public Vector2 Position;
         public List<string> Prerequisites = new();
         [Min(1)] public int RequiredLevel = 1;

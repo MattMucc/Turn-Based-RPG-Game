@@ -107,6 +107,6 @@ public sealed partial class ProgressionMenu
         int slot=-1;
         if(keyboard!=null){if(keyboard.digit1Key.wasPressedThisFrame)slot=0;else if(keyboard.digit2Key.wasPressedThisFrame)slot=1;else if(keyboard.digit3Key.wasPressedThisFrame)slot=2;else if(keyboard.digit4Key.wasPressedThisFrame)slot=3;}
         if(pad!=null&&pad.leftTrigger.isPressed){if(pad.buttonWest.wasPressedThisFrame)slot=0;else if(pad.buttonNorth.wasPressedThisFrame)slot=1;else if(pad.buttonSouth.wasPressedThisFrame)slot=2;else if(pad.buttonEast.wasPressedThisFrame)slot=3;}
-        if(slot<0)return false;ChooseShortcutSlot(slot);return true;
+        if(slot<0)return false;if(page==Page.Abilities)ChooseAbilityShortcutSlot(slot);else ChooseShortcutSlot(slot);return true;
     }
 }

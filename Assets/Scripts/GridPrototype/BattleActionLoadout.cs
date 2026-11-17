@@ -113,7 +113,6 @@ namespace Game.GridPrototype
                     amount += "–" + CombatMath.Damage(source, target, Damage + QteBonusDamage, DamageType, Scaling, StatScaling) + " (QTE)";
                 if (Pattern == BattleTargetPattern.Multiple) amount += " per hit";
                 result += Row("Damage", amount);
-                result += Row("Defense", target == null ? "Before mitigation" : "Target included");
             }
             if (Effect == ActionEffect.Heal) result += Row("Healing", $"Up to {Healing} HP");
             if (Effect == ActionEffect.RestoreMagic) result += Row("Recovery", $"Up to {MagicRestored} MP");

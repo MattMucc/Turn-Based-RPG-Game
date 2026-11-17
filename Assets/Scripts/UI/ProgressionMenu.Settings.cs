@@ -63,16 +63,16 @@ public sealed partial class ProgressionMenu
             Detail("Audio","Master volume adjusts all game audio. Changes apply immediately and are remembered between sessions.");
         }else if(settingsTab==SettingsTab.Display){
             bool chosen=pendingFullscreen??Screen.fullScreen;
-            Button(list,"Display mode: "+(chosen?"Fullscreen":"Windowed"),12,12,width-24,()=>{pendingFullscreen=!chosen;SettingsRebuild("Display mode");},()=>Detail("Display mode","Choose Fullscreen or Windowed, then Apply. You will have 15 seconds to keep the change.\n\nIn Unity, the Game view is managed by the editor; verify actual window changes in a standalone build."));
+            Button(list,"Display mode: "+(chosen?"Fullscreen":"Windowed"),12,12,width-24,()=>{pendingFullscreen=!chosen;SettingsRebuild("Display mode");},()=>Detail("Display mode","Fullscreen or Windowed. Unconfirmed changes revert after 15 seconds."));
             Button(list,"Apply display change",12,64,width-24,BeginDisplayChange).interactable=chosen!=Screen.fullScreen;
             Detail("Display","Choose a mode, then Apply. A 15-second confirmation protects against an unwanted display change. Only a kept mode is saved.");
         }else if(settingsTab==SettingsTab.Controls){
             var style=Manager.Input?Manager.Input.ControllerIcons:ControllerIconStyle.Auto;
             Button(list,"Controller icons: "+style,12,12,width-24,()=>{
                 if(Manager.Input){Manager.Input.ControllerIcons=(ControllerIconStyle)(((int)style+1)%3);PlayerPrefs.SetInt("PlayerMenu.Icons",(int)Manager.Input.ControllerIcons);PlayerPrefs.Save();}SettingsRebuild("Controller icons");
-            },()=>Detail("Controller icons","Auto follows the detected controller. Xbox and PlayStation override the icon appearance. This does not change button bindings.\n\nFavorite action shortcuts are configured on the Shortcuts page.")).interactable=Manager.Input;
+            },()=>Detail("Controller icons","Auto follows the detected controller. Xbox and PlayStation override the icon appearance. This does not change button bindings.\n\nFavorite action shortcuts are configured in Abilities.")).interactable=Manager.Input;
             Button(list,"Restore defaults",12,76,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
-            Detail("Controls","Choose automatic, Xbox, or PlayStation controller icons.\n\nMenu: arrows / D-pad to navigate, Enter / bottom face button to select, Escape or Backspace / east face button to go back.\n\nUse the Shortcuts page to assign favorite actions. Full control rebinding is not available yet.");
+            Detail("Controls","Automatic, Xbox, or PlayStation controller icons.\n\nFavorite actions are configured in Abilities. Full control rebinding is not available yet.");
         }else{
             var defense=Member.GetComponent<DefensePrototypeSettings>();bool assisted=PlayerPrefs.HasKey("PlayerMenu.Assisted")?PlayerPrefs.GetInt("PlayerMenu.Assisted")!=0:defense&&defense.Assisted;
             bool auto=PlayerPrefs.GetInt(AutoCameraKey,1)!=0,top=PlayerPrefs.GetInt(OrderTopKey,1)!=0;
@@ -117,7 +117,7 @@ public sealed partial class ProgressionMenu
     }
     bool BackFromSettings()
     {
-        if(page!=Page.Settings)return false;
+        if(page!=Page.Settings && !(page==Page.System&&systemTab==SystemTab.Settings))return false;
         if(displayPreview.Active||pendingFullscreen.HasValue){CancelDisplayChange();SettingsRebuild("Display mode");return true;}
         if(resetSettingsPending){resetSettingsPending=false;SettingsRebuild("Restore defaults");return true;}
         return false;

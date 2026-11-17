@@ -22,6 +22,11 @@ public class CombatEffectsTests
         Assert.AreEqual(28, CombatMath.Damage(source, null, 10, DamageKind.Magical, ScalingStat.Soul, 1.5f));
         Assert.AreEqual(13, CombatMath.Damage(source, null, 10, DamageKind.Physical, ScalingStat.Strength, 1));
     }
+    [Test] public void DamageTooltipOmitsDefenseQualifierButRetainsCalculatedDamage()
+    {
+        var action=new BattleActionOption{Damage=25};
+        StringAssert.Contains("25",action.Tooltip);StringAssert.DoesNotContain("mitigation",action.Tooltip);StringAssert.DoesNotContain("Defense",action.Tooltip);
+    }
     [Test] public void TooltipShowsApAndTwentyStackAffliction()
     {
         var action = new BattleActionOption { Category = BattleActionCategory.Skill, ActionPointCost = 4,

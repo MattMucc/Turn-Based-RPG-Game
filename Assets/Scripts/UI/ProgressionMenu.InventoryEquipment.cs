@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Game.GridPrototype;
 using UnityEngine;
@@ -23,6 +23,7 @@ public sealed partial class ProgressionMenu
     }
     void BackInventoryEquipment()
     {
+        if(partyEquipmentContext){partyEquipmentContext=false;CloseInventoryModal();OpenPartyEquipmentPicker(inventoryEquipSlot);return;}
         if(inventoryStep==6&&!inventoryUnequip)inventoryStep=inventoryEquipment[inventoryItem].Definition.Kind==EquipmentKind.Accessory?5:4;
         else inventoryStep=inventoryStep==5?4:0;
         inventoryEquipNotice=null;DrawInventoryModal();

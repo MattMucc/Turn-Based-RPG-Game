@@ -8,10 +8,12 @@ using UnityEngine.UI;
 public sealed partial class ProgressionMenu
 {
     MenuSkillNode selectedSkillNode;
+    bool prototypeSkillTree;
     readonly List<(MenuSkillNode node, Button button, SkillTreeNodeGraphic graphic)> skillCards=new();
     List<MenuSkillNode> treeNodes=new();
     bool SkillLearned(MenuSkillNode node)
     {
+        if(prototypeSkillTree)return false;
         var loadout=Loadout();
         return !node.Passive && !string.IsNullOrWhiteSpace(node.ActionName) && loadout
             && loadout.Options.Any(o=>o!=null&&o.Category==BattleActionCategory.Skill&&o.Name==node.ActionName);
@@ -22,23 +24,22 @@ public sealed partial class ProgressionMenu
     void SkillTree()
     {
         skillCards.Clear();float width=Mathf.Max(300,body.rect.width);
-        Label(Rect("Tree title",body,0,0,width,34),DisplayName(Member)+" · SKILLS",20);
-        Label(Rect("Tree legend",body,0,36,width,46),"Circle: Skill    Diamond: Passive\nGold: learned    Gray: locked    Blue outline: selected",13);
+        Label(Rect("Tree title",body,0,0,width,34),DisplayName(Member)+" · SKILL TREE",20);
+        Label(Rect("Tree legend",body,0,36,width,46),"Circle: Skill    Diamond: Passive\nGold: learned    Gray: locked / placeholder    Blue: selected",13);
         var data=Member.GetComponent<CharacterMenuData>();
         treeNodes=data&&data.SkillTree!=null?data.SkillTree.Where(n=>n!=null).ToList():new List<MenuSkillNode>();
-        if(treeNodes.Count==0){
-            selectedSkillNode=null;
-            Label(Rect("Empty skill tree",body,16,112,width-32,120),"This character's Skill Tree is not available yet.",18);
-            Detail("Character Skill Tree","Unique Skills will use Skill Points to learn. These are separate from the AP spent using Skills in combat.\n\nCharacter kits and their learning rules are still being defined.");return;
-        }
-        if(!treeNodes.Contains(selectedSkillNode))selectedSkillNode=treeNodes[0];
+        prototypeSkillTree=treeNodes.Count==0;
+        if(prototypeSkillTree)treeNodes=PrototypeGrowthNodes();
+        if(!treeNodes.Contains(selectedSkillNode))selectedSkillNode=treeNodes.FirstOrDefault(n=>n.Id==selectedSkillNode?.Id)??treeNodes.FirstOrDefault(n=>n.Prerequisites==null||n.Prerequisites.Count==0)??treeNodes[0];
         Vector2 minimum=new Vector2(treeNodes.Min(n=>n.Position.x),treeNodes.Min(n=>n.Position.y));
         float treeWidth=Mathf.Max(width-8,treeNodes.Max(n=>n.Position.x)-minimum.x+160);
-        float treeHeight=Mathf.Max(180,treeNodes.Max(n=>n.Position.y)-minimum.y+150);
+        float treeHeight=Mathf.Max(body.rect.height-92,treeNodes.Max(n=>n.Position.y)-minimum.y+150);
         var tree=List(body,"Skill tree",0,92,width,Mathf.Max(180,body.rect.height-92),treeHeight);
         tree.sizeDelta=new Vector2(treeWidth,tree.sizeDelta.y);
         var scroll=tree.parent.GetComponent<ScrollRect>();scroll.horizontal=true;
-        Vector2 Center(MenuSkillNode n)=>n.Position-minimum+new Vector2(80,44);
+        float horizontalPadding=(treeWidth-(treeNodes.Max(n=>n.Position.x)-minimum.x))/2;
+        // Authored Y is progression height: larger values render farther up the tree.
+        Vector2 Center(MenuSkillNode n)=>new Vector2(n.Position.x-minimum.x+horizontalPadding,treeHeight-96-(n.Position.y-minimum.y));
         foreach(var node in treeNodes)foreach(var id in (node.Prerequisites??new List<string>()).Distinct()) {
             var parent=Prerequisite(id);if(parent==null||parent==node)continue;
             var from=Center(parent);var to=Center(node);var direction=to-from;float length=direction.magnitude;
@@ -49,7 +50,7 @@ public sealed partial class ProgressionMenu
             var image=line.gameObject.AddComponent<Image>();image.color=SkillLearned(parent)?new Color(.65f,.51f,.25f):new Color(.25f,.31f,.37f);image.raycastTarget=false;
         }
         foreach(var node in treeNodes) {
-            var captured=node;var point=Center(node);bool learned=SkillLearned(node),met=SkillRequirementsMet(node);
+            var captured=node;var point=Center(node);bool learned=!prototypeSkillTree&&SkillLearned(node),met=!prototypeSkillTree&&SkillRequirementsMet(node);
             var button=Button(tree,"Skill node "+node.Id,point.x-58,point.y-28,116,()=>{events.SetSelectedGameObject(skillCards.Find(c=>c.node==captured).button.gameObject);ShowSkillNode(captured);},()=>ShowSkillNode(captured),96);
             button.image.color=Color.clear;
             var shapeRect=Rect("Node frame",button.transform,30,0,56,56);
@@ -67,16 +68,33 @@ public sealed partial class ProgressionMenu
         foreach(var card in skillCards){
             var nav=card.button.navigation;nav.mode=Navigation.Mode.Explicit;
             nav.selectOnLeft=SkillNeighbor(card.node,Vector2.left);nav.selectOnRight=SkillNeighbor(card.node,Vector2.right);
-            nav.selectOnUp=SkillNeighbor(card.node,Vector2.down);nav.selectOnDown=SkillNeighbor(card.node,Vector2.up);
-            if(!nav.selectOnLeft)nav.selectOnLeft=shell.GetComponentsInChildren<Button>().FirstOrDefault(b=>b.name=="Skill Tree");
+            nav.selectOnUp=SkillNeighbor(card.node,Vector2.up);nav.selectOnDown=SkillNeighbor(card.node,Vector2.down);
+            if(!nav.selectOnLeft)nav.selectOnLeft=shell.GetComponentsInChildren<Button>().FirstOrDefault(b=>b.name=="Growth");
             card.button.navigation=nav;
         }
         ShowSkillNode(selectedSkillNode);
     }
+    // Presentation-only examples. Never attach these records to a character or save them.
+    static List<MenuSkillNode> PrototypeGrowthNodes() => new()
+    {
+        new MenuSkillNode{Id="preview-start",Name="Starting node",Position=new Vector2(160,0),Description="The starting point of this character's future Skill Tree."},
+        new MenuSkillNode{Id="preview-left",Name="Branch A",Position=new Vector2(80,150),Prerequisites=new(){"preview-start"},Description="Placeholder branch. Its Skills and requirements are undecided."},
+        new MenuSkillNode{Id="preview-right",Name="Branch B",Position=new Vector2(240,150),Prerequisites=new(){"preview-start"},Description="Placeholder branch. Its Skills and requirements are undecided."},
+        new MenuSkillNode{Id="preview-left-top",Name="Future Skill",Position=new Vector2(0,300),Prerequisites=new(){"preview-left"},Description="Example of a later Skill node; no ability is assigned."},
+        new MenuSkillNode{Id="preview-passive",Name="Future passive",Passive=true,Position=new Vector2(160,300),Prerequisites=new(){"preview-left","preview-right"},Description="Example passive node shape; no passive effect is assigned."},
+        new MenuSkillNode{Id="preview-right-top",Name="Future Skill",Position=new Vector2(320,300),Prerequisites=new(){"preview-right"},Description="Example of a later Skill node; no ability is assigned."}
+    };
     Button SkillNeighbor(MenuSkillNode origin,Vector2 direction)
     {
         Button result=null;float best=float.PositiveInfinity;
-        foreach(var card in skillCards){var delta=card.node.Position-origin.Position;float along=Vector2.Dot(delta,direction);if(along<=.01f)continue;
+        var candidates=skillCards.Where(c=>Vector2.Dot(c.node.Position-origin.Position,direction)>.01f).ToList();
+        if(Mathf.Abs(direction.y)>.5f){
+            var connected=candidates.Where(c=>direction.y>0
+                ? (c.node.Prerequisites?.Contains(origin.Id)??false)
+                : (origin.Prerequisites?.Contains(c.node.Id)??false)).ToList();
+            if(connected.Count>0)candidates=connected;
+        }
+        foreach(var card in candidates){var delta=card.node.Position-origin.Position;float along=Vector2.Dot(delta,direction);if(along<=.01f)continue;
             float perpendicular=Mathf.Abs(delta.x*direction.y-delta.y*direction.x);float score=along+perpendicular*3;
             if(score<best){best=score;result=card.button;}}
         return result;
@@ -90,7 +108,11 @@ public sealed partial class ProgressionMenu
     {
         selectedSkillNode=node;
         foreach(var card in skillCards){card.graphic.Selected=card.node==node;card.graphic.SetVerticesDirty();}
-        bool learned=SkillLearned(node),met=SkillRequirementsMet(node);
+        if(prototypeSkillTree){
+            Detail(node.Name,"Layout prototype\n\n"+node.Description+"\n\nSkill: Not designed\nRequired level: Not set\nSkill Point cost: Not set\n\nUnlocking is unavailable. These nodes do not grant abilities, spend points or change this character.");
+            return;
+        }
+        bool learned=!prototypeSkillTree&&SkillLearned(node),met=!prototypeSkillTree&&SkillRequirementsMet(node);
         string state=learned?"Learned":met?"Level and prerequisites met":"Locked";
         string text=$"{(node.Passive?"Passive":"Active Skill")} · {state}\n\n{node.Description}\n\nREQUIREMENTS\nCharacter level: {Member.Level} / {Mathf.Max(1,node.RequiredLevel)}\nSkill Point cost: {Mathf.Max(0,node.SkillPointCost)}\n\nPREREQUISITES";
         var prerequisites=node.Prerequisites??new List<string>();

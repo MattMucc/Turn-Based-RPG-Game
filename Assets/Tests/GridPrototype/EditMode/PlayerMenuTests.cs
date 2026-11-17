@@ -69,6 +69,25 @@ public class PlayerMenuTests
             AudioListener.volume=volume;PlayerPrefs.Save();
         }
     }
+    [Test] public void SystemCombinesDestinationsAndCancelsPendingSettingsOnTabChange()
+    {
+        Open();Find("System").onClick.Invoke();
+        var shell=(RectTransform)menuType.GetField("shell",Hidden).GetValue(menu);
+        Assert.IsNull(shell.Find("Settings"));Assert.IsNull(shell.Find("Saves"));
+        Assert.IsFalse(shell.Find("Selected member").gameObject.activeSelf);
+        Assert.AreEqual("System",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
+        bool screen=Screen.fullScreen;
+        Find("Display").onClick.Invoke();Find("Display mode").onClick.Invoke();
+        Find("Save / Load").onClick.Invoke();Assert.AreEqual(screen,Screen.fullScreen);
+        Assert.IsNull(menuType.GetField("pendingFullscreen",Hidden).GetValue(menu));
+        Assert.IsNotNull(Find("Save Game"));Assert.IsNotNull(Find("Load Last Checkpoint"));
+        Find("Settings").onClick.Invoke();Assert.IsFalse(Find("Apply display change").interactable);
+        Find("Audio").onClick.Invoke();Find("Restore defaults").onClick.Invoke();
+        Find("Save / Load").onClick.Invoke();Find("Settings").onClick.Invoke();
+        Assert.IsFalse((bool)menuType.GetField("resetSettingsPending",Hidden).GetValue(menu));
+        Assert.IsNotNull(Find("Volume -"));
+        Page("Party");Assert.IsTrue(shell.Find("Selected member").gameObject.activeSelf);
+    }
     [Test] public void SettingsVolumeRetainsFocusAndDefaultsRequireConfirmation()
     {
         WithSettingsSnapshot(()=>{
@@ -134,6 +153,39 @@ public class PlayerMenuTests
         Find("Locked sweep · Unlocked").onClick.Invoke();
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Weapon XP 10 / 10")));
         Assert.AreEqual("new",equipment.InstanceAt(EquipmentSlot.Weapon));
+    }
+    [Test] public void CombinedAbilityWorkspaceSearchesLargeSpellCollectionAndKeepsFourSlots()
+    {
+        var loadout=party[0].GetComponent<BattleActionLoadout>();
+        for(int i=0;i<100;i++)loadout.PersonalOptions.Add(new BattleActionOption{Name="Search spell "+i.ToString("000"),Category=BattleActionCategory.Magic});
+        Open();Page("Abilities");Find("Spells").onClick.Invoke();
+        Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Shortcuts"&&b.transform.parent.name=="Menu frame"));
+        Assert.AreEqual(4,menu.GetComponentsInChildren<Button>().Count(b=>b.name.StartsWith("Shortcut ")));
+        var input=menu.GetComponentInChildren<TMP_InputField>();input.text="099";
+        Assert.AreEqual(1,menu.GetComponentsInChildren<Button>().Count(b=>b.name.StartsWith("Spell family ")));
+        Assert.IsNotNull(Find("Search spell 099 · Unlocked"));
+        input.text="not present";Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No matches"));
+        input.text="";Assert.AreEqual(100,menu.GetComponentsInChildren<Button>().Count(b=>b.name.StartsWith("Spell family ")));
+        Assert.AreEqual(4,menu.GetComponentsInChildren<Button>().Count(b=>b.name.StartsWith("Shortcut ")));
+    }
+    [Test] public void CombinedAbilityShortcutsConfirmCancelClearAndKeepSharedItems()
+    {
+        Open();Page("Abilities");Find("Strike · Unlocked").onClick.Invoke();var loadout=party[0].GetComponent<BattleActionLoadout>();
+        Find("Shortcut 4").onClick.Invoke();Assert.IsNull(loadout.Favorite(BattleActionCategory.Attack,3));Find("Cancel").onClick.Invoke();
+        Find("Shortcut 4").onClick.Invoke();Find("Confirm shortcut").onClick.Invoke();Assert.AreEqual("Strike",loadout.Favorite(BattleActionCategory.Attack,3).Name);
+        Find("Shortcut 4").onClick.Invoke();Find("Clear slot").onClick.Invoke();Assert.IsNull(loadout.Favorite(BattleActionCategory.Attack,3));
+        Find("Items").onClick.Invoke();Find("Mana Potion · Unlocked").onClick.Invoke();Find("Shortcut 4").onClick.Invoke();Find("Confirm shortcut").onClick.Invoke();
+        Assert.AreEqual("Mana Potion",loadout.Favorite(BattleActionCategory.Item,3).Name);
+        Assert.AreEqual(3,((PartyInventory)managerType.GetField("Inventory").GetValue(manager)).Count("mana-potion"));
+    }
+    [Test] public void CombinedSpellBrowserShowsAllTiersButCannotFavoriteLockedTier()
+    {
+        var loadout=party[0].GetComponent<BattleActionLoadout>();loadout.LearnedSpells.Add(new LearnedSpell{Id="fireball",Experience=0});
+        Open();Page("Abilities");Find("Spells").onClick.Invoke();Find("Fireball III · Locked").onClick.Invoke();
+        Find("Shortcut 4").onClick.Invoke();Assert.IsFalse(Find("Confirm shortcut").interactable);Find("Cancel").onClick.Invoke();
+        Find("Fireball I · Unlocked").onClick.Invoke();Find("Shortcut 4").onClick.Invoke();Find("Confirm shortcut").onClick.Invoke();
+        Assert.AreEqual(1,loadout.Favorite(BattleActionCategory.Magic,3).SpellTier);
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Spell milestone"));
     }
     [Test] public void AbilityBrowserShowsSkillsSpellsAndEmptyCategoryWithoutChangingFavorites()
     {
@@ -272,9 +324,20 @@ public class PlayerMenuTests
         var service=(Component)managerType.GetProperty("Saves").GetValue(manager);service.GetType().GetField("store",Hidden).SetValue(service,store);
         var battleType=Type.GetType("BattleManager, Assembly-CSharp",true);var singleton=battleType.GetField("<Instance>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic);var previous=singleton.GetValue(null);
         try{
-            Open();Page("Saves");Assert.IsFalse(Find("Load checkpoint").interactable);Find("Save slot 1").onClick.Invoke();
+            Open();Page("Saves");Assert.IsFalse(Find("Load Last Checkpoint").interactable);Find("Save Game").onClick.Invoke();Find("Save slot 1").onClick.Invoke();
             Assert.IsNotNull(Find("Confirm overwrite"));Find("Cancel save/load").onClick.Invoke();Assert.AreEqual("Test captain",store.Read(0,out _).CaptainName);
-            Find("Load slot 1").onClick.Invoke();Assert.IsNotNull(Find("Confirm load"));menuType.GetMethod("Back").Invoke(menu,null);
+            menuType.GetMethod("Back").Invoke(menu,null);Find("Load Game").onClick.Invoke();Find("Load slot 1").onClick.Invoke();Assert.IsNotNull(Find("Confirm load"));menuType.GetMethod("Back").Invoke(menu,null);
+            var active=service.GetType().GetField("<ActiveSlot>k__BackingField",Hidden);
+            var checkpointA=new GameSaveData{Scene=saved.Scene,CaptainName="Checkpoint A",Inventory=new PartyInventory()};checkpointA.Characters.Add(new SavedCharacter{Id="test"});
+            saved.CheckpointPayload=SaveFileStore.Encode(checkpointA);store.Write(0,SaveFileStore.Encode(saved),true);
+            saved.CheckpointPayload=null;store.Write(1,SaveFileStore.Encode(saved),false);
+            store.Write(3,SaveFileStore.Encode(checkpointA),false);
+            active.SetValue(service,0);
+            object[] arguments={false};var read=service.GetType().GetMethod("ReadCheckpoint");
+            Assert.AreEqual("Checkpoint A",((GameSaveData)read.Invoke(service,arguments)).CaptainName);
+            active.SetValue(service,1);Assert.IsFalse((bool)service.GetType().GetProperty("HasCheckpoint").GetValue(service),"Never fall back to another slot or the old global checkpoint.");
+            Assert.Throws<TargetInvocationException>(()=>read.Invoke(service,new object[]{false}));
+            active.SetValue(service,-1);Assert.IsTrue((bool)service.GetType().GetProperty("HasCheckpoint").GetValue(service));
             var battle=Make("Test save guard").AddComponent(battleType);singleton.SetValue(null,battle);battleType.GetField("<InBattle>k__BackingField",Hidden).SetValue(battle,true);
             Assert.IsFalse((bool)service.GetType().GetProperty("CanOperate").GetValue(service));
             battleType.GetField("<InBattle>k__BackingField",Hidden).SetValue(battle,false);Assert.IsTrue((bool)service.GetType().GetProperty("CanOperate").GetValue(service));
@@ -346,6 +409,38 @@ public class PlayerMenuTests
         Find("Member 3").onClick.Invoke();Find("Confirm use").onClick.Invoke();
         Assert.AreEqual(50,reserves[0].StoredHealth);Assert.AreEqual(2,inventory.Count("health-potion"));
         Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Inventory interaction"));
+    }
+    [Test] public void InventoryContextUsesClickPositionAndStaysInsideCanvasAtEdges()
+    {
+        Open();Page("Inventory");Canvas.ForceUpdateCanvases();
+        var canvas=(RectTransform)((GameObject)menuType.GetField("canvasObject",Hidden).GetValue(menu)).transform;
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        foreach(var fraction in new[]{new Vector2(.45f,.35f),new Vector2(.99f,.99f),new Vector2(.01f,.01f)}){
+            var local=new Vector2(canvas.rect.xMin+canvas.rect.width*fraction.x,canvas.rect.yMin+canvas.rect.height*fraction.y);
+            var screen=RectTransformUtility.WorldToScreenPoint(null,canvas.TransformPoint(local));
+            var data=new UnityEngine.EventSystems.PointerEventData(events){button=UnityEngine.EventSystems.PointerEventData.InputButton.Right,position=screen};
+            UnityEngine.EventSystems.ExecuteEvents.Execute(Find("Health Potion").gameObject,data,UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+            var modal=(RectTransform)menuType.GetField("inventoryModal",Hidden).GetValue(menu);var panel=(RectTransform)modal.Find("Item context");
+            Assert.AreEqual(0,modal.GetComponent<Image>().color.a,"Context menus should not dim the whole page.");
+            float x=panel.anchoredPosition.x,y=-panel.anchoredPosition.y;
+            Assert.GreaterOrEqual(x,8);Assert.GreaterOrEqual(y,8);
+            Assert.LessOrEqual(x+panel.rect.width,canvas.rect.width-8+.1f);Assert.LessOrEqual(y+panel.rect.height,canvas.rect.height-8+.1f);
+            if(fraction.x==.45f){Assert.AreEqual(canvas.rect.width*fraction.x+12,x,.1f);Assert.AreEqual(canvas.rect.height*(1-fraction.y)-12,y+panel.rect.height,.1f);}
+            Find("Back").onClick.Invoke();
+        }
+    }
+    [Test] public void InventoryCommandRailDetailsAndNavigationContextPreserveSelection()
+    {
+        Open();Page("Inventory");Find("Mana Potion").onClick.Invoke();
+        Assert.IsNotNull(menu.GetComponentsInChildren<Transform>().FirstOrDefault(t=>t.name=="Selected item image"));
+        Assert.AreEqual("Mana Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
+        Find("Item actions").onClick.Invoke();Assert.AreEqual("Mana Potion",((BattleActionOption)menuType.GetField("inventoryItem",Hidden).GetValue(menu)).Name);
+        Find("Examine").onClick.Invoke();
+        var modal=(RectTransform)menuType.GetField("inventoryModal",Hidden).GetValue(menu);
+        Assert.AreEqual(new Vector2(.5f,.5f),((RectTransform)modal.Find("Item context")).pivot);
+        Find("Back").onClick.Invoke();Find("Back").onClick.Invoke();
+        Assert.AreEqual("Mana Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
+        Assert.AreEqual(1,menu.GetComponentsInChildren<Button>().Count(b=>b.name=="Item actions"));
     }
     [Test] public void InventoryLeftClickSelectsAndHoverDoesNotReplacePinnedDetails()
     {
@@ -423,10 +518,10 @@ public class PlayerMenuTests
         var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var charm=EquipmentAsset("Context charm",EquipmentKind.Accessory);
         gear.Owned.Add(new OwnedEquipment{InstanceId="charm",Definition=charm});
         var profile=reserves[0].gameObject.AddComponent<CharacterEquipment>();managerType.GetMethod("BindEquipment").Invoke(manager,null);
-        Open();Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Equipment"||b.name=="Progression"||b.name=="Upgrades"));
+        Open();Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.transform.parent.name=="Menu frame"&&(b.name=="Equipment"||b.name=="Attributes"||b.name=="Progression"||b.name=="Upgrades")));
         Page("Inventory");RightClickItem("Context charm");Find("Equip").onClick.Invoke();Find("Member 3").onClick.Invoke();Find("Accessory 2:").onClick.Invoke();Find("Confirm equip").onClick.Invoke();
         Assert.AreEqual("charm",profile.InstanceAt(EquipmentSlot.AccessoryTwo));Assert.IsNull(profile.At(EquipmentSlot.AccessoryOne));
-        Page("Abilities");Find("Mastery & milestones").onClick.Invoke();Assert.AreEqual("Progression",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());Find("Back to Abilities").onClick.Invoke();Assert.AreEqual("Abilities",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
+        Page("Abilities");Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Mastery & milestones"));Assert.AreEqual("Abilities",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
     }
     [Test] public void InventoryDragSwapsWholeStacksAndInvalidDropsOrPageChangesCancel()
     {
@@ -509,6 +604,69 @@ public class PlayerMenuTests
         glyphType.GetMethod("Refresh").Invoke(glyph,new object[]{false});
         Assert.IsFalse(glyph.transform.Find("Trigger").gameObject.activeSelf);
         Assert.IsNotNull(glyph.transform.Find("Key").GetComponent<Image>().sprite);
+    }
+    [Test] public void PartyFormationSwapRequiresConfirmationAndSupportsContextSelection()
+    {
+        Open(); var outgoing=party[1];var incoming=reserves[0];
+        Find("Member 3").onClick.Invoke(); Find("Character actions").onClick.Invoke();
+        Find("Swap with").onClick.Invoke();
+        var modal=(RectTransform)menuType.GetField("partyModal",Hidden).GetValue(menu);
+        modal.GetComponentsInChildren<Button>().First(b=>b.name=="Member 1").onClick.Invoke();
+        Assert.AreSame(outgoing,party[1]);Find("Cancel").onClick.Invoke();Assert.AreSame(outgoing,party[1]);
+        menuType.GetMethod("StagePartySwap",Hidden).Invoke(menu,new object[]{incoming,outgoing});
+        Find("Confirm swap").onClick.Invoke(); Assert.AreSame(incoming,party[1]);Assert.Contains(outgoing,reserves);
+        Assert.AreEqual(3,party.Count);Assert.AreEqual(3,reserves.Count);
+        var before=party.ToArray();menuType.GetMethod("StagePartySwap",Hidden).Invoke(menu,new object[]{party[0],party[1]});
+        CollectionAssert.AreEqual(before,party);Assert.IsNull(menuType.GetField("partyModal",Hidden).GetValue(menu));
+    }
+    [Test] public void PartyPortraitDragOnlyStagesSwapAndOutsideDropCancels()
+    {
+        Open();var source=Find("Member 3").gameObject;var target=Find("Member 1").gameObject;
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        var data=new UnityEngine.EventSystems.PointerEventData(events){button=UnityEngine.EventSystems.PointerEventData.InputButton.Left,pointerDrag=source,position=Vector2.one};
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.beginDragHandler);
+        Assert.IsNotNull(menuType.GetField("partyDragGhost",Hidden).GetValue(menu));
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.endDragHandler);
+        Assert.IsNull(menuType.GetField("partyModal",Hidden).GetValue(menu));Assert.AreEqual("Member 1",party[1].name);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.beginDragHandler);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(target,data,UnityEngine.EventSystems.ExecuteEvents.dropHandler);
+        Assert.IsNotNull(menuType.GetField("partyModal",Hidden).GetValue(menu));Assert.AreEqual("Member 1",party[1].name);
+        Find("Confirm swap").onClick.Invoke();Assert.AreEqual("Member 3",party[1].name);
+    }
+    [Test] public void PartyAllocationStagesSeveralStatsAndCommitsOnceWithoutHealing()
+    {
+        var member=party[0];member.GrantLevel(2,3);member.MaterializeVitals();int hp=member.StoredHealth,mp=member.StoredMagicPoints;
+        int magic=member.Stat(CharacterStat.Magic),soul=member.Stat(CharacterStat.Soul);
+        Open();Find("Attributes").onClick.Invoke();Find("Increase Magic").onClick.Invoke();Find("Increase Magic").onClick.Invoke();Find("Increase Soul").onClick.Invoke();
+        Assert.AreEqual(3,member.UnspentPoints);Assert.AreEqual(magic,member.Stat(CharacterStat.Magic));Assert.IsFalse(Find("Increase Magic").interactable);
+        Find("Decrease Magic").onClick.Invoke();Find("Apply allocation").onClick.Invoke();Find("Cancel").onClick.Invoke();Assert.AreEqual(3,member.UnspentPoints);
+        Find("Apply allocation").onClick.Invoke();var confirm=Find("Confirm allocation");confirm.onClick.Invoke();
+        Assert.AreEqual(1,member.UnspentPoints);Assert.AreEqual(magic+1,member.Stat(CharacterStat.Magic));Assert.AreEqual(soul+1,member.Stat(CharacterStat.Soul));
+        Assert.AreEqual(hp,member.StoredHealth);Assert.AreEqual(mp,member.StoredMagicPoints);
+        confirm.onClick.Invoke();Assert.AreEqual(1,member.UnspentPoints);
+    }
+    [Test] public void PartyAllocationProtectsPendingEditsOnNavigationAndRejectsStaleConfirmation()
+    {
+        var member=party[0];member.GrantLevel(2,3);Open();Find("Attributes").onClick.Invoke();Find("Increase Strength").onClick.Invoke();
+        menuType.GetMethod("Cycle",Hidden).Invoke(menu,new object[]{1});Find("Keep editing").onClick.Invoke();
+        Assert.AreEqual(0,menuType.GetField("memberIndex",Hidden).GetValue(menu));
+        Find("Apply allocation").onClick.Invoke();int before=member.Stat(CharacterStat.Strength);member.Strength=20;
+        Find("Confirm allocation").onClick.Invoke();Assert.AreEqual(3,member.UnspentPoints);Assert.AreEqual(0,member.AllocatedPoints.Strength);
+        Find("Increase Magic").onClick.Invoke();menuType.GetMethod("Cycle",Hidden).Invoke(menu,new object[]{1});Find("Discard changes").onClick.Invoke();
+        Assert.AreEqual(1,menuType.GetField("memberIndex",Hidden).GetValue(menu));Assert.AreEqual(3,member.UnspentPoints);
+    }
+    [Test] public void PartyEquipmentUsesSharedComparisonAndReturnsToSlotPickerOnBack()
+    {
+        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var sword=EquipmentAsset("Party sword");var bow=EquipmentAsset("Party bow",EquipmentKind.Weapon,WeaponType.Bow);
+        gear.Owned.Add(new OwnedEquipment{InstanceId="party-sword",Definition=sword});gear.Owned.Add(new OwnedEquipment{InstanceId="party-bow",Definition=bow});
+        var profile=party[0].gameObject.AddComponent<CharacterEquipment>();profile.AllowedWeaponTypes=new[]{WeaponType.Shortsword};
+        Open();Find("Equipment").onClick.Invoke();Find("Weapon").onClick.Invoke();
+        Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name.StartsWith("Party bow")));
+        Find("Party sword").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
+        Find("Back").onClick.Invoke();Assert.IsNotNull(menuType.GetField("partyModal",Hidden).GetValue(menu));
+        Find("Party sword").onClick.Invoke();Find("Confirm equip").onClick.Invoke();Assert.AreEqual("party-sword",profile.InstanceAt(EquipmentSlot.Weapon));
+        Assert.AreEqual("Party",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
+        Find("Weapon").onClick.Invoke();Find("Unequip").onClick.Invoke();Find("Confirm unequip").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
     }
     [Test] public void CaptainSelectionReordersOnlyActiveParty()
     {
@@ -596,6 +754,21 @@ public class PlayerMenuTests
         Assert.IsFalse(scroll.GetComponentsInChildren<Transform>().Any(t=>t.name=="Mastery experience"));
         Find("Weapons").onClick.Invoke();Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No weapon records available yet."));
     }
+    [Test] public void GrowthPrototypeStartsAtBottomAndNavigatesUpWithoutCreatingACharacterKit()
+    {
+        var loadout=party[0].GetComponent<BattleActionLoadout>();var before=loadout.Options.Select(a=>a.Name).ToArray();int points=party[0].UnspentPoints;
+        Open();Find("Growth").onClick.Invoke();Canvas.ForceUpdateCanvases();
+        var root=Find("Skill node preview-start");var left=Find("Skill node preview-left");var top=Find("Skill node preview-left-top");
+        Assert.Greater(((RectTransform)left.transform).anchoredPosition.y,((RectTransform)root.transform).anchoredPosition.y);
+        Assert.Greater(((RectTransform)top.transform).anchoredPosition.y,((RectTransform)left.transform).anchoredPosition.y);
+        Assert.AreEqual(left,root.navigation.selectOnUp);Assert.AreEqual(root,left.navigation.selectOnDown);
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        Assert.AreEqual(root.gameObject,events.currentSelectedGameObject);
+        left.onClick.Invoke();Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Layout prototype")&&t.text.Contains("Skill Point cost: Not set")));
+        menuType.GetMethod("Rebuild",Hidden).Invoke(menu,null);Assert.AreEqual("Skill node preview-left",events.currentSelectedGameObject.name);
+        Assert.IsNull(party[0].GetComponent<CharacterMenuData>());CollectionAssert.AreEqual(before,loadout.Options.Select(a=>a.Name));Assert.AreEqual(points,party[0].UnspentPoints);
+        menuType.GetMethod("Cycle",Hidden).Invoke(menu,new object[]{1});Assert.AreEqual("Skill node preview-start",events.currentSelectedGameObject.name);
+    }
     [Test] public void SkillTreeShowsRequirementsAndScrollsToOffscreenNodesWithoutLearning()
     {
         var data=party[0].gameObject.AddComponent<CharacterMenuData>();
@@ -607,6 +780,8 @@ public class PlayerMenuTests
         Assert.IsTrue(scroll.horizontal);Assert.Greater(scroll.content.rect.width,scroll.viewport.rect.width);
         var first=Find("Skill node root");var last=Find("Skill node child");
         Assert.AreEqual(last,first.navigation.selectOnRight);Assert.AreEqual(first,last.navigation.selectOnLeft);
+        Assert.AreEqual(last,first.navigation.selectOnUp);Assert.AreEqual(first,last.navigation.selectOnDown);
+        Assert.Greater(((RectTransform)last.transform).anchoredPosition.y,((RectTransform)first.transform).anchoredPosition.y);
         last.onClick.Invoke();Canvas.ForceUpdateCanvases();
         var bounds=RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport,last.transform);
         Assert.LessOrEqual(bounds.max.x,scroll.viewport.rect.xMax+.1f);Assert.GreaterOrEqual(bounds.min.y,scroll.viewport.rect.yMin-.1f);

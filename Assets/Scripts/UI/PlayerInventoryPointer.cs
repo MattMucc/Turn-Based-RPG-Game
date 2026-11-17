@@ -5,11 +5,16 @@ public sealed class PlayerInventoryPointer : MonoBehaviour, IPointerClickHandler
     IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler, ISelectHandler
 {
     public Action Context, Hover, Exit;
+    public Action<PointerEventData> PointerContext;
     public Action Select, Cancel;
     public Action<PointerEventData> Begin, Move, End;
     public Action<PlayerInventoryPointer> Drop;
     public bool Dragging { get; private set; }
-    public void OnPointerClick(PointerEventData data) { if(!Dragging && data.button == PointerEventData.InputButton.Right) Context?.Invoke(); }
+    public void OnPointerClick(PointerEventData data)
+    {
+        if (Dragging || data.button != PointerEventData.InputButton.Right) return;
+        if (PointerContext != null) PointerContext(data); else Context?.Invoke();
+    }
     public void OnPointerEnter(PointerEventData data) => Hover?.Invoke();
     public void OnPointerExit(PointerEventData data) => Exit?.Invoke();
     public void OnSelect(BaseEventData data) { if(!(data is PointerEventData)) Select?.Invoke(); }

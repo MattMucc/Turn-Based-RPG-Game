@@ -7,6 +7,7 @@ namespace Game.GridPrototype
     {
         public int Version=1;
         public string Scene, SavedUtc, CaptainName, CheckpointName;
+        public string CheckpointPayload;
         public long Experience;
         public string Controlled;
         public List<string> Active=new(), Reserve=new();

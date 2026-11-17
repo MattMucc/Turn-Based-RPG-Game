@@ -52,6 +52,24 @@ namespace Game.GridPrototype
             if (unspentPoints <= 0 || !System.Enum.IsDefined(typeof(CharacterStat), stat) || Stat(stat) == int.MaxValue) return false;
             AllocatedPoints.Add(stat); unspentPoints--; return true;
         }
+        public bool SpendPoints(System.Collections.Generic.IReadOnlyDictionary<CharacterStat, int> allocation)
+        {
+            if (allocation == null) return false;
+            long total = 0;
+            foreach (var pair in allocation)
+            {
+                if (!System.Enum.IsDefined(typeof(CharacterStat), pair.Key) || pair.Value < 0 ||
+                    (long)Stat(pair.Key) + pair.Value > int.MaxValue ||
+                    (long)AllocatedPoints.Get(pair.Key) + pair.Value > int.MaxValue) return false;
+                total += pair.Value;
+            }
+            if (total <= 0 || total > unspentPoints) return false;
+            // Validate the whole transaction before changing any character state.
+            MaterializeVitals();
+            foreach (var pair in allocation) AllocatedPoints.Increase(pair.Key, pair.Value);
+            unspentPoints -= (int)total;
+            return true;
+        }
         private string StatDescription(CharacterStat stat) => BaseStat(stat) < 0 && Stat(stat) == 0 ? "Not assigned (0)" : Stat(stat).ToString();
         [Header("Prototype stat tuning")]
         [Min(1)] public int BaseHealth = 100;
