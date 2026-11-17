@@ -91,10 +91,10 @@ public class BattleActionTests
         var dash = new BattleActionOption { Name = "Dash", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash };
         battle.Loadout.Options.Add(dash);
         int movement = battle.Movement;
-        int points = battle.Combatants[battle.CurrentActorIndex].SkillPoints;
+        int points = battle.Combatants[battle.CurrentActorIndex].ActionPoints;
         Assert.IsTrue(battle.ChooseAction(dash));
         Assert.AreEqual(movement + 3, battle.Movement);
-        Assert.AreEqual(points - 1, battle.Combatants[battle.CurrentActorIndex].SkillPoints);
+        Assert.AreEqual(points - 1, battle.Combatants[battle.CurrentActorIndex].ActionPoints);
         Assert.IsNull(battle.ChosenAction);
         Assert.IsFalse(battle.ActionReady);
         Assert.IsTrue(battle.PlayerReady, "Dash must leave the turn open for movement.");
@@ -112,10 +112,10 @@ public class BattleActionTests
         unit.InitializeMagicPoints(24, 8); Assert.IsTrue(battle.TryPrepareAction(out var action));
         Assert.AreEqual(0, unit.MagicPoints); Assert.IsFalse(battle.TryPrepareAction(out _));
         while (action.MoveNext()) { }
-        Assert.AreEqual(4, unit.SkillPoints); Assert.AreEqual(3, unit.Movement);
-        unit.EndTurn(); unit.BeginTurn(); int movement = unit.Movement; int sp = unit.SkillPoints;
+        Assert.AreEqual(4, unit.ActionPoints); Assert.AreEqual(3, unit.Movement);
+        unit.EndTurn(); unit.BeginTurn(); int movement = unit.Movement; int sp = unit.ActionPoints;
         Assert.IsTrue(battle.CanFocus); battle.Focus();
-        Assert.AreEqual(8, unit.MagicPoints); Assert.AreEqual(sp, unit.SkillPoints); Assert.AreEqual(movement, unit.Movement);
+        Assert.AreEqual(8, unit.MagicPoints); Assert.AreEqual(sp, unit.ActionPoints); Assert.AreEqual(movement, unit.Movement);
         Assert.IsFalse(battle.CanFocus);
         battle.StorePartyHealth(); var next = new GridUnit("Next", Vector2Int.zero); battle.Info(0).Configure(next);
         Assert.AreEqual(8, next.MagicPoints);
@@ -128,23 +128,23 @@ public class BattleActionTests
         Assert.IsTrue(battle.ChooseAction(potion)); Assert.IsTrue(battle.ToggleTarget(unit.Position));
         Assert.IsTrue(battle.TryPrepareAction(out var action)); Assert.AreEqual(2, battle.Inventory.Count("mana-potion"));
         while (action.MoveNext()) { }
-        Assert.AreEqual(8, unit.MagicPoints); Assert.AreEqual(3, unit.Movement); Assert.AreEqual(4, unit.SkillPoints);
+        Assert.AreEqual(8, unit.MagicPoints); Assert.AreEqual(3, unit.Movement); Assert.AreEqual(4, unit.ActionPoints);
     }
     [Test] public void SkillSelectionIsFreeAndCommitRechecksPointsThenChargesOnce()
     {
         var unit = battle.Combatants[battle.CurrentActorIndex];
-        var skill = new BattleActionOption { Name = "Test SP", Category = BattleActionCategory.Skill, SkillPointCost = 4, Damage = 0 };
+        var skill = new BattleActionOption { Name = "Test AP", Category = BattleActionCategory.Skill, ActionPointCost = 4, Damage = 0 };
         battle.Loadout.Options.Add(skill);
-        Assert.IsTrue(battle.ChooseAction(skill)); Assert.AreEqual(4, unit.SkillPoints);
-        battle.CancelAction(); Assert.AreEqual(4, unit.SkillPoints);
+        Assert.IsTrue(battle.ChooseAction(skill)); Assert.AreEqual(4, unit.ActionPoints);
+        battle.CancelAction(); Assert.AreEqual(4, unit.ActionPoints);
         Assert.IsTrue(battle.ChooseAction(skill)); Assert.IsTrue(battle.ToggleTarget(unit.Position));
-        unit.InitializeSkillPoints(3);
+        unit.InitializeActionPoints(3);
         Assert.IsFalse(battle.TryPrepareAction(out _)); Assert.IsTrue(unit.ActionAvailable);
-        unit.InitializeSkillPoints(4);
-        Assert.IsTrue(battle.TryPrepareAction(out var sequence)); Assert.AreEqual(0, unit.SkillPoints);
+        unit.InitializeActionPoints(4);
+        Assert.IsTrue(battle.TryPrepareAction(out var sequence)); Assert.AreEqual(0, unit.ActionPoints);
         Assert.IsFalse(battle.TryPrepareAction(out _));
         while (sequence.MoveNext()) { }
-        Assert.AreEqual(0, unit.SkillPoints); Assert.AreEqual(3, unit.Movement);
+        Assert.AreEqual(0, unit.ActionPoints); Assert.AreEqual(3, unit.Movement);
     }
     [Test] public void MultiHitBasicAttackRecoversOnePointOnlyAfterAllHits()
     {
@@ -153,10 +153,10 @@ public class BattleActionTests
         battle.Loadout.Options.Add(attack);
         Assert.IsTrue(battle.ChooseAction(attack));
         for (int i = 0; i < 3; i++) Assert.IsTrue(battle.ToggleTarget(unit.Position));
-        Assert.IsTrue(battle.TryPrepareAction(out var sequence)); Assert.AreEqual(4, unit.SkillPoints);
-        Assert.IsTrue(sequence.MoveNext()); Assert.AreEqual(4, unit.SkillPoints);
+        Assert.IsTrue(battle.TryPrepareAction(out var sequence)); Assert.AreEqual(4, unit.ActionPoints);
+        Assert.IsTrue(sequence.MoveNext()); Assert.AreEqual(4, unit.ActionPoints);
         while (sequence.MoveNext()) { }
-        Assert.AreEqual(5, unit.SkillPoints);
+        Assert.AreEqual(5, unit.ActionPoints);
     }
     [Test] public void DetailsMatchDamageCalculationWithoutActionCostOrSingleHitSuffix()
     {

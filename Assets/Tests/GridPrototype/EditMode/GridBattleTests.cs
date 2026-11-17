@@ -15,6 +15,25 @@ public class GridBattleTests
         board.Units.Add(unit); unit.BeginTurn();
     }
 
+    [Test] public void DashCapsMovementAndCannotWasteAnActionAtTheCap()
+    {
+        unit.EndTurn(); unit.BeginTurn(5);
+        Assert.IsTrue(unit.Dash()); Assert.AreEqual(10, unit.Movement);
+        unit.EndTurn(); unit.BeginTurn(int.MaxValue);
+        int ap = unit.ActionPoints;
+        Assert.IsFalse(unit.Dash(3, 1)); Assert.IsTrue(unit.ActionAvailable);
+        Assert.AreEqual(ap, unit.ActionPoints); Assert.AreEqual(10, unit.Movement);
+    }
+    [Test] public void SwapSpendsIncomingActionAndCapsItsRestoredBank()
+    {
+        var incoming = new GridUnit("Reserve", Vector2Int.one);
+        incoming.BeginTurn(9); incoming.EndTurn();
+        Assert.IsTrue(unit.HandOffTurnTo(incoming));
+        Assert.AreEqual(3, incoming.Movement); Assert.IsFalse(incoming.ActionAvailable);
+        Assert.IsFalse(incoming.SpendAction()); Assert.IsTrue(incoming.SpendMovement(1));
+        incoming.EndTurn(); incoming.BeginTurn();
+        Assert.AreEqual(10, incoming.Movement); Assert.IsTrue(incoming.ActionAvailable);
+    }
     [Test] public void MovementDoesNotSpendAction()
     {
         Assert.IsTrue(board.TryMove(unit, new Vector2Int(2, 1), out _));
@@ -33,11 +52,11 @@ public class GridBattleTests
         unit.EndTurn(); Assert.IsFalse(unit.SpendMovement(1));
         unit.BeginTurn(); Assert.AreEqual(5, unit.Movement); Assert.IsTrue(unit.ActionAvailable);
     }
-    [Test] public void CarryoverIsPerUnitAndUncapped()
+    [Test] public void CarryoverIsPerUnitAndCappedAtTen()
     {
         var other = new GridUnit("Other", Vector2Int.zero);
         for (int i = 0; i < 5; i++) { unit.EndTurn(); unit.BeginTurn(); }
-        other.BeginTurn(); Assert.AreEqual(18, unit.Movement); Assert.AreEqual(3, other.Movement);
+        other.BeginTurn(); Assert.AreEqual(10, unit.Movement); Assert.AreEqual(3, other.Movement);
     }
     [Test] public void MovementGrantCanBeSuppressedWithoutDeletingBank()
     {

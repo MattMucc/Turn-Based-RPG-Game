@@ -21,19 +21,19 @@ namespace Game.GridPrototype
         [TextArea] public string Description;
         public BattleActionCategory Category;
         [Tooltip("Used only for Skills. Costs are paid once when the action is committed.")]
-        [Range(1, 9)] public int SkillPointCost = 1;
+        [Range(1, 9)] [UnityEngine.Serialization.FormerlySerializedAs("SkillPointCost")] public int ActionPointCost = 1;
         [Tooltip("Optional self recovery once after a Skill completes, not per hit. Normally zero.")]
-        [Range(0, 9)] public int SkillPointRecovery;
+        [Range(0, 9)] [UnityEngine.Serialization.FormerlySerializedAs("SkillPointRecovery")] public int ActionPointRecovery;
         [Tooltip("MP cost for Spells only; no cost for other categories.")]
         [Min(0)] public int MagicPointCost = 4;
         [Min(0)] public int MagicRestored;
         public int EffectiveMagicPointCost => Category == BattleActionCategory.Magic ? Mathf.Max(0, MagicPointCost) : 0;
-        public int EffectiveSkillPointCost => Category == BattleActionCategory.Skill ? Mathf.Clamp(SkillPointCost, 1, 9) : 0;
-        public bool CanUse(GridUnit source) => Available && source != null && source.CanAffordSkillPoints(EffectiveSkillPointCost) && source.CanAffordMagicPoints(EffectiveMagicPointCost);
+        public int EffectiveActionPointCost => Category == BattleActionCategory.Skill ? Mathf.Clamp(ActionPointCost, 1, 9) : 0;
+        public bool CanUse(GridUnit source) => Available && source != null && (Effect != ActionEffect.Dash || source.Movement < GridUnit.MaximumMovement) && source.CanAffordActionPoints(EffectiveActionPointCost) && source.CanAffordMagicPoints(EffectiveMagicPointCost);
         public void CompleteResourceRecovery(GridUnit source)
         {
-            if (Category == BattleActionCategory.Attack && Effect == ActionEffect.Damage) source.RestoreSkillPoints(source.AttackSkillPointGain);
-            else if (Category == BattleActionCategory.Skill) source.RestoreSkillPoints(Mathf.Clamp(SkillPointRecovery, 0, 9));
+            if (Category == BattleActionCategory.Attack && Effect == ActionEffect.Damage) source.RestoreActionPoints(source.AttackActionPointGain);
+            else if (Category == BattleActionCategory.Skill) source.RestoreActionPoints(Mathf.Clamp(ActionPointRecovery, 0, 9));
         }
         public BattleTargetPattern Pattern;
         [Min(1)] public int Reach = 1;
@@ -59,7 +59,7 @@ namespace Game.GridPrototype
         [Range(0, 100)] public float HitChance = 100;
         public CombatStatus InflictedStatus;
         [Range(0, 100)] public float StatusChance = 100;
-        [Range(1, 10)] public int StatusStacks = 1;
+        [Range(1, GridUnit.MaximumStatusStacks)] public int StatusStacks = 1;
         [Min(0)] public int BarrierGranted;
         public bool SignatureQte;
         public QteMode QteType;
@@ -99,11 +99,11 @@ namespace Game.GridPrototype
             }
             if (Category == BattleActionCategory.Skill)
             {
-                result += Row("Cost", $"{EffectiveSkillPointCost} SP");
-                if (source != null && !source.CanAffordSkillPoints(EffectiveSkillPointCost)) result += Row("Available", $"{source.SkillPoints} SP — insufficient");
-                if (SkillPointRecovery > 0) result += Row("Recovery", $"{Mathf.Clamp(SkillPointRecovery, 0, 9)} SP after use");
+                result += Row("Cost", $"{EffectiveActionPointCost} AP");
+                if (source != null && !source.CanAffordActionPoints(EffectiveActionPointCost)) result += Row("Available", $"{source.ActionPoints} AP — insufficient");
+                if (ActionPointRecovery > 0) result += Row("Recovery", $"{Mathf.Clamp(ActionPointRecovery, 0, 9)} AP after use");
             }
-            if (Effect == ActionEffect.Dash) return result + Row("Movement", "+3 points");
+            if (Effect == ActionEffect.Dash) return result + Row("Movement", source == null ? "Up to +3 (maximum 10)" : $"+{Mathf.Min(3, GridUnit.MaximumMovement - source.Movement)} (maximum 10)");
             result += Row("Reach", $"{Reach} tiles");
             if (Effect == ActionEffect.Damage)
             {
@@ -126,7 +126,7 @@ namespace Game.GridPrototype
             if (Effect == ActionEffect.Damage) result += Row("Damage Type", DamageType.ToString());
             if (Category == BattleActionCategory.Item) result += Row("Cost", $"1 item ({Quantity} carried)");
             if (InflictedStatus != CombatStatus.None)
-                result += Row("Afflictions", $"{InflictedStatus} ×{Mathf.Clamp(StatusStacks, 1, 10)}")
+                result += Row("Afflictions", $"{InflictedStatus} ×{Mathf.Clamp(StatusStacks, 1, GridUnit.MaximumStatusStacks)}")
                     + $"\n<indent=105>{Mathf.Clamp(StatusChance, 0, 100):0.#}% per landed hit</indent>";
             if (BarrierGranted > 0) result += Row("Barrier", BarrierGranted.ToString());
             return result;
@@ -309,8 +309,8 @@ namespace Game.GridPrototype
         {
             var options = new List<BattleActionOption>
         {
-            new BattleActionOption { Name = "Strike", Description = "Prototype adjacent attack." },
-            new BattleActionOption { Name = "Piercing Attack", Description = "Prototype line targeting.", Pattern = BattleTargetPattern.Piercing, Reach = 4, Damage = 18 },
+            new BattleActionOption { Name = "Strike", Description = "A simple close-range strike." },
+            new BattleActionOption { Name = "Piercing Attack", Description = "Strike targets along a straight line.", Pattern = BattleTargetPattern.Piercing, Reach = 4, Damage = 18 },
             new BattleActionOption { Name = "Dash", Description = "Gain movement to reposition this turn.", Category = BattleActionCategory.Skill, Effect = ActionEffect.Dash, Damage = 0 },
             new BattleActionOption { Name = "Push", Category = BattleActionCategory.Attack, Effect = ActionEffect.Push, Damage = 0, Description = "Push one cell forward. Requires higher Strength." }
         };

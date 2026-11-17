@@ -21,7 +21,7 @@ public class PartyBattleTests
         for (int i = 0; i < 4; i++)
         {
             var obj = Make("Party test " + i); figures.Add(obj.transform);
-            var info = obj.AddComponent<BattleCharacterInfo>(); info.Initiative = 40 - i * 10;
+            var info = obj.AddComponent<BattleCharacterInfo>(); info.Speed = 40 - i * 10;
             info.Vitality = i; info.Strength = 5 + i;
             if (i < 3)
             {
@@ -42,7 +42,7 @@ public class PartyBattleTests
     void Next() => typeof(InSceneGridBattle).GetMethod("AdvanceTurn", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(battle, null);
     BattleCharacterInfo Reserve(string name = "Reserve")
     {
-        var info = Make(name).AddComponent<BattleCharacterInfo>(); info.Initiative = 99;
+        var info = Make(name).AddComponent<BattleCharacterInfo>(); info.Speed = 99;
         battle.AddReserve(info, 0); return info;
     }
     [Test] public void SwapTransfersMovementConsumesActionAndPreservesPersonalBank()

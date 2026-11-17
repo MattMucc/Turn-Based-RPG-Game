@@ -84,14 +84,14 @@ MonoBehaviour:
     Magic: 0
     PhysicalDefense: 0
     MagicalDefense: 0
-    Initiative: 0
+    Speed: 0
   AllocatedPoints:
     Vitality: 0
     Strength: 0
     Magic: 0
     PhysicalDefense: 0
     MagicalDefense: 0
-    Initiative: 0
+    Speed: 0
   unspentPoints: 0
   rewardedLevel: 1
   storedHealth: -1
@@ -109,7 +109,7 @@ MonoBehaviour:
   Magic: 16
   PhysicalDefense: 3
   MagicalDefense: 12
-  Initiative: 14
+  Speed: 14
   Resistances: 
   Statuses: 
 --- !u!114 &6696669594128705682

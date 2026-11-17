@@ -159,7 +159,7 @@ public class BattleManager : MonoBehaviour
             encounter.Initialize(grid, figures, offsets, entry.Cells, worldCamera, shader, CompleteBattle, preemptive, partySize, entry, GameManager.Instance.Inventory);
             foreach (var reserve in reserveActors) encounter.AddReserve(reserve.Transform.GetComponent<BattleCharacterInfo>(), reserve.FootOffset);
             if (battleMenu) battleMenu.Bind(encounter);
-            Debug.Log(preemptive ? "[Battle] Pre-emptive strike: controlled character acts first this round." : "[Battle] Initiative determines turn order.");
+            Debug.Log(preemptive ? "[Battle] Pre-emptive strike: controlled character acts first this round." : "[Battle] Speed determines turn order.");
             return true;
         }
         catch (Exception exception)

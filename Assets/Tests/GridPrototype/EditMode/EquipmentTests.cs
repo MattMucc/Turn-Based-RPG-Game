@@ -45,13 +45,13 @@ public class EquipmentTests
     }
     [Test]public void MasteryCountsOneSuccessfulHostileActionAndSnapshotsFinisherBeforeUnlock()
     {
-        var sword=Item("sword");sword.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=1,FinisherSkillPoints=1});sword.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=3});
+        var sword=Item("sword");sword.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=1,FinisherActionPoints=1});sword.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=3});
         var owned=new OwnedEquipment{Definition=sword};var attack=sword.Attacks[0];attack.EquipmentActionId="sword:"+attack.Name;
-        var source=new GridUnit("source",Vector2Int.zero);source.InitializeSkillPoints(0);
+        var source=new GridUnit("source",Vector2Int.zero);source.InitializeActionPoints(0);
         var miss=new WeaponMasteryUse(owned,attack);miss.Record(false,true,false);miss.Record(true,false,true);Assert.AreEqual(0,miss.Complete(source));
         var hit=new WeaponMasteryUse(owned,attack);for(int i=0;i<3;i++)hit.Record(true,true,true);
-        Assert.AreEqual(1,hit.Complete(source));Assert.AreEqual(0,hit.Complete(source));Assert.AreEqual(0,source.SkillPoints);
-        var next=new WeaponMasteryUse(owned,attack);next.Record(true,true,true);next.Complete(source);Assert.AreEqual(1,source.SkillPoints);
+        Assert.AreEqual(1,hit.Complete(source));Assert.AreEqual(0,hit.Complete(source));Assert.AreEqual(0,source.ActionPoints);
+        var next=new WeaponMasteryUse(owned,attack);next.Record(true,true,true);next.Complete(source);Assert.AreEqual(1,source.ActionPoints);
         attack.Category=BattleActionCategory.Skill;var skill=new WeaponMasteryUse(owned,attack);skill.Record(true,true,true);Assert.AreEqual(0,skill.Complete(source));
         Assert.AreEqual(2,owned.MasteryExperience);
     }
@@ -71,12 +71,12 @@ public class EquipmentTests
     }
     [Test]public void BonusesAffectCombatAndEquipmentNeverHealsOrRevives()
     {
-        var item=Item("charm");item.Kind=EquipmentKind.Accessory;item.Bonuses=new StatValues{Vitality=2,Magic=3,Strength=4,PhysicalDefense=5,MagicalDefense=6,Initiative=7};
+        var item=Item("charm");item.Kind=EquipmentKind.Accessory;item.Bonuses=new StatValues{Vitality=2,Magic=3,Strength=4,PhysicalDefense=5,MagicalDefense=6,Speed=7};
         var inv=new PartyEquipment();inv.Owned.Add(new OwnedEquipment{InstanceId="c",Definition=item});var profile=Character(inv);var info=profile.GetComponent<BattleCharacterInfo>();
-        info.Level=1;info.Vitality=info.Strength=info.Magic=info.PhysicalDefense=info.MagicalDefense=info.Initiative=0;
+        info.Level=1;info.Vitality=info.Strength=info.Magic=info.PhysicalDefense=info.MagicalDefense=info.Speed=0;
         profile.ApplySlot(EquipmentSlot.AccessoryOne,"c");var unit=new GridUnit("test",Vector2Int.zero);info.Configure(unit);
         Assert.AreEqual(120,unit.MaxHealth);Assert.AreEqual(100,info.StoredHealth);Assert.AreEqual(30,unit.MaxMagicPoints);Assert.AreEqual(24,info.StoredMagicPoints);
-        Assert.AreEqual(4,unit.Strength);Assert.AreEqual(3,unit.Magic);Assert.AreEqual(5,unit.PhysicalDefense);Assert.AreEqual(6,unit.MagicalDefense);Assert.AreEqual(7,info.EffectiveInitiative);
+        Assert.AreEqual(4,unit.Strength);Assert.AreEqual(3,unit.Magic);Assert.AreEqual(5,unit.PhysicalDefense);Assert.AreEqual(6,unit.MagicalDefense);Assert.AreEqual(7,info.EffectiveSpeed);
         Assert.AreEqual(14,new BattleActionOption{Damage=10,Scaling=ScalingStat.Strength,StatScaling=1}.CalculateDamage(unit,null,10));
         info.HealOutsideCombat(100);info.RestoreMagicOutsideCombat(100);profile.ApplySlot(EquipmentSlot.AccessoryOne,null);
         Assert.AreEqual(100,info.StoredHealth);Assert.AreEqual(24,info.StoredMagicPoints);

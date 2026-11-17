@@ -26,7 +26,7 @@ namespace Game.GridPrototype
         [Header("Prototype enemy on-hit status")]
         public CombatStatus EnemyStatus;
         [Range(0, 100)] public float EnemyStatusChance = 100;
-        [Range(1, 10)] public int EnemyStatusStacks = 1;
+        [Range(1, GridUnit.MaximumStatusStacks)] public int EnemyStatusStacks = 1;
         [Min(0)] public int SingleDamage = 25;
         [Min(0)] public int ComboHitDamage = 10;
         [Min(0)] public int CounterDamage = 25;

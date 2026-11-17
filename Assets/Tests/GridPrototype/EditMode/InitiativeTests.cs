@@ -44,7 +44,7 @@ public class InitiativeTests
             for (int i = 0; i < 3; i++)
             {
                 var actor = new GameObject("Actor " + i); objects.Add(actor); figures.Add(actor.transform);
-                actor.AddComponent<BattleCharacterInfo>().Initiative = new[] { 5, 20, 10 }[i];
+                actor.AddComponent<BattleCharacterInfo>().Speed = new[] { 5, 20, 10 }[i];
             }
             var camera = new GameObject("Source camera"); objects.Add(camera);
             var root = new GameObject("Encounter"); objects.Add(root);

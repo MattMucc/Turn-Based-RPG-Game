@@ -36,6 +36,7 @@ public sealed partial class ProgressionMenu
                 () => { abilityCategory = selected; abilitySelection = null; Rebuild(); });
             if (selected == abilityCategory) tab.image.color = new Color(.16f, .36f, .44f);
         }
+        Button(body,"Mastery & milestones",0,body.rect.height-38,width,()=>ShowPage(Page.Progression));
         var entries = new List<AbilityEntry>();
         var loadout = Loadout();
         if (loadout) foreach (var action in loadout.Options.Where(a => a != null && a.Category == abilityCategory))
@@ -73,7 +74,7 @@ public sealed partial class ProgressionMenu
         }
         Label(Rect("Ability collection", body, 0, 46, width, 40), abilityCategory == BattleActionCategory.Attack
             ? "Character attacks and all owned weapons · select to inspect" : "Abilities available to " + DisplayName(Member), 14);
-        var list = List(body, "Ability entries", 0, 92, width, Mathf.Max(150, body.rect.height - 92), entries.Count * 78);
+        var list = List(body, "Ability entries", 0, 92, width, Mathf.Max(150, body.rect.height - 140), entries.Count * 78);
         foreach (var entry in entries)
         {
             var button = Button(list, entry.Action.Name + " · " + (entry.Unlocked ? "Unlocked" : "Locked"), 0,
@@ -115,6 +116,7 @@ public sealed partial class ProgressionMenu
         {
             var equipment = Member.GetComponent<CharacterEquipment>();
             var current = equipment ? equipment.CopyAt(EquipmentSlot.Weapon) : null;
+            source.Soul = Member.StatReplacingCopy(CharacterStat.Soul, current, entry.Weapon);
             source.Strength = Member.StatReplacingCopy(CharacterStat.Strength, current, entry.Weapon);
             source.Magic = Member.StatReplacingCopy(CharacterStat.Magic, current, entry.Weapon);
             if (!art) art = entry.Weapon.Definition.Image;

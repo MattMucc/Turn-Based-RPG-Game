@@ -15,7 +15,7 @@ MonoBehaviour:
   Actions:
   - Name: Strike
     FavoriteSlot: -1
-    Description: Prototype adjacent attack.
+    Description: A simple close-range strike.
     Category: 0
     Pattern: 0
     Reach: 1
@@ -46,7 +46,7 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Piercing Attack
     FavoriteSlot: -1
-    Description: Prototype line targeting.
+    Description: Strike targets along a straight line.
     Category: 0
     Pattern: 2
     Reach: 4

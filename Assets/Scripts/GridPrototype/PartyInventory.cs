@@ -8,9 +8,16 @@ namespace Game.GridPrototype
     public sealed class PartyInventory
     {
         public List<BattleActionOption> Items = new() { HealthPotion(), ManaPotion() };
+        public List<string> SlotOrder = new();
         [NonSerialized] private int revision;
         public int Revision => revision;
         public void NotifyChanged() => revision++;
+        public bool SwapItems(BattleActionOption first, BattleActionOption second)
+        {
+            int a=Items.IndexOf(first), b=Items.IndexOf(second);
+            if(first==null||second==null||a<0||b<0||a==b)return false;
+            Items[a]=second;Items[b]=first;NotifyChanged();return true;
+        }
         public static BattleActionOption HealthPotion(int quantity = 3) => new BattleActionOption {
             ItemId = "health-potion", Name = "Health Potion", Description = "Restore health to a living target. Does not revive.",
             Category = BattleActionCategory.Item, Effect = ActionEffect.Heal, Healing = 50, Damage = 0,

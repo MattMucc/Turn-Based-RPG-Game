@@ -171,7 +171,7 @@ namespace Game.GridPrototype
             targetHighlight = new GameObject("Hovered battle target").AddComponent<BattleTargetHighlight>();
             targetHighlight.transform.SetParent(transform); targetHighlight.Initialize(shader);
             var initiatives = new List<int>();
-            foreach (var figure in actors) initiatives.Add(figure.GetComponent<BattleCharacterInfo>().EffectiveInitiative);
+            foreach (var figure in actors) initiatives.Add(figure.GetComponent<BattleCharacterInfo>().EffectiveSpeed);
             initiativeOrder = new InitiativeOrder(initiatives, preemptive ? 0 : -1);
             actorIndex = initiativeOrder.First;
             if (IsAlly(actorIndex)) DefenseSettings = allyDefense[actorIndex];
@@ -499,7 +499,7 @@ namespace Game.GridPrototype
                     if (target.Alive && target.HasHealth && footprint.Overlaps(TargetCells(target))) hit.Add(target);
                 batches.Add(hit);
             }
-            if (!Active.SpendActionWithSkillPoints(action.EffectiveSkillPointCost, action.EffectiveMagicPointCost)) return false;
+            if (!Active.SpendActionWithActionPoints(action.EffectiveActionPointCost, action.EffectiveMagicPointCost)) return false;
             if (action.Category == BattleActionCategory.Item) action.Quantity--;
             busy = true;
             if (action.SignatureQte)
@@ -844,8 +844,8 @@ namespace Game.GridPrototype
         }
         private void Dash(BattleActionOption option)
         {
-            if (PlayerReady && !InteractionBlocked && ChosenAction == null && option.CanUse(Active) && Active.Dash(3, option.EffectiveSkillPointCost))
-            { option.CompleteResourceRecovery(Active); CancelAction(); ActionResolved?.Invoke(); message = "Dash: +3 movement points. Choose where to move, then End Turn."; Refresh(); }
+            if (PlayerReady && !InteractionBlocked && ChosenAction == null && option.CanUse(Active) && Active.Dash(3, option.EffectiveActionPointCost))
+            { option.CompleteResourceRecovery(Active); CancelAction(); ActionResolved?.Invoke(); message = $"Dash: movement {Active.Movement} / {GridUnit.MaximumMovement}."; Refresh(); }
         }
         public void Block()
         {

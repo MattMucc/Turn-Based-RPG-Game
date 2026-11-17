@@ -346,6 +346,6 @@ MonoBehaviour:
   Magic: -1
   PhysicalDefense: -1
   MagicalDefense: -1
-  Initiative: 12
+  Speed: 12
   Resistances:
   Statuses:

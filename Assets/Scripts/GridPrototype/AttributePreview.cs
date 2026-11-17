@@ -12,6 +12,7 @@ namespace Game.GridPrototype
             switch (stat)
             {
                 case CharacterStat.Vitality: unit.MaxHealth = Add(unit.MaxHealth, member.HealthPerVitality); break;
+                case CharacterStat.Soul: unit.Soul = Add(unit.Soul, 1); break;
                 case CharacterStat.Strength: unit.Strength = Add(unit.Strength, 1); break;
                 case CharacterStat.Magic:
                     unit.Magic = Add(unit.Magic, 1);
@@ -26,11 +27,12 @@ namespace Game.GridPrototype
         public static string Explanation(CharacterStat stat) => stat switch
         {
             CharacterStat.Vitality => "Increases maximum health.",
+            CharacterStat.Soul => "Improves the damage of Soul-scaling Skills.",
             CharacterStat.Strength => "Improves Strength-scaling actions. Push requires your Strength to exceed the target's Strength.",
             CharacterStat.Magic => "Improves Magic-scaling actions and increases maximum MP.",
             CharacterStat.PhysicalDefense => "Reduces incoming physical damage. Element and damage type are separate.",
             CharacterStat.MagicalDefense => "Reduces incoming magical damage. Element and damage type are separate.",
-            _ => "Higher Initiative acts earlier in the battle's turn order. It does not grant extra turns."
+            _ => "Higher Speed acts earlier in the battle's turn order. It does not grant extra turns."
         };
     }
 }

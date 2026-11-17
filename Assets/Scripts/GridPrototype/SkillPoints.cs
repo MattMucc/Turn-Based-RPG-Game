@@ -5,22 +5,22 @@ namespace Game.GridPrototype
 {
     public sealed partial class GridUnit
     {
-        public const int MaximumSkillPoints = 9;
-        public int SkillPoints { get; private set; } = 3;
-        public int TurnSkillPointGain = 1;
-        public int AttackSkillPointGain = 1;
-        public void InitializeSkillPoints(int startingPoints) => SkillPoints = Mathf.Clamp(startingPoints, 0, MaximumSkillPoints);
-        public int RestoreSkillPoints(int amount)
+        public const int MaximumActionPoints = 9;
+        public int ActionPoints { get; private set; } = 3;
+        public int TurnActionPointGain = 1;
+        public int AttackActionPointGain = 1;
+        public void InitializeActionPoints(int startingPoints) => ActionPoints = Mathf.Clamp(startingPoints, 0, MaximumActionPoints);
+        public int RestoreActionPoints(int amount)
         {
-            int before = SkillPoints;
-            SkillPoints = (int)Math.Min(MaximumSkillPoints, (long)SkillPoints + Math.Max(0, amount));
-            return SkillPoints - before;
+            int before = ActionPoints;
+            ActionPoints = (int)Math.Min(MaximumActionPoints, (long)ActionPoints + Math.Max(0, amount));
+            return ActionPoints - before;
         }
-        public bool CanAffordSkillPoints(int cost) => cost >= 0 && SkillPoints >= cost;
-        public bool SpendActionWithSkillPoints(int cost, int magicCost = 0)
+        public bool CanAffordActionPoints(int cost) => cost >= 0 && ActionPoints >= cost;
+        public bool SpendActionWithActionPoints(int cost, int magicCost = 0)
         {
-            if (!CanAffordSkillPoints(cost) || !CanAffordMagicPoints(magicCost) || !SpendAction()) return false;
-            SkillPoints -= cost;
+            if (!CanAffordActionPoints(cost) || !CanAffordMagicPoints(magicCost) || !SpendAction()) return false;
+            ActionPoints -= cost;
             MagicPoints -= magicCost;
             return true;
         }

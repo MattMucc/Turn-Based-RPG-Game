@@ -25,6 +25,7 @@ public sealed partial class ProgressionMenu
     void UpgradesPage()
     {
         upgradeCards.Clear();Manager.BindEquipment();float width=body.rect.width;
+        if(!blacksmith)Button(body,"Back",width-112,body.rect.height-112,112,()=>ShowPage(Page.Inventory));
         var copies=Manager.Equipment.Owned.Where(e=>e!=null&&e.Definition).ToList();
         if(!copies.Any(e=>e.InstanceId==upgradeSelection))upgradeSelection=copies.FirstOrDefault()?.InstanceId;
         Label(Rect("Upgrade heading",body,0,0,width,40),BlacksmithServiceAvailable?blacksmith.DisplayName+" · "+Manager.Equipment.Coins+" coins":"UPGRADE RECIPES · Visit a blacksmith",19);

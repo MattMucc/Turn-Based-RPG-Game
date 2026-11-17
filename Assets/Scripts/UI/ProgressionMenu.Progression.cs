@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Game.GridPrototype;
@@ -42,13 +42,14 @@ public sealed partial class ProgressionMenu
                 var spell=SpellDefinition.Find(learned.Id);if(!spell)continue;
                 entries.RemoveAll(e=>e.Name==spell.DisplayName);
                 var tiers=spell.OrderedTiers.ToList();var next=tiers.FirstOrDefault(t=>t.RequiredExperience>learned.Experience);
-                entries.Add(new MenuProgressionEntry{Kind=ProgressionEntryKind.Spell,Name=spell.DisplayName,Image=spell.Image,Description=spell.Description+"\nMastery belongs to this character. View Abilities for tier patterns and calculated effects.",
+                entries.Add(new MenuProgressionEntry{Kind=ProgressionEntryKind.Spell,Name=spell.DisplayName,Image=spell.Image,Description=spell.Description+"\nMastery belongs to this character.",
                     Level=tiers.Count(t=>t.RequiredExperience<=learned.Experience),MaximumLevel=tiers.Count,Experience=learned.Experience,NextLevelExperience=next?.RequiredExperience??spell.MaximumExperience,
                     Milestones=tiers.Select((t,i)=>new UpgradeMilestone{Level=i+1,Name=spell.CreateAction(t).Name,Description=$"Requires {t.RequiredExperience} cumulative Spell XP · {t.Action.MagicPointCost} MP\n{t.Action.Description}"}).ToList()});
             }
         }
         Label(Rect("Collection count",body,0,48,width,28),$"{DisplayName(Member)} · {entries.Count} entries",15);
-        var list=List(body,"Progression entries",0,84,width,Mathf.Max(180,body.rect.height-84),entries.Count*88);
+        var list=List(body,"Progression entries",0,84,width,Mathf.Max(180,body.rect.height-132),entries.Count*88);
+        Button(body,"Back to Abilities",0,body.rect.height-38,width,()=>ShowPage(Page.Abilities));
         for(int i=0;i<entries.Count;i++) {
             var entry=entries[i]; float cardWidth=width-8;
             var card=Button(list,entry.Name??"Unnamed entry",0,i*88,cardWidth,()=>ShowEntry(entry),()=>ShowEntry(entry),80);
@@ -68,7 +69,7 @@ public sealed partial class ProgressionMenu
         if(entries.Count==0) {
             string empty=progressionKind==ProgressionEntryKind.Spell?"No spells learned yet.":progressionKind==ProgressionEntryKind.Weapon?"No weapon records available yet.":"No gear records available yet.";
             Label(Rect("Empty collection",list,16,20,width-40,90),empty,18);
-            Detail(labels[(int)progressionKind],empty+"\n\nSelect a different character or collection tab. Upgrade milestones will appear here when available.");
+            Detail(labels[(int)progressionKind],empty+"");
         } else ShowEntry(entries.FirstOrDefault(e=>EntryKey(e)==progressionSelection)??entries[0]);
     }
     void RestoreProgressionSelection()
@@ -113,7 +114,7 @@ public sealed partial class ProgressionMenu
                 source.Magic=Member.StatReplacingCopy(CharacterStat.Magic,current,entry.EquipmentCopy);
                 y=DrawEquipmentAttacks(content,entry.Equipment,source,y,width,entry.EquipmentCopy);
             }
-            y=ProgressionText(content,"Equipment progression pending","Visit Abilities to inspect all owned weapon Attacks, including locked mastery unlocks. Upgrade requirements are listed on the Upgrades page; a blacksmith performs upgrades.",y+12,width,15);
+            y=ProgressionText(content,"Equipment progression pending","Visit Abilities to inspect all owned weapon Attacks, including locked mastery unlocks. Right-click equipment in Inventory for upgrade details; a blacksmith performs upgrades.",y+12,width,15);
             content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(((RectTransform)content.parent).rect.height,y+12));return;
         }
         int maximum=Mathf.Max(1,entry.MaximumLevel),level=Mathf.Clamp(entry.Level,1,maximum);

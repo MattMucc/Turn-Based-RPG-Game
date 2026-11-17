@@ -75,9 +75,9 @@ public sealed partial class ProgressionMenu
         int i=0;foreach(CharacterStat stat in Enum.GetValues(typeof(CharacterStat)))
         {
             var current=stat;
-            var button=Button(body,$"{AttributePreview.Name(stat)}   {Member.Stat(stat)}     +1",0,84+i++*54,width,
+            var button=Button(body,$"{AttributePreview.Name(stat)}   {Member.Stat(stat)}     +1",0,76+i++*46,width,
                 ()=>{if(Member.UnspentPoints>0&&Member.Stat(current)<int.MaxValue){pendingStat=current;Rebuild();}},
-                ()=>{if(!pendingStat.HasValue)PreviewAttribute(current);},44);
+                ()=>{if(!pendingStat.HasValue)PreviewAttribute(current);},38);
             if(pendingStat==current)button.image.color=new Color(.17f,.38f,.4f);
         }
         if(pendingStat.HasValue)
@@ -87,7 +87,7 @@ public sealed partial class ProgressionMenu
             Button(body,"Cancel",width-130,422,130,()=>{pendingStat=null;Rebuild();});
             PreviewAttribute(stat);
         }
-        else Detail("Attributes","Hover or select an attribute to see what one point would change.\n\nNo points are spent until you confirm.\n\nThese points are separate from combat SP and future Training Points.",Portrait(Member));
+        else Detail("Attributes","Attribute Points improve individual stats. Awarded on level-up; separate from combat AP and Skill Points.",Portrait(Member));
     }
     void ConfirmAttribute()
     {
@@ -106,9 +106,9 @@ public sealed partial class ProgressionMenu
             var kind=stat==CharacterStat.PhysicalDefense?DamageKind.Physical:DamageKind.Magical;
             text+=$"\n\nExample: 100-power incoming hit\nDamage taken: {CombatMath.Damage(null,before,100,kind)} → {CombatMath.Damage(null,after,100,kind)}\nBefore Block or Barrier.";
         }
-        if(stat==CharacterStat.Strength||stat==CharacterStat.Magic)
+        if(stat==CharacterStat.Strength||stat==CharacterStat.Magic||stat==CharacterStat.Soul)
         {
-            var loadout=Loadout();var scaling=stat==CharacterStat.Strength?ScalingStat.Strength:ScalingStat.Magic;
+            var loadout=Loadout();var scaling=stat==CharacterStat.Strength?ScalingStat.Strength:stat==CharacterStat.Soul?ScalingStat.Soul:ScalingStat.Magic;
             var actions=loadout?loadout.Options.Where(o=>o!=null&&o.Effect==ActionEffect.Damage&&o.Scaling==scaling&&o.StatScaling>0).ToList():new System.Collections.Generic.List<BattleActionOption>();
             text+="\n\nCurrent actions · before enemy defenses";
             foreach(var action in actions)text+=$"\n{action.Name}: {action.CalculateDamage(before,null,action.Damage)} → {action.CalculateDamage(after,null,action.Damage)}";

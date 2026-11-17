@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Game.GridPrototype;
 using TMPro;
@@ -52,11 +52,19 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         if(canvasObject){var group=canvasObject.GetComponent<CanvasGroup>();if(!group)group=canvasObject.AddComponent<CanvasGroup>();group.interactable=!(Manager.GetComponent<SaveGameService>()&&Manager.GetComponent<SaveGameService>().Busy);}
         if(Manager.GetComponent<SaveGameService>()&&Manager.GetComponent<SaveGameService>().Busy)return;
         if (InBattle) { Close(); return; }
-        if (!Application.isFocused) return;
+        if (!Application.isFocused) { CancelInventoryDrag(); return; }
         var k = Keyboard.current; var pad = Gamepad.current;
         bool toggle = (k != null && k.tabKey.wasPressedThisFrame) || (pad != null && pad.startButton.wasPressedThisFrame);
         if (toggle) { if (open) Close(); else if (!Manager.WorldInputBlocked) Open(); return; }
         if (!open) return;
+        if(inventoryDragSource){
+            if((k!=null&&k.escapeKey.wasPressedThisFrame)||(pad!=null&&pad.buttonEast.wasPressedThisFrame))CancelInventoryDrag();
+            return;
+        }
+        if(page==Page.Inventory&&!inventoryModal&&((k!=null&&k.f10Key.wasPressedThisFrame&&(k.leftShiftKey.isPressed||k.rightShiftKey.isPressed))||(pad!=null&&pad.buttonWest.wasPressedThisFrame))){
+            var item=events.currentSelectedGameObject?events.currentSelectedGameObject.GetComponent<PlayerInventoryPointer>():null;
+            if(item)item.Context?.Invoke();return;
+        }
         if ((shell.rect.size-lastMenuSize).sqrMagnitude>1 && !inventoryModal) Rebuild();
         if(page==Page.Shortcuts && HandleShortcutInput(k,pad)) return;
         if ((k != null && (k.escapeKey.wasPressedThisFrame || k.backspaceKey.wasPressedThisFrame)) || (pad != null && pad.buttonEast.wasPressedThisFrame)) { Back(); return; }
@@ -115,12 +123,13 @@ public sealed partial class ProgressionMenu : MonoBehaviour
     public void Close()
     {
         if (!open) return;
+        CancelInventoryDrag();
         blacksmith=null;checkpointContext=null;restConfirmation=false;CancelDisplayChange(); resetSettingsPending=false; CloseInventoryModal(); HideItemTooltip(); open = false; closedFrame = Time.frameCount; Time.timeScale = savedTimeScale;
         if (canvasObject) canvasObject.SetActive(false);
         if (events) { events.sendNavigationEvents = savedNavigation; events.SetSelectedGameObject(savedSelection ? savedSelection : null); }
         Cursor.visible = savedCursor; Cursor.lockState = savedLock;
     }
-    public void Back() { if(upgradePending){upgradePending=false;Rebuild();return;} if(page==Page.Upgrades&&blacksmith){Close();return;} if(equipmentPending){equipmentPending=false;Rebuild();return;} if(restConfirmation){restConfirmation=false;Rebuild();return;} if(savePendingSlot>=0){savePendingSlot=-1;Rebuild();return;} if(checkpointContext&&page==Page.Saves){ShowPage(Page.Checkpoint);return;} if(page==Page.Checkpoint){Close();return;} if(BackFromSettings())return; if (inventoryModal) { InventoryBack(); return; } if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
+    public void Back() { if(upgradePending){upgradePending=false;Rebuild();return;} if(page==Page.Upgrades&&blacksmith){Close();return;} if(equipmentPending){equipmentPending=false;Rebuild();return;} if(restConfirmation){restConfirmation=false;Rebuild();return;} if(savePendingSlot>=0){savePendingSlot=-1;Rebuild();return;} if(checkpointContext&&page==Page.Saves){ShowPage(Page.Checkpoint);return;} if(page==Page.Checkpoint){Close();return;} if(BackFromSettings())return; if (inventoryModal) { InventoryBack(); return; } if (pendingShortcutSlot.HasValue) { pendingShortcutSlot=null; Rebuild(); } else if (pendingStat.HasValue) { pendingStat=null; Rebuild(); } else if (assigning != null) { assigning = null; Rebuild(); } else if(page==Page.Progression)ShowPage(Page.Abilities); else if(page==Page.Upgrades||page==Page.Equipment)ShowPage(Page.Inventory); else if (page != Page.Party) ShowPage(Page.Party); else Close(); }
     void Cycle(int direction) { if (inventoryModal || displayPreview.Active || resetSettingsPending) return; int count = Manager.Progression.Members.Count; upgradePending=false;equipmentPending=false;equipmentNotice=null; memberIndex = (memberIndex + direction + count) % count; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
     public void ShowPage(Page value) { if (!open) return; CancelDisplayChange(); resetSettingsPending=false; settingsSelection=null; CloseInventoryModal(); HideItemTooltip(); if(value!=Page.Checkpoint&&value!=Page.Saves)checkpointContext=null;restConfirmation=false;upgradePending=false;equipmentPending=false;equipmentNotice=null;if(value!=Page.Upgrades)blacksmith=null;page = value; savePendingSlot=-1; progressionSelection=null; selectedSkillNode=null; assigning = null; pendingStat=null; pendingShortcutSlot=null;shortcutSelection=null; Rebuild(); }
     void Clear(Transform parent)
@@ -129,12 +138,14 @@ public sealed partial class ProgressionMenu : MonoBehaviour
     }
     void Rebuild()
     {
+        CancelInventoryDrag();
         Canvas.ForceUpdateCanvases(); lastMenuSize=shell.rect.size;
         shownAbility=null; shownProgressionEntry=null; events.SetSelectedGameObject(null); Clear(body); Clear(detailRoot); buttons.Clear();
         title.text = page == Page.SkillTree ? "SKILL TREE" : page.ToString().ToUpperInvariant();
         characterLabel.text = DisplayName(Member); BuildDetails();
         switch (page) { case Page.Party: Party(); break; case Page.Attributes: Attributes(); break; case Page.Shortcuts: Shortcuts(); break; case Page.Progression: Progression(); break; case Page.SkillTree: SkillTree(); break; case Page.Inventory: Inventory(); break; case Page.Settings: Settings(); break; case Page.Saves: Saves(); break; case Page.Checkpoint: CheckpointPage(); break; case Page.Equipment: EquipmentPage(); break; case Page.Upgrades: UpgradesPage(); break; case Page.Abilities: AbilitiesPage(); break; }
-        if(page!=Page.SkillTree || skillCards.Count==0) SelectFirst();
+        if(page==Page.Inventory)RestoreInventorySelection();
+        else if(page!=Page.SkillTree || skillCards.Count==0) SelectFirst();
         if(page==Page.Party) {
             var selected=buttons.Find(b=>b.name==DisplayName(Member));
             if(selected)events.SetSelectedGameObject(selected.gameObject);

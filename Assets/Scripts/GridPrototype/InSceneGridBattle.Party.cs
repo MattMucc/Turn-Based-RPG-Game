@@ -58,7 +58,7 @@ namespace Game.GridPrototype
             allyDefense[slot] = defense;
             reserves[reserveIndex] = outgoing; participants.Add(incoming.Info);
             hitDamage.Remove(slot); hitTime.Remove(slot); TargetFocus.Dismiss();
-            initiativeOrder.SetInitiative(slot, incoming.Info.EffectiveInitiative);
+            initiativeOrder.SetInitiative(slot, incoming.Info.EffectiveSpeed);
         }
 
         private bool DeployReserves()

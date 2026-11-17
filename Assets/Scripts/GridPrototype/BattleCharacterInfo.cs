@@ -5,7 +5,7 @@ namespace Game.GridPrototype
     // Authored stats and prototype formula tuning; level growth and allocated points are applied; equipped stat modifiers are applied.
     public sealed class BattleCharacterInfo : MonoBehaviour
     {
-        public int EffectiveInitiative => Stat(CharacterStat.Initiative);
+        public int EffectiveSpeed => Stat(CharacterStat.Speed);
         [Header("Level growth (prototype tuning)")]
         public StatValues AutomaticGrowth = new StatValues { Vitality = 1 };
         public StatValues AllocatedPoints = new StatValues();
@@ -29,7 +29,7 @@ namespace Game.GridPrototype
             int maximum = EffectiveMaxHealth;
             storedHealth = (int)System.Math.Min(maximum, (long)(storedHealth < 0 ? maximum : storedHealth) + amount);
         }
-        public int BaseStat(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : Initiative;
+        public int BaseStat(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : stat == CharacterStat.Soul ? Soul : Speed;
         public int Stat(CharacterStat stat) => StatReplacingEquipment(stat,null,null);
         public int StatReplacingCopy(CharacterStat stat,OwnedEquipment previous,OwnedEquipment next) => (int)System.Math.Max(0,System.Math.Min(int.MaxValue,
             (long)Mathf.Max(0,BaseStat(stat))+Mathf.Max(0,AutomaticGrowth.Get(stat))*(long)Mathf.Max(0,Level-1)+AllocatedPoints.Get(stat)
@@ -56,10 +56,10 @@ namespace Game.GridPrototype
         [Header("Prototype stat tuning")]
         [Min(1)] public int BaseHealth = 100;
         [Min(0)] public int HealthPerVitality = 10;
-        [Header("Skill Points")]
-        [Range(0, 9)] public int StartingSkillPoints = 3;
-        [Min(0)] public int SkillPointsPerTurn = 1;
-        [Min(0)] public int SkillPointsPerBasicAttack = 1;
+        [Header("Action Points (AP)")]
+        [Range(0, 9)] [UnityEngine.Serialization.FormerlySerializedAs("StartingSkillPoints")] public int StartingActionPoints = 3;
+        [Min(0)] [UnityEngine.Serialization.FormerlySerializedAs("SkillPointsPerTurn")] public int ActionPointsPerTurn = 1;
+        [Min(0)] [UnityEngine.Serialization.FormerlySerializedAs("SkillPointsPerBasicAttack")] public int ActionPointsPerBasicAttack = 1;
         [Header("Magic Points (prototype tuning)")]
         [Min(0)] public int StartingMaxMagicPoints = 24;
         [Min(0)] public int MagicPointsPerLevel = 2;
@@ -81,12 +81,12 @@ namespace Game.GridPrototype
         {
             unit.InitializeMagicPoints(EffectiveMaxMagicPoints, storedMagicPoints);
             unit.FocusRecovery = Mathf.Max(0, FocusMagicRecovery);
-            unit.InitializeSkillPoints(StartingSkillPoints);
-            unit.TurnSkillPointGain = Mathf.Max(0, SkillPointsPerTurn);
-            unit.AttackSkillPointGain = Mathf.Max(0, SkillPointsPerBasicAttack);
+            unit.InitializeActionPoints(StartingActionPoints);
+            unit.TurnActionPointGain = Mathf.Max(0, ActionPointsPerTurn);
+            unit.AttackActionPointGain = Mathf.Max(0, ActionPointsPerBasicAttack);
             unit.MaxHealth = EffectiveMaxHealth;
             unit.Health = unit.MaxHealth;
-            unit.Strength = Stat(CharacterStat.Strength); unit.Magic = Stat(CharacterStat.Magic);
+            unit.Soul = Stat(CharacterStat.Soul); unit.Strength = Stat(CharacterStat.Strength); unit.Magic = Stat(CharacterStat.Magic);
             unit.PhysicalDefense = Stat(CharacterStat.PhysicalDefense); unit.MagicalDefense = Stat(CharacterStat.MagicalDefense);
             unit.BurnTickDamage = Mathf.Max(0, BurningDamagePerTick); unit.RegenerationTickHealing = Mathf.Max(0, RegenerationHealingPerTick);
         }
@@ -94,7 +94,9 @@ namespace Game.GridPrototype
         public string DisplayName;
         [Min(0)] public int Level;
         public string Race, Role;
-        public int Vitality = -1, Strength = -1, Magic = -1, PhysicalDefense = -1, MagicalDefense = -1, Initiative = -1;
+        public int Vitality = -1, Strength = -1, Magic = -1, PhysicalDefense = -1, MagicalDefense = -1;
+        [UnityEngine.Serialization.FormerlySerializedAs("Initiative")] public int Speed = -1;
+        public int Soul = 0;
         [TextArea] public string Resistances;
         [TextArea] public string Statuses;
         public static string Value(int value) => value < 0 ? "Not assigned" : value.ToString();
@@ -105,7 +107,7 @@ namespace Game.GridPrototype
             string live = unit.EffectDetails();
             if (!string.IsNullOrEmpty(live)) statuses = live + (statuses == "None" ? "" : "\n" + statuses);
             if (unit.EffectiveBlock) statuses = "Blocking" + (statuses == "None" ? "" : "\n" + statuses);
-            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nMP  {unit.MagicPoints} / {unit.MaxMagicPoints}\nSP  {unit.SkillPoints} / {GridUnit.MaximumSkillPoints}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nInitiative  {EffectiveInitiative}{(Initiative < 0 && EffectiveInitiative == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
+            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nMP  {unit.MagicPoints} / {unit.MaxMagicPoints}\nAP  {unit.ActionPoints} / {GridUnit.MaximumActionPoints}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nSoul  {StatDescription(CharacterStat.Soul)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nSpeed  {EffectiveSpeed}{(Speed < 0 && EffectiveSpeed == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
         }
         private static string Assigned(string value) => string.IsNullOrWhiteSpace(value) ? "Not assigned" : value;
     }

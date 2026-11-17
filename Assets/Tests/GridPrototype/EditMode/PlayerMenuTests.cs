@@ -52,6 +52,12 @@ public class PlayerMenuTests
     void Open() => menuType.GetMethod("Open").Invoke(menu, null);
     void Page(string name) => menuType.GetMethod("ShowPage").Invoke(menu, new[] { Enum.Parse(menuType.GetNestedType("Page"), name) });
     Button Find(string name) => menu.GetComponentsInChildren<Button>(true).First(b => b.gameObject.activeInHierarchy && b.name.StartsWith(name));
+    void RightClickItem(string name)
+    {
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        var data=new UnityEngine.EventSystems.PointerEventData(events){button=UnityEngine.EventSystems.PointerEventData.InputButton.Right};
+        UnityEngine.EventSystems.ExecuteEvents.Execute(Find(name).gameObject,data,UnityEngine.EventSystems.ExecuteEvents.pointerClickHandler);
+    }
     void WithSettingsSnapshot(Action action)
     {
         var keys=new[]{"PlayerMenu.Icons","PlayerMenu.Assisted","PlayerMenu.AutoCamera","PlayerMenu.OrderTop","PlayerMenu.Fullscreen"};
@@ -147,7 +153,7 @@ public class PlayerMenuTests
     {
         var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);
         var book=new BattleActionOption{Name="Fireball Spellbook",ItemId="spellbook-fireball",LearnSpellId="fireball",Category=BattleActionCategory.Item,Quantity=2};inventory.Items.Add(book);
-        Open();Page("Inventory");Find("Fireball Spellbook").onClick.Invoke();Find("Use").onClick.Invoke();Find("Member 0   Learn spell").onClick.Invoke();
+        Open();Page("Inventory");RightClickItem("Fireball Spellbook");Find("Use").onClick.Invoke();Find("Member 0   Learn spell").onClick.Invoke();
         Assert.AreEqual(2,book.Quantity);Find("Back").onClick.Invoke();Assert.AreEqual(2,book.Quantity);
         Find("Member 0   Learn spell").onClick.Invoke();Find("Confirm learning").onClick.Invoke();
         Assert.AreEqual(1,book.Quantity);Assert.IsTrue(party[0].GetComponent<BattleActionLoadout>().KnowsSpell("fireball"));Assert.IsFalse(party[1].GetComponent<BattleActionLoadout>().KnowsSpell("fireball"));
@@ -341,6 +347,112 @@ public class PlayerMenuTests
         Assert.AreEqual(50,reserves[0].StoredHealth);Assert.AreEqual(2,inventory.Count("health-potion"));
         Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Inventory interaction"));
     }
+    [Test] public void InventoryLeftClickSelectsAndHoverDoesNotReplacePinnedDetails()
+    {
+        Open();Page("Inventory");Find("Mana Potion").onClick.Invoke();
+        Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Inventory interaction"));
+        Assert.AreEqual("Mana Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        var data=new UnityEngine.EventSystems.PointerEventData(events);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(Find("Health Potion").gameObject,data,UnityEngine.EventSystems.ExecuteEvents.pointerEnterHandler);
+        Assert.AreEqual("Mana Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
+        RightClickItem("Health Potion");Assert.IsNotNull(Find("Use"));
+    }
+    [Test] public void InventoryGridFiltersEquipmentMaterialsAndBooksWithPicturesAndSafeContext()
+    {
+        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);
+        var sword=EquipmentAsset("Grid sword");var armor=EquipmentAsset("Grid armor",EquipmentKind.Armor);var charm=EquipmentAsset("Grid charm",EquipmentKind.Accessory);
+        gear.Owned.AddRange(new[]{new OwnedEquipment{InstanceId="sword-one",Definition=sword},new OwnedEquipment{InstanceId="sword-two",Definition=sword},new OwnedEquipment{InstanceId="armor",Definition=armor},new OwnedEquipment{InstanceId="charm",Definition=charm}});
+        gear.Materials.Add(new MaterialStack{Id="iron",Name="Iron",Quantity=7});
+        var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);
+        inventory.Items.Add(new BattleActionOption{Name="Fireball Book",ItemId="book",Category=BattleActionCategory.Item,LearnSpellId="fireball",Quantity=2});
+        Open();Page("Inventory");
+        var potion=Find("Health Potion");Assert.IsFalse(potion.transform.Find("Label").gameObject.activeSelf);
+        Assert.AreEqual(((RectTransform)potion.transform).rect.width,((RectTransform)potion.transform).rect.height,.01f);
+        Assert.IsNotNull(potion.transform.Find("Item artwork").GetComponent<Graphic>());
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Empty inventory slot"));
+        Find("Weapons").onClick.Invoke();Assert.AreEqual(2,menu.GetComponentsInChildren<Button>().Count(b=>b.name=="Grid sword"));
+        Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Health Potion"));
+        RightClickItem("Grid sword");Assert.IsNotNull(Find("Examine"));Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Use"));Find("Back").onClick.Invoke();
+        Find("Armor").onClick.Invoke();Assert.IsNotNull(Find("Grid armor"));
+        Find("Accessories").onClick.Invoke();Assert.IsNotNull(Find("Grid charm"));
+        Find("Materials").onClick.Invoke();Find("Iron").onClick.Invoke();Assert.AreEqual("Iron",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
+        Assert.AreEqual("7",Find("Iron").transform.Find("Quantity or upgrade").GetComponent<TMP_Text>().text);
+        Find("Spell Books").onClick.Invoke();RightClickItem("Fireball Book");Assert.IsNotNull(Find("Use"));Find("Back").onClick.Invoke();
+        Find("Other").onClick.Invoke();Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No items in this category."));
+    }
+    [Test] public void InventoryCrossCategorySwapOnlyChangesSavedSlotOrder()
+    {
+        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var sword=EquipmentAsset("Drag sword");
+        var copy=new OwnedEquipment{InstanceId="drag-sword",Definition=sword,MasteryExperience=4};gear.Owned.Add(copy);
+        var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);int count=inventory.Items[0].Quantity;
+        Open();Page("Inventory");
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        var source=Find("Health Potion").gameObject;var target=Find("Drag sword").gameObject;
+        var data=new UnityEngine.EventSystems.PointerEventData(events){button=UnityEngine.EventSystems.PointerEventData.InputButton.Left,pointerDrag=source};
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.beginDragHandler);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(target,data,UnityEngine.EventSystems.ExecuteEvents.dropHandler);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.endDragHandler);
+        Assert.AreEqual("equipment:drag-sword",inventory.SlotOrder[0]);Assert.AreSame(copy,gear.Owned[0]);Assert.AreEqual(4,copy.MasteryExperience);Assert.AreEqual(count,inventory.Items[0].Quantity);
+        source=Find("Drag sword").gameObject;target=menu.GetComponentsInChildren<Transform>().First(t=>t.name=="Empty inventory slot").gameObject;data.pointerDrag=source;
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.beginDragHandler);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(target,data,UnityEngine.EventSystems.ExecuteEvents.dropHandler);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.endDragHandler);
+        Assert.IsTrue(inventory.SlotOrder[0].StartsWith("empty:"));Assert.AreSame(copy,gear.Owned[0]);
+        var saved=JsonUtility.FromJson<PartyInventory>(JsonUtility.ToJson(inventory));CollectionAssert.AreEqual(inventory.SlotOrder,saved.SlotOrder);
+    }
+    [Test] public void InventoryEquipPreviewsCancelsConfirmsAndUnequipsWithoutHealing()
+    {
+        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var sword=EquipmentAsset("Context sword");
+        sword.Upgrades.Add(new EquipmentUpgradeStep{AddedStats=new StatValues{Strength=2}});
+        gear.Owned.Add(new OwnedEquipment{InstanceId="context-sword",Definition=sword,UpgradeLevel=1});
+        var profile=party[0].gameObject.AddComponent<CharacterEquipment>();profile.AllowedWeaponTypes=new[]{WeaponType.Shortsword};
+        var incompatible=party[1].gameObject.AddComponent<CharacterEquipment>();incompatible.AllowedWeaponTypes=new[]{WeaponType.Bow};
+        managerType.GetMethod("BindEquipment").Invoke(manager,null);party[0].MaterializeVitals();int hp=party[0].StoredHealth,mp=party[0].StoredMagicPoints,before=party[0].Stat(CharacterStat.Strength);
+        Open();Page("Inventory");RightClickItem("Context sword");Find("Equip").onClick.Invoke();
+        Assert.IsFalse(Find("Member 1 · incompatible").interactable);Find("Member 0").onClick.Invoke();
+        Assert.IsNull(profile.At(EquipmentSlot.Weapon));Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.name=="Equipment stat changes"&&t.text.Contains("Strength")&&t.text.Contains((before+5).ToString())));
+        Find("Back").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));Find("Member 0").onClick.Invoke();
+        var confirm=Find("Confirm equip");confirm.onClick.Invoke();confirm.onClick.Invoke();
+        Assert.AreEqual("context-sword",profile.InstanceAt(EquipmentSlot.Weapon));Assert.AreEqual(before+5,party[0].Stat(CharacterStat.Strength));Assert.AreEqual(hp,party[0].StoredHealth);Assert.AreEqual(mp,party[0].StoredMagicPoints);
+        RightClickItem("Context sword");Assert.IsFalse(Find("Equip").interactable);Find("Unequip").onClick.Invoke();Find("Confirm unequip").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));Assert.AreEqual(1,gear.Owned.Count);
+        RightClickItem("Context sword");Find("Upgrade details").onClick.Invoke();Assert.AreEqual("Upgrades",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());Assert.IsFalse(Find("Review upgrade").interactable);Find("Back").onClick.Invoke();Assert.AreEqual("Inventory",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
+    }
+    [Test] public void InventoryAccessoryChoosesSecondSlotAndSidebarUsesConsolidatedPages()
+    {
+        var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var charm=EquipmentAsset("Context charm",EquipmentKind.Accessory);
+        gear.Owned.Add(new OwnedEquipment{InstanceId="charm",Definition=charm});
+        var profile=reserves[0].gameObject.AddComponent<CharacterEquipment>();managerType.GetMethod("BindEquipment").Invoke(manager,null);
+        Open();Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Equipment"||b.name=="Progression"||b.name=="Upgrades"));
+        Page("Inventory");RightClickItem("Context charm");Find("Equip").onClick.Invoke();Find("Member 3").onClick.Invoke();Find("Accessory 2:").onClick.Invoke();Find("Confirm equip").onClick.Invoke();
+        Assert.AreEqual("charm",profile.InstanceAt(EquipmentSlot.AccessoryTwo));Assert.IsNull(profile.At(EquipmentSlot.AccessoryOne));
+        Page("Abilities");Find("Mastery & milestones").onClick.Invoke();Assert.AreEqual("Progression",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());Find("Back to Abilities").onClick.Invoke();Assert.AreEqual("Abilities",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
+    }
+    [Test] public void InventoryDragSwapsWholeStacksAndInvalidDropsOrPageChangesCancel()
+    {
+        var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);
+        var health=inventory.Items[0];var mana=inventory.Items[1];int hpCount=health.Quantity,mpCount=mana.Quantity;
+        Open();Page("Inventory");
+        var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
+        var source=Find("Health Potion").gameObject;var target=Find("Mana Potion").gameObject;
+        var data=new UnityEngine.EventSystems.PointerEventData(events){button=UnityEngine.EventSystems.PointerEventData.InputButton.Left,pointerDrag=source,eligibleForClick=true,pointerCurrentRaycast=new UnityEngine.EventSystems.RaycastResult{gameObject=target}};
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.beginDragHandler);
+        Assert.IsFalse(data.eligibleForClick);
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Dragged inventory item"));
+        Assert.IsTrue(target.GetComponent<Outline>().enabled);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(target,data,UnityEngine.EventSystems.ExecuteEvents.dropHandler);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.endDragHandler);
+        Assert.AreSame(mana,inventory.Items[0]);Assert.AreSame(health,inventory.Items[1]);Assert.AreEqual(hpCount,health.Quantity);Assert.AreEqual(mpCount,mana.Quantity);
+        Assert.AreEqual("Health Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
+        Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Inventory interaction"||t.name=="Dragged inventory item"));
+        source=Find("Health Potion").gameObject;data.pointerDrag=source;data.pointerCurrentRaycast=new UnityEngine.EventSystems.RaycastResult();
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.beginDragHandler);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.endDragHandler);
+        Assert.AreSame(mana,inventory.Items[0]);
+        UnityEngine.EventSystems.ExecuteEvents.Execute(source,data,UnityEngine.EventSystems.ExecuteEvents.beginDragHandler);Page("Party");
+        Assert.IsFalse(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Dragged inventory item"));Assert.AreSame(mana,inventory.Items[0]);
+        var saved=JsonUtility.FromJson<PartyInventory>(JsonUtility.ToJson(inventory));Assert.AreEqual(mana.ItemId,saved.Items[0].ItemId);Assert.AreEqual(hpCount,saved.Items[1].Quantity);
+    }
     [Test] public void MenuPausesRestoresAndBuildsEveryPageWithoutRuntimePlaytesting()
     {
         Time.timeScale = .75f; Open(); Assert.AreEqual(0, Time.timeScale);
@@ -439,7 +551,7 @@ public class PlayerMenuTests
         Assert.IsNull(menuType.GetField("pendingStat",Hidden).GetValue(menu));
     }
     [TestCase(CharacterStat.Vitality)] [TestCase(CharacterStat.Strength)] [TestCase(CharacterStat.Magic)]
-    [TestCase(CharacterStat.PhysicalDefense)] [TestCase(CharacterStat.MagicalDefense)] [TestCase(CharacterStat.Initiative)]
+    [TestCase(CharacterStat.PhysicalDefense)] [TestCase(CharacterStat.MagicalDefense)] [TestCase(CharacterStat.Speed)] [TestCase(CharacterStat.Soul)]
     public void AttributePreviewMatchesActualAllocationWithoutMutatingMember(CharacterStat stat)
     {
         var member=party[0]; member.GrantLevel(2,2); int before=member.Stat(stat);
@@ -447,7 +559,7 @@ public class PlayerMenuTests
         Assert.AreEqual(before,member.Stat(stat)); Assert.AreEqual(2,member.UnspentPoints);
         Assert.IsTrue(member.SpendPoint(stat)); var actual=new GridUnit("After",Vector2Int.zero);member.Configure(actual);
         Assert.AreEqual(actual.MaxHealth,preview.MaxHealth);Assert.AreEqual(actual.MaxMagicPoints,preview.MaxMagicPoints);
-        Assert.AreEqual(actual.Strength,preview.Strength);Assert.AreEqual(actual.Magic,preview.Magic);
+        Assert.AreEqual(actual.Soul,preview.Soul);Assert.AreEqual(actual.Strength,preview.Strength);Assert.AreEqual(actual.Magic,preview.Magic);
         Assert.AreEqual(actual.PhysicalDefense,preview.PhysicalDefense);Assert.AreEqual(actual.MagicalDefense,preview.MagicalDefense);
     }
     [Test] public void ProgressionShowsOrderedMilestonesAndPreservesSelectionWithoutGrantingUpgrades()
@@ -488,7 +600,7 @@ public class PlayerMenuTests
     {
         var data=party[0].gameObject.AddComponent<CharacterMenuData>();
         var root=new MenuSkillNode{Id="root",Name="Dash root",ActionName="Dash",Position=new Vector2(-300,-80)};
-        var child=new MenuSkillNode{Id="child",Name="Future Skill",RequiredLevel=5,TrainingPointCost=3,Position=new Vector2(1000,720),Prerequisites=new List<string>{"root"}};
+        var child=new MenuSkillNode{Id="child",Name="Future Skill",RequiredLevel=5,SkillPointCost=3,Position=new Vector2(1000,720),Prerequisites=new List<string>{"root"}};
         data.SkillTree.Add(root);data.SkillTree.Add(child);
         Open();Page("SkillTree");
         var scroll=menu.GetComponentsInChildren<ScrollRect>().First(r=>r.name=="Skill tree");
@@ -498,7 +610,7 @@ public class PlayerMenuTests
         last.onClick.Invoke();Canvas.ForceUpdateCanvases();
         var bounds=RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport,last.transform);
         Assert.LessOrEqual(bounds.max.x,scroll.viewport.rect.xMax+.1f);Assert.GreaterOrEqual(bounds.min.y,scroll.viewport.rect.yMin-.1f);
-        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Dash root · Learned")&&t.text.Contains("Training Point cost: 3")&&t.text.Contains("Locked")));
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Dash root · Learned")&&t.text.Contains("Skill Point cost: 3")&&t.text.Contains("Locked")));
         menuType.GetMethod("Rebuild",Hidden).Invoke(menu,null);
         var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
         Assert.AreEqual("Skill node child",events.currentSelectedGameObject.name);

@@ -6,13 +6,14 @@ namespace Game.GridPrototype
 {
     public enum CombatStatus { None, Burning, Regeneration, Paralyzed, Weakened, Exposed }
     public enum DamageKind { Physical, Magical }
-    public enum ScalingStat { None, Strength, Magic }
+    public enum ScalingStat { None, Strength, Magic, Soul }
     public enum CombatElement { None, Fire, Lightning, Ice }
     public enum ActionEffect { Damage, Support, Push, Dash, Heal, RestoreMagic }
 
     public sealed partial class GridUnit
     {
-        public int Strength, Magic, PhysicalDefense, MagicalDefense;
+        public const int MaximumStatusStacks = 20;
+        public int Soul, Strength, Magic, PhysicalDefense, MagicalDefense;
         public int BurnTickDamage = 5, RegenerationTickHealing = 5;
         public int Barrier { get; private set; }
         public int BarrierMaximum { get; private set; }
@@ -26,7 +27,7 @@ namespace Game.GridPrototype
         public void ApplyStatus(CombatStatus status, int amount)
         {
             if (status == CombatStatus.None || amount <= 0 || Health <= 0) return;
-            stacks[status] = (int)Math.Min(10L, (long)Stacks(status) + amount);
+            stacks[status] = (int)Math.Min(MaximumStatusStacks, (long)Stacks(status) + amount);
             if (status == CombatStatus.Paralyzed) Blocking = false;
         }
         public void AddBarrier(int amount)
@@ -77,7 +78,7 @@ namespace Game.GridPrototype
     {
         public static int Damage(GridUnit source, GridUnit target, int power, DamageKind kind, ScalingStat stat = ScalingStat.None, float scaling = 0, float multiplier = 1)
         {
-            int value = stat == ScalingStat.Strength ? (source?.Strength ?? 0) : stat == ScalingStat.Magic ? (source?.Magic ?? 0) : 0;
+            int value = stat == ScalingStat.Strength ? (source?.Strength ?? 0) : stat == ScalingStat.Magic ? (source?.Magic ?? 0) : stat == ScalingStat.Soul ? (source?.Soul ?? 0) : 0;
             float raw = Math.Max(0, power) + Math.Max(0, value) * Math.Max(0, scaling);
             raw *= Mathf.Max(0, multiplier) * (source != null && source.Stacks(CombatStatus.Weakened) > 0 ? .8f : 1f);
             int defense = Math.Max(0, kind == DamageKind.Physical ? (target?.PhysicalDefense ?? 0) : (target?.MagicalDefense ?? 0));

@@ -4,17 +4,18 @@ using UnityEngine;
 
 namespace Game.GridPrototype
 {
-    public enum CharacterStat { Vitality, Strength, Magic, PhysicalDefense, MagicalDefense, Initiative }
+    public enum CharacterStat { Vitality, Strength, Magic, PhysicalDefense, MagicalDefense, Speed, Soul }
     [Serializable] public sealed class StatValues
     {
-        public int Vitality, Strength, Magic, PhysicalDefense, MagicalDefense, Initiative;
-        public int Get(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : Initiative;
+        public int Vitality, Strength, Magic, PhysicalDefense, MagicalDefense, Soul;
+        [UnityEngine.Serialization.FormerlySerializedAs("Initiative")] public int Speed;
+        public int Get(CharacterStat stat) => stat == CharacterStat.Vitality ? Vitality : stat == CharacterStat.Strength ? Strength : stat == CharacterStat.Magic ? Magic : stat == CharacterStat.PhysicalDefense ? PhysicalDefense : stat == CharacterStat.MagicalDefense ? MagicalDefense : stat == CharacterStat.Soul ? Soul : Speed;
         public void Add(CharacterStat stat)
         {
             switch (stat) {
                 case CharacterStat.Vitality: Vitality++; break; case CharacterStat.Strength: Strength++; break;
                 case CharacterStat.Magic: Magic++; break; case CharacterStat.PhysicalDefense: PhysicalDefense++; break;
-                case CharacterStat.MagicalDefense: MagicalDefense++; break; case CharacterStat.Initiative: Initiative++; break;
+                case CharacterStat.MagicalDefense: MagicalDefense++; break; case CharacterStat.Speed: Speed++; break; case CharacterStat.Soul: Soul++; break;
             }
         }
     }
@@ -25,7 +26,7 @@ namespace Game.GridPrototype
         [Min(1)] public int FirstLevelCost = 100;
         [Min(0)] public int CostIncreasePerLevel = 50;
         [Range(1, 100)] public int LevelCap = 50;
-        [Min(0)] public int PointsPerLevel = 2;
+        [Min(0)] public int PointsPerLevel = 3;
         [SerializeField] long experience;
         [Serializable] public sealed class MemberExperience
         { public BattleCharacterInfo Member; public long Experience; public int HalfRemainder; }

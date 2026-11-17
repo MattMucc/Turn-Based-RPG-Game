@@ -20,6 +20,7 @@ namespace Game.GridPrototype
     {
         public readonly string Name;
         public Vector2Int Position;
+        public const int MaximumMovement = 10;
         public int Movement { get; private set; }
         public bool ActionAvailable { get; private set; }
         public bool TurnOpen { get; private set; }
@@ -36,7 +37,7 @@ namespace Game.GridPrototype
         public bool HandOffTurnTo(GridUnit incoming)
         {
             if (incoming == null || incoming == this || Health <= 0 || incoming.Health <= 0 || incoming.TurnOpen || !SpendAction()) return false;
-            incoming.deferredMovement = checked(incoming.deferredMovement + incoming.Movement);
+            incoming.deferredMovement = (int)Math.Min(MaximumMovement, (long)incoming.deferredMovement + incoming.Movement);
             incoming.Movement = Movement; Movement = 0;
             EndTurn();
             incoming.TurnOpen = true; incoming.ActionAvailable = false; incoming.Blocking = false;
@@ -52,8 +53,8 @@ namespace Game.GridPrototype
             if (movementGrant < 0) throw new ArgumentOutOfRangeException(nameof(movementGrant));
             TickStartEffects();
             if (Health <= 0) return;
-            RestoreSkillPoints(TurnSkillPointGain);
-            Movement = checked(Movement + deferredMovement + movementGrant); deferredMovement = 0;
+            RestoreActionPoints(TurnActionPointGain);
+            Movement = (int)Math.Min(MaximumMovement, (long)Movement + deferredMovement + movementGrant); deferredMovement = 0;
             ActionAvailable = true;
             Blocking = false;
             TurnOpen = true;
@@ -73,11 +74,11 @@ namespace Game.GridPrototype
             return true;
         }
 
-        public bool Dash(int movementGain = 3, int skillPointCost = 0)
+        public bool Dash(int movementGain = 3, int actionPointCost = 0)
         {
-            if (!TurnOpen || !ActionAvailable || movementGain <= 0 || Movement > int.MaxValue - movementGain) return false;
-            if (!SpendActionWithSkillPoints(skillPointCost)) return false;
-            Movement += movementGain; return true;
+            if (!TurnOpen || !ActionAvailable || movementGain <= 0 || Movement >= MaximumMovement) return false;
+            if (!SpendActionWithActionPoints(actionPointCost)) return false;
+            Movement = (int)Math.Min(MaximumMovement, (long)Movement + movementGain); return true;
         }
         public void EndTurn() { if (TurnOpen) TickEndEffects(); TurnOpen = false; ActionAvailable = false; }
     }

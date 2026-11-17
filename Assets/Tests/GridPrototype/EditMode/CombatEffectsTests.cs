@@ -5,6 +5,31 @@ using Game.GridPrototype;
 public class CombatEffectsTests
 {
     GridUnit Unit() => new GridUnit("Test", Vector2Int.zero);
+    [Test] public void AllStackBasedStatusesShareTwentyCapAndBarrierRemainsSeparate()
+    {
+        var unit = Unit();
+        foreach (CombatStatus status in System.Enum.GetValues(typeof(CombatStatus)))
+        {
+            if (status == CombatStatus.None) continue;
+            unit.ApplyStatus(status, 19); unit.ApplyStatus(status, int.MaxValue);
+            Assert.AreEqual(20, unit.Stacks(status), status.ToString());
+        }
+        unit.AddBarrier(60); Assert.AreEqual(60, unit.Barrier);
+    }
+    [Test] public void SoulScalingIncreasesDamageWithoutChangingOtherScaling()
+    {
+        var source = Unit(); source.Soul = 12; source.Strength = 3;
+        Assert.AreEqual(28, CombatMath.Damage(source, null, 10, DamageKind.Magical, ScalingStat.Soul, 1.5f));
+        Assert.AreEqual(13, CombatMath.Damage(source, null, 10, DamageKind.Physical, ScalingStat.Strength, 1));
+    }
+    [Test] public void TooltipShowsApAndTwentyStackAffliction()
+    {
+        var action = new BattleActionOption { Category = BattleActionCategory.Skill, ActionPointCost = 4,
+            InflictedStatus = CombatStatus.Burning, StatusStacks = 20, StatusChance = 35 };
+        StringAssert.Contains("4 AP", action.Tooltip);
+        StringAssert.Contains("Burning ×20", action.Tooltip);
+        StringAssert.Contains("35% per landed hit", action.Tooltip);
+    }
     [Test] public void BurningAndRegenerationTickOnlyAtStartAndConsumeOneStack()
     {
         var unit = Unit(); unit.Health = 60; unit.BurnTickDamage = 8; unit.RegenerationTickHealing = 3;
@@ -15,7 +40,7 @@ public class CombatEffectsTests
         unit.EndTurn(); unit.BeginTurn(); Assert.AreEqual(50, unit.Health);
         Assert.AreEqual(0, unit.Stacks(CombatStatus.Regeneration));
     }
-    [Test] public void EachLandedHitRollsIndependentlyAndAddsItsWholeStackAmountUpToTen()
+    [Test] public void EachLandedHitRollsIndependentlyAndAddsItsWholeStackAmountUpToTwenty()
     {
         var source = Unit(); var target = Unit();
         var action = new BattleActionOption { Damage = 0, HitChance = 70, StatusChance = 50, InflictedStatus = CombatStatus.Burning, StatusStacks = 2 };
@@ -24,8 +49,8 @@ public class CombatEffectsTests
         action.ApplyHit(source, target, 0, .1f, .1f, out _);
         Assert.AreEqual(4, target.Stacks(CombatStatus.Burning));
         action.ApplyHit(source, target, 0, .1f, .9f, out _); Assert.AreEqual(4, target.Stacks(CombatStatus.Burning));
-        target.ApplyStatus(CombatStatus.Burning, 9); Assert.AreEqual(10, target.Stacks(CombatStatus.Burning));
-        target.BeginTurn(); Assert.AreEqual(95, target.Health); Assert.AreEqual(9, target.Stacks(CombatStatus.Burning));
+        target.ApplyStatus(CombatStatus.Burning, 30); Assert.AreEqual(20, target.Stacks(CombatStatus.Burning));
+        target.BeginTurn(); Assert.AreEqual(95, target.Health); Assert.AreEqual(19, target.Stacks(CombatStatus.Burning));
     }
     [Test] public void BarrierAbsorbsAndSpillsIntoHealthWithoutChangingMaxHealth()
     {

@@ -235,7 +235,7 @@ public class BattleMenuUI : MonoBehaviour
             if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
         if (category == BattleActionCategory.Magic && family==null)
-            Row("Focus", () => battle.Focus(), $"Recover up to {battle.Combatants[battle.CurrentActorIndex].FocusRecovery} MP. Uses your action, but costs no SP or MP. Movement remains available.", () => battle.CanFocus);
+            Row("Focus", () => battle.Focus(), $"Restore up to {battle.Combatants[battle.CurrentActorIndex].FocusRecovery} MP.", () => battle.CanFocus);
         if (rows == 0) Row("None available", () => { }, "This character has no available options in this category.", () => false);
         if (battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple)
         {
@@ -365,7 +365,7 @@ public class BattleMenuUI : MonoBehaviour
         if (showResources)
         {
             var actor = battle.Combatants[battle.CurrentActorIndex];
-            skillPointCounter.text = $"SP {actor.SkillPoints} / {GridUnit.MaximumSkillPoints}   MP {actor.MagicPoints} / {actor.MaxMagicPoints}\nMovement {actor.Movement}";
+            skillPointCounter.text = $"AP {actor.ActionPoints} / {GridUnit.MaximumActionPoints}   MP {actor.MagicPoints} / {actor.MaxMagicPoints}\nMovement {actor.Movement}";
         }
         int approachCost = battle.PreviewApproachCost;
         bool multi = battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple;

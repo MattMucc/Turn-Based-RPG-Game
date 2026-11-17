@@ -1521,8 +1521,8 @@ MonoBehaviour:
       FavoriteSlot: -1
       Description: Restore health to a living target. Does not revive.
       Category: 2
-      SkillPointCost: 1
-      SkillPointRecovery: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
       MagicPointCost: 4
       MagicRestored: 0
       Pattern: 0
@@ -1563,8 +1563,8 @@ MonoBehaviour:
       FavoriteSlot: -1
       Description: Restore Magic Points to a living target.
       Category: 2
-      SkillPointCost: 1
-      SkillPointRecovery: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
       MagicPointCost: 4
       MagicRestored: 8
       Pattern: 0
@@ -1605,8 +1605,8 @@ MonoBehaviour:
       FavoriteSlot: -1
       Description: Teach Fireball to one party member.
       Category: 2
-      SkillPointCost: 1
-      SkillPointRecovery: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
       MagicPointCost: 4
       MagicRestored: 0
       Pattern: 0
@@ -1647,8 +1647,8 @@ MonoBehaviour:
       FavoriteSlot: -1
       Description: Teach Mend to one party member.
       Category: 2
-      SkillPointCost: 1
-      SkillPointRecovery: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
       MagicPointCost: 4
       MagicRestored: 0
       Pattern: 0
@@ -1691,7 +1691,7 @@ MonoBehaviour:
     FirstLevelCost: 100
     CostIncreasePerLevel: 50
     LevelCap: 50
-    PointsPerLevel: 2
+    PointsPerLevel: 3
     experience: 0
     memberExperience: []
 --- !u!4 &898598909

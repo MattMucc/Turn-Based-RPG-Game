@@ -12,8 +12,8 @@ namespace Game.GridPrototype
         public string Name;
         [TextArea] public string Description;
         public List<BattleActionOption> Attacks = new();
-        [Tooltip("Extra SP once after a weapon Attack defeats at least one hostile. Not per hit or target.")]
-        [Range(0,9)] public int FinisherSkillPoints;
+        [Tooltip("Extra AP once after a weapon Attack defeats at least one hostile. Not per hit or target.")]
+        [Range(0,9)] [UnityEngine.Serialization.FormerlySerializedAs("FinisherSkillPoints")] public int FinisherActionPoints;
     }
     public static class WeaponMastery
     {
@@ -27,7 +27,7 @@ namespace Game.GridPrototype
             return (weapon.Definition.Attacks??new()).Concat(Milestones(weapon.Definition).Where(m=>weapon.MasteryExperience>=m.RequiredExperience).SelectMany(m=>m.Attacks??new()))
                 .Where(a=>a!=null&&a.Category==BattleActionCategory.Attack).GroupBy(a=>a.Name).Select(g=>g.First());
         }
-        public static int FinisherBonus(OwnedEquipment weapon) => weapon==null?0:Mathf.Clamp(Milestones(weapon.Definition).Where(m=>weapon.MasteryExperience>=m.RequiredExperience).Sum(m=>Mathf.Clamp(m.FinisherSkillPoints,0,9)),0,9);
+        public static int FinisherBonus(OwnedEquipment weapon) => weapon==null?0:Mathf.Clamp(Milestones(weapon.Definition).Where(m=>weapon.MasteryExperience>=m.RequiredExperience).Sum(m=>Mathf.Clamp(m.FinisherActionPoints,0,9)),0,9);
     }
     // One transaction per committed Attack: hit slots and friendly fire cannot multiply XP.
     public sealed class WeaponMasteryUse
@@ -49,7 +49,7 @@ namespace Game.GridPrototype
             if(weapon==null||!successful)return 0;
             int before=weapon.MasteryExperience,maximum=WeaponMastery.MaximumExperience(weapon.Definition);
             weapon.MasteryExperience=(int)Math.Max(before,Math.Min(maximum,(long)before+award));
-            if(defeated&&source!=null&&source.Health>0)source.RestoreSkillPoints(finisherBonus);
+            if(defeated&&source!=null&&source.Health>0)source.RestoreActionPoints(finisherBonus);
             return weapon.MasteryExperience-before;
         }
     }

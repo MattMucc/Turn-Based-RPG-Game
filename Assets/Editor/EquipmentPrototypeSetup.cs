@@ -53,7 +53,23 @@ public static class EquipmentPrototypeSetup
         }
         AssetDatabase.SaveAssets();
     }
-    static BattleActionOption Attack(string name,int damage,int reach,float scale)=>new(){Name=name,Description="Prototype weapon attack.",Category=BattleActionCategory.Attack,Damage=damage,Reach=reach,Radius=0,Scaling=ScalingStat.Strength,StatScaling=scale};
+    static string AttackDescription(string name) => name switch
+    {
+        "Quick Attack" => "A quick strike with a shortsword.",
+        "Slash" => "A close-range sword slash.",
+        "Sweeping Blow" => "A broad sweep across three cells ahead.",
+        "Slam" => "A heavy blow that strikes the surrounding area.",
+        "Staff Strike" => "A close-range staff blow.",
+        "Staff Thrust" => "A forward thrust through a line of targets.",
+        "Shot" => "A single ranged shot.",
+        "Triple Shot" => "Three shots divided between chosen targets.",
+        "Precision Thrust" => "A precise, close-range sword thrust.",
+        "Driving Cleave" => "A forceful cleave through a line of targets.",
+        "Staff Sweep" => "A sweeping staff blow across three cells ahead.",
+        "Piercing Shot" => "A shot that pierces targets in a line.",
+        _ => "A weapon attack."
+    };
+    static BattleActionOption Attack(string name,int damage,int reach,float scale)=>new(){Name=name,Description=AttackDescription(name),Category=BattleActionCategory.Attack,Damage=damage,Reach=reach,Radius=0,Scaling=ScalingStat.Strength,StatScaling=scale};
     [MenuItem("Tools/Game/Prepare prototype weapon mastery")]
     public static void PrepareMastery()
     {
@@ -65,8 +81,8 @@ public static class EquipmentPrototypeSetup
             if(item.WeaponType==WeaponType.Staff){move.Pattern=BattleTargetPattern.Sweep;move.Radius=1;}
             else if(item.WeaponType!=WeaponType.Shortsword)move.Pattern=BattleTargetPattern.Piercing;
             else move.StatScaling=1.25f;
-            item.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=10,Name=move.Name,Description="Unlock this additional weapon Attack.",Attacks=new List<BattleActionOption>{move}});
-            item.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=25,Name="Finisher",Description="Gain 1 additional SP when a weapon Attack defeats at least one hostile. Once per action.",FinisherSkillPoints=1});
+            item.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=10,Name=move.Name,Description="Unlocks an additional weapon Attack.",Attacks=new List<BattleActionOption>{move}});
+            item.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=25,Name="Finisher",Description="Gain 1 additional AP when a weapon Attack defeats at least one hostile. Once per action.",FinisherActionPoints=1});
             EditorUtility.SetDirty(item);
         }
         AssetDatabase.SaveAssets();

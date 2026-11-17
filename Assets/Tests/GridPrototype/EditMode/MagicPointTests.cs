@@ -16,7 +16,7 @@ public class MagicPointTests
             info.MagicPointsPerLevel = 3; info.MagicPointsPerMagic = 4; info.FocusMagicRecovery = 7;
             var unit = new GridUnit("A", Vector2Int.zero); info.Configure(unit);
             Assert.AreEqual(42, unit.MaxMagicPoints); Assert.AreEqual(7, unit.FocusRecovery);
-            unit.BeginTurn(); Assert.IsTrue(unit.SpendActionWithSkillPoints(0, 8)); info.StoreMagicPoints(unit);
+            unit.BeginTurn(); Assert.IsTrue(unit.SpendActionWithActionPoints(0, 8)); info.StoreMagicPoints(unit);
             var next = new GridUnit("A", Vector2Int.zero); info.Configure(next);
             Assert.AreEqual(34, next.MagicPoints);
             info.Level = 4; info.Configure(next);
@@ -29,7 +29,7 @@ public class MagicPointTests
         var unit = new GridUnit("A", Vector2Int.zero); unit.InitializeMagicPoints(24, 5); unit.BeginTurn();
         Assert.AreEqual(5, unit.MagicPoints);
         Assert.IsTrue(unit.Focus()); Assert.AreEqual(13, unit.MagicPoints);
-        Assert.AreEqual(3, unit.Movement); Assert.AreEqual(4, unit.SkillPoints); Assert.IsFalse(unit.Focus());
+        Assert.AreEqual(3, unit.Movement); Assert.AreEqual(4, unit.ActionPoints); Assert.IsFalse(unit.Focus());
         unit.EndTurn(); unit.BeginTurn(); unit.RestoreMagicPoints(int.MaxValue);
         Assert.AreEqual(24, unit.MagicPoints); Assert.IsFalse(unit.Focus()); Assert.IsTrue(unit.ActionAvailable);
         unit.InitializeMagicPoints(24, 0); unit.Health = 0;
@@ -38,7 +38,7 @@ public class MagicPointTests
     [Test] public void ResourcePaymentIsAtomicAndSwapDoesNotRestoreMP()
     {
         var a = new GridUnit("A", Vector2Int.zero); a.InitializeMagicPoints(24, 3); a.BeginTurn();
-        Assert.IsFalse(a.SpendActionWithSkillPoints(2, 4)); Assert.AreEqual(4, a.SkillPoints); Assert.AreEqual(3, a.MagicPoints); Assert.IsTrue(a.ActionAvailable);
+        Assert.IsFalse(a.SpendActionWithActionPoints(2, 4)); Assert.AreEqual(4, a.ActionPoints); Assert.AreEqual(3, a.MagicPoints); Assert.IsTrue(a.ActionAvailable);
         var b = new GridUnit("B", Vector2Int.one); b.InitializeMagicPoints(24, 0);
         Assert.IsTrue(a.HandOffTurnTo(b)); Assert.AreEqual(0, b.MagicPoints); Assert.AreEqual(3, a.MagicPoints);
         b.EndTurn(); b.BeginTurn(); Assert.AreEqual(0, b.MagicPoints);

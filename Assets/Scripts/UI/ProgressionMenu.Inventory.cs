@@ -2,6 +2,7 @@ using System.Linq;
 using Game.GridPrototype;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
 public sealed partial class ProgressionMenu
 {
@@ -9,49 +10,147 @@ public sealed partial class ProgressionMenu
     BattleActionOption inventoryItem;
     int inventoryStep;
     CanvasGroup inventoryBackground;
+    BattleActionOption selectedInventoryItem, draggedInventoryItem, droppedInventoryItem;
+    PlayerInventoryPointer inventoryDragSource;
+    RectTransform inventoryDragGhost;
+    ScrollRect inventoryScroll;
+    Outline inventoryDropOutline;
+    string droppedEmptySlot;
+    readonly System.Collections.Generic.Dictionary<PlayerInventoryPointer,BattleActionOption> inventoryRows=new();
+    readonly System.Collections.Generic.Dictionary<BattleActionOption,Button> inventoryButtons=new();
     string InventoryDescription(BattleActionOption item)
     {
+        if(inventoryEquipment.ContainsKey(item)||inventoryMaterials.ContainsKey(item))return item.Description;
         if(!string.IsNullOrEmpty(item.LearnSpellId)) {
             var spell=SpellDefinition.Find(item.LearnSpellId);
-            return spell?$"Teaches {spell.DisplayName} to one party member.\n{spell.Description}\n\nShared stock: {item.Quantity}\nChoose Use, then a learner. Consumes one book on confirmation. Mastery belongs to that character.":"This book's Spell definition is unavailable.";
+            return spell?$"Teaches {spell.DisplayName} to one party member.\n{spell.Description}\n\nShared stock: {item.Quantity}\nConsumed on use. Mastery belongs to the learner.":"This book's Spell definition is unavailable.";
         }
         string effect = item.Effect == ActionEffect.Heal ? $"Restores up to {item.Healing} HP. Outside combat, also heals knocked-out party members."
             : item.Effect == ActionEffect.RestoreMagic ? $"Restores up to {item.MagicRestored} MP to a living party member." : item.Description;
-        return effect + $"\n\nShared stock: {item.Quantity}\n" + (PartyInventory.UsableOutsideCombat(item) ? "Choose Use to select an active or reserve party member. One item is consumed on confirmation." : "Cannot be used outside combat.");
+        return effect + $"\n\nShared stock: {item.Quantity}\n" + (PartyInventory.UsableOutsideCombat(item) ? "Usable on active and reserve party members. Consumed on use." : "Cannot be used outside combat.");
     }
     void Inventory()
     {
-        Label(Rect("Inventory title",body,0,0,500,44),"SHARED ITEMS",20);
-        var items=Manager.Inventory.Items.Where(x=>x!=null).ToList();
-        var list=List(body,"Items",0,54,500,Mathf.Max(240,body.rect.height-54),items.Count*48);
-        for(int i=0;i<items.Count;i++) {
-            var item=items[i];
-            var button=Button(list,$"{item.Name}   ×{item.Quantity}",0,i*48,486,()=>OpenItemContext(item),()=>Detail(item.Name,InventoryDescription(item)),44);
-            var pointer=button.gameObject.AddComponent<PlayerInventoryPointer>();
-            pointer.Context=()=>OpenItemContext(item); pointer.Hover=()=>ShowItemTooltip(item,button.transform); pointer.Exit=HideItemTooltip;
+        inventoryRows.Clear();inventoryButtons.Clear();
+        float width=Mathf.Max(300,body.rect.width);
+        var all=InventoryEntries();
+        float filterWidth=(width-12)/3;
+        var filters=System.Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().ToArray();
+        for(int i=0;i<filters.Length;i++) {
+            var filter=filters[i];
+            var tab=Button(body,InventoryCategoryName(filter),(i%3)*(filterWidth+6),(i/3)*34,filterWidth,()=>{inventoryCategory=filter;HideItemTooltip();Rebuild();},null,30);
+            tab.GetComponentInChildren<TMPro.TMP_Text>().fontSize=13;
+            if(filter==inventoryCategory)tab.image.color=new Color(.16f,.36f,.44f);
         }
-        Detail("Party inventory","Items are shared by the entire party.\n\nRight-click an item for Examine and Use. You can also select it with Enter or the bottom face button.");
+        var items=all.Where(x=>inventoryCategory==InventoryCategory.All||InventoryKind(x)==inventoryCategory).ToList();
+        Label(Rect("Inventory count",body,0,108,width,24),$"{items.Count} stacks / equipment copies",13);
+        int columns=Mathf.Max(3,Mathf.FloorToInt((width-8)/80));float size=(width-8)/columns-8;
+        var lookup=items.ToDictionary(InventoryEntryKey);
+        var slotKeys=Manager.Inventory.SlotOrder.Where(key=>key!=null&&(key.StartsWith("empty:")||lookup.ContainsKey(key))).ToList();
+        int slots=Mathf.Max(columns*3,Mathf.CeilToInt(slotKeys.Count/(float)columns)*columns);
+        while(slotKeys.Count<slots){string key="empty:"+System.Guid.NewGuid().ToString("N");slotKeys.Add(key);Manager.Inventory.SlotOrder.Add(key);}
+        var list=List(body,"Items",0,138,width,Mathf.Max(150,body.rect.height-138),Mathf.CeilToInt(slots/(float)columns)*(size+8));
+        inventoryScroll=list.GetComponentInParent<ScrollRect>();
+        for(int i=0;i<slots;i++) {
+            float x=(i%columns)*(size+8), y=(i/columns)*(size+8);
+            if(!lookup.TryGetValue(slotKeys[i],out var item)){
+                string key=slotKeys[i];var empty=Rect("Empty inventory slot",list,x,y,size,size).gameObject.AddComponent<Image>();empty.color=new Color(.04f,.08f,.12f);
+                var edge=empty.gameObject.AddComponent<Outline>();edge.effectColor=Accent;edge.effectDistance=new Vector2(2,-2);edge.enabled=false;
+                var drop=empty.gameObject.AddComponent<PlayerInventoryPointer>();inventoryRows[drop]=null;
+                drop.Drop=source=>{if(source==inventoryDragSource)droppedEmptySlot=key;};continue;
+            }
+            var button=Button(list,item.Name,x,y,size,()=>SelectInventoryItem(item),null,size);
+            button.transform.Find("Label").gameObject.SetActive(false);
+            DrawInventoryIcon(button.transform,item,8,8,size-16);
+            string badge=inventoryEquipment.TryGetValue(item,out var copy)?"+"+copy.UpgradeLevel:item.Quantity.ToString();
+            var quantity=Label(Rect("Quantity or upgrade",button.transform,4,size-23,size-8,20),badge,13);quantity.alignment=TMPro.TextAlignmentOptions.BottomRight;
+            if(copy!=null&&Manager.EquipmentOwner(copy.InstanceId))Label(Rect("Equipped marker",button.transform,5,3,22,20),"E",13).color=Accent;
+            var pointer=button.gameObject.AddComponent<PlayerInventoryPointer>();
+            inventoryRows[pointer]=item;inventoryButtons[item]=button;
+            var outline=button.gameObject.AddComponent<Outline>();outline.effectColor=Accent;outline.effectDistance=new Vector2(2,-2);outline.enabled=false;
+            pointer.Context=()=>OpenItemContext(item);pointer.Hover=()=>ShowItemTooltip(item,button.transform);pointer.Exit=HideItemTooltip;
+            pointer.Select=()=>SelectInventoryItem(item);
+            pointer.Begin=data=>BeginInventoryDrag(pointer,item,data);pointer.Move=MoveInventoryDrag;pointer.End=data=>EndInventoryDrag();pointer.Cancel=CancelInventoryDrag;
+            pointer.Drop=source=>{if(source==inventoryDragSource&&inventoryRows.ContainsKey(source))droppedInventoryItem=item;};
+        }
+        if(selectedInventoryItem!=null&&items.Contains(selectedInventoryItem))SelectInventoryItem(selectedInventoryItem);
+        else {selectedInventoryItem=null;Detail("Party inventory",items.Count==0?"No items in this category.":"Items, equipment and materials shared by the party.");}
+    }
+    void SelectInventoryItem(BattleActionOption item)
+    {
+        if(inventoryModal||inventoryDragSource||!inventoryButtons.ContainsKey(item))return;
+        selectedInventoryItem=item;
+        foreach(var row in inventoryButtons)if(row.Value)row.Value.image.color=row.Key==item?new Color(.16f,.36f,.44f):new Color(.08f,.17f,.25f);
+        Detail(item.Name,InventoryDescription(item),item.Image);
+    }
+    void RestoreInventorySelection()
+    {
+        if(selectedInventoryItem!=null&&inventoryButtons.TryGetValue(selectedInventoryItem,out var button)&&button)events.SetSelectedGameObject(button.gameObject);
+        else if(inventoryButtons.Count>0)events.SetSelectedGameObject(inventoryButtons.First().Value.gameObject);else SelectFirst();
+    }
+    void BeginInventoryDrag(PlayerInventoryPointer source,BattleActionOption item,PointerEventData data)
+    {
+        if(inventoryModal||!open||page!=Page.Inventory){source.CancelDrag();return;}
+        CancelInventoryDrag();HideItemTooltip();inventoryDragSource=source;draggedInventoryItem=item;
+        inventoryDragGhost=Rect("Dragged inventory item",shell,0,0,64,64);
+        inventoryDragGhost.gameObject.AddComponent<Image>().color=new Color(.08f,.17f,.25f,.9f);
+        var group=inventoryDragGhost.gameObject.AddComponent<CanvasGroup>();group.blocksRaycasts=false;group.interactable=false;
+        DrawInventoryIcon(inventoryDragGhost,item,6,6,52);
+        MoveInventoryDrag(data);
+    }
+    void MoveInventoryDrag(PointerEventData data)
+    {
+        if(!inventoryDragSource)return;
+        if(inventoryDragGhost&&RectTransformUtility.ScreenPointToLocalPointInRectangle(shell,data.position,data.pressEventCamera,out var p))
+            inventoryDragGhost.anchoredPosition=new Vector2(p.x-shell.rect.xMin+12,p.y-shell.rect.yMax-12);
+        if(inventoryDropOutline)inventoryDropOutline.enabled=false;
+        var hovered=data.pointerCurrentRaycast.gameObject?data.pointerCurrentRaycast.gameObject.GetComponentInParent<PlayerInventoryPointer>():null;
+        inventoryDropOutline=hovered&&inventoryRows.ContainsKey(hovered)&&hovered!=inventoryDragSource?hovered.GetComponent<Outline>():null;
+        if(inventoryDropOutline)inventoryDropOutline.enabled=true;
+        if(inventoryScroll&&inventoryScroll.content.rect.height>inventoryScroll.viewport.rect.height&&RectTransformUtility.ScreenPointToLocalPointInRectangle(inventoryScroll.viewport,data.position,data.pressEventCamera,out var local)){
+            var rect=inventoryScroll.viewport.rect;
+            if(local.x>=rect.xMin&&local.x<=rect.xMax){float direction=local.y>rect.yMax-30?1:local.y<rect.yMin+30?-1:0;
+                inventoryScroll.verticalNormalizedPosition=Mathf.Clamp01(inventoryScroll.verticalNormalizedPosition+direction*Time.unscaledDeltaTime*450/(inventoryScroll.content.rect.height-rect.height));}
+        }
+    }
+    void EndInventoryDrag()
+    {
+        var from=draggedInventoryItem;var to=droppedInventoryItem;var empty=droppedEmptySlot;
+        float scroll=inventoryScroll?inventoryScroll.verticalNormalizedPosition:1;
+        CancelInventoryDrag();
+        if(open&&page==Page.Inventory&&!inventoryModal&&(empty!=null?MoveInventoryToEmpty(from,empty):SwapInventoryEntries(from,to))){
+            selectedInventoryItem=from;Rebuild();if(inventoryScroll)inventoryScroll.verticalNormalizedPosition=scroll;
+        }
+    }
+    void CancelInventoryDrag()
+    {
+        if(inventoryDragSource)inventoryDragSource.CancelDrag();inventoryDragSource=null;draggedInventoryItem=droppedInventoryItem=null;droppedEmptySlot=null;
+        if(inventoryDropOutline)inventoryDropOutline.enabled=false;inventoryDropOutline=null;
+        if(inventoryDragGhost){inventoryDragGhost.gameObject.SetActive(false);if(Application.isPlaying)Destroy(inventoryDragGhost.gameObject);else DestroyImmediate(inventoryDragGhost.gameObject);}inventoryDragGhost=null;
     }
     void ShowItemTooltip(BattleActionOption item,Transform source)
     {
-        if(inventoryModal) return;
+        if(inventoryModal||inventoryDragSource) return;
         HideItemTooltip();
         itemTooltip=Rect("Item hover tooltip",shell,0,0,300,190);
         var local=shell.InverseTransformPoint(source.position);
         float x=local.x-shell.rect.xMin+100, y=shell.rect.yMax-local.y+44;
         itemTooltip.anchoredPosition=new Vector2(Mathf.Clamp(x,8,shell.rect.width-308),-Mathf.Clamp(y,8,shell.rect.height-198));
         var image=itemTooltip.gameObject.AddComponent<Image>();image.color=Panel;image.raycastTarget=false;
-        Label(Rect("Tooltip text",itemTooltip,12,10,276,170),$"<b>{item.Name}</b>\n{InventoryDescription(item)}",14);
+        var text=Label(Rect("Tooltip text",itemTooltip,12,10,276,170),$"<b>{item.Name}</b>\n{InventoryDescription(item)}",14);
+        float height=Mathf.Min(shell.rect.height-36,Mathf.Max(80,text.GetPreferredValues(text.text,276,0).y+20));
+        itemTooltip.sizeDelta=new Vector2(300,height);text.rectTransform.sizeDelta=new Vector2(276,height-20);
+        itemTooltip.anchoredPosition=new Vector2(Mathf.Clamp(x,8,shell.rect.width-308),-Mathf.Clamp(y,8,shell.rect.height-height-8));
     }
     void HideItemTooltip() { if(itemTooltip){itemTooltip.gameObject.SetActive(false);if(Application.isPlaying)Destroy(itemTooltip.gameObject);else DestroyImmediate(itemTooltip.gameObject);} itemTooltip=null; }
-    void OpenItemContext(BattleActionOption item) { inventoryItem=item; inventoryStep=0; DrawInventoryModal(); }
+    void OpenItemContext(BattleActionOption item) { if(inventoryDragSource)return;SelectInventoryItem(item);inventoryItem=item; inventoryStep=0; DrawInventoryModal(); }
     void CloseInventoryModal()
     {
         if(inventoryModal){inventoryModal.gameObject.SetActive(false);if(Application.isPlaying)Destroy(inventoryModal.gameObject);else DestroyImmediate(inventoryModal.gameObject);}
         inventoryModal=null;
         if(inventoryBackground){inventoryBackground.interactable=true;inventoryBackground.blocksRaycasts=true;}
     }
-    void InventoryBack() { if(inventoryStep>0){inventoryStep=inventoryStep==3?2:0;DrawInventoryModal();}else{CloseInventoryModal();Rebuild();} }
+    void InventoryBack() { if(inventoryStep>=4){BackInventoryEquipment();return;} if(inventoryStep>0){inventoryStep=inventoryStep==3?2:0;DrawInventoryModal();}else{CloseInventoryModal();Rebuild();} }
     void DrawInventoryModal(BattleCharacterInfo target=null)
     {
         CloseInventoryModal(); HideItemTooltip();
@@ -60,14 +159,20 @@ public sealed partial class ProgressionMenu
         inventoryModal=Rect("Inventory interaction",canvasObject.transform,0,0,0,0);inventoryModal.anchorMin=Vector2.zero;inventoryModal.anchorMax=Vector2.one;inventoryModal.offsetMin=inventoryModal.offsetMax=Vector2.zero;
         var shade=inventoryModal.gameObject.AddComponent<Image>();shade.color=new Color(0,0,0,.6f);
         var dismiss=inventoryModal.gameObject.AddComponent<Button>();dismiss.onClick.AddListener(InventoryBack);var nav=dismiss.navigation;nav.mode=Navigation.Mode.None;dismiss.navigation=nav;
-        var panel=Rect("Item context",inventoryModal,0,0,440,inventoryStep==2?460:330);panel.anchorMin=panel.anchorMax=panel.pivot=new Vector2(.5f,.5f);panel.anchoredPosition=Vector2.zero;
+        var panel=Rect("Item context",inventoryModal,0,0,440,inventoryStep>=4?500:inventoryStep==2?460:330);panel.anchorMin=panel.anchorMax=panel.pivot=new Vector2(.5f,.5f);panel.anchoredPosition=Vector2.zero;
         panel.gameObject.AddComponent<Image>().color=Panel;
         Label(Rect("Item name",panel,18,14,404,36),inventoryItem.Name,22);
         int start=buttons.Count;
-        if(inventoryStep==0) {
+        if(inventoryStep>=4) DrawInventoryEquipment(panel);
+        else if(inventoryStep==0) {
             Button(panel,"Examine",18,64,404,()=>{inventoryStep=1;DrawInventoryModal();});
+            if(inventoryEquipment.TryGetValue(inventoryItem,out var gear))DrawInventoryEquipmentContext(panel,gear);
             if(PartyInventory.UsableOutsideCombat(inventoryItem))Button(panel,"Use",18,110,404,()=>{inventoryStep=2;DrawInventoryModal();}).interactable=inventoryItem.Quantity>0;
-        } else if(inventoryStep==1) Label(Rect("Item description",panel,18,60,404,200),InventoryDescription(inventoryItem),16);
+        } else if(inventoryStep==1) {
+            var content=List(panel,"Item examination",18,60,404,204,204);
+            float height=ProgressionText(content,"Item description",InventoryDescription(inventoryItem),4,372,16);
+            content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(204,height+8));
+        }
         else if(inventoryStep==2) {
             Label(Rect("Choose target",panel,18,54,404,30),"Choose a party member",17);
             var list=List(panel,"Party targets",18,90,404,304,Manager.Progression.Members.Count*48);

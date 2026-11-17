@@ -11,35 +11,65 @@ public class ProgressionTests
     BattleCharacterInfo Member()
     { var go = new GameObject("Party member"); objects.Add(go); return go.AddComponent<BattleCharacterInfo>(); }
     [TearDown] public void Cleanup() { foreach (var obj in objects) if (obj) Object.DestroyImmediate(obj); objects.Clear(); }
+    [Test] public void LegacySaveKeepsSpeedCostsAndQuotedDescriptionText()
+    {
+        var data = new GameSaveData { Scene = "Assets/Scenes/SampleScene.unity", Inventory = new PartyInventory() };
+        data.Characters.Add(new SavedCharacter { Allocated = new StatValues { Speed = 7 },
+            PersonalActions = new List<BattleActionOption> { new BattleActionOption {
+                ActionPointCost = 6, ActionPointRecovery = 2, Description = "Initiative and \"SkillPointCost\": are just text." } } });
+        string payload = JsonUtility.ToJson(data).Replace("\"Speed\":", "\"Initiative\":")
+            .Replace("\"ActionPointCost\":", "\"SkillPointCost\":").Replace("\"ActionPointRecovery\":", "\"SkillPointRecovery\":");
+        string checksum;
+        using (var hash = System.Security.Cryptography.SHA256.Create())
+            checksum = System.Convert.ToBase64String(hash.ComputeHash(System.Text.Encoding.UTF8.GetBytes(payload)));
+        var restored = SaveFileStore.Decode(JsonUtility.ToJson(new SaveFileStore.Envelope { Payload = payload, Checksum = checksum }));
+        Assert.AreEqual(7, restored.Characters[0].Allocated.Speed);
+        Assert.AreEqual(0, restored.Characters[0].Allocated.Soul);
+        var action = restored.Characters[0].PersonalActions[0];
+        Assert.AreEqual(6, action.ActionPointCost); Assert.AreEqual(2, action.ActionPointRecovery);
+        Assert.AreEqual(data.Characters[0].PersonalActions[0].Description, action.Description);
+    }
+    [Test] public void SoulGrowthAndAllocationReachDamageAndSaveRoundTrip()
+    {
+        var member = Member(); member.Soul = 4; member.AutomaticGrowth.Soul = 2;
+        member.GrantLevel(3, 3); Assert.IsTrue(member.SpendPoint(CharacterStat.Soul));
+        var unit = new GridUnit("Test", Vector2Int.zero); member.Configure(unit);
+        Assert.AreEqual(9, unit.Soul);
+        var saved = new SavedCharacter(); member.CaptureProgress(saved);
+        var restored = Member(); restored.Soul = 4; restored.AutomaticGrowth.Soul = 2;
+        restored.RestoreProgress(JsonUtility.FromJson<SavedCharacter>(JsonUtility.ToJson(saved)));
+        Assert.AreEqual(9, restored.Stat(CharacterStat.Soul));
+        Assert.AreEqual(5, restored.UnspentPoints);
+    }
     [Test] public void SharedExperienceLevelsActiveAndInactiveMembersWithoutDivision()
     {
         var party = new PartyProgression(); var a = Member(); var b = Member(); b.gameObject.SetActive(false);
         party.Register(a); party.Register(b); party.Members.Add(a);
         Assert.AreEqual(0, party.AwardExperience(50)); Assert.AreEqual(50, party.Progress);
         Assert.AreEqual(1, party.AwardExperience(50)); Assert.AreEqual(2, a.Level); Assert.AreEqual(2, b.Level);
-        Assert.AreEqual(2, a.UnspentPoints); Assert.AreEqual(2, b.UnspentPoints); Assert.AreEqual(0, party.Progress);
-        party.Register(a); Assert.AreEqual(2, a.UnspentPoints);
+        Assert.AreEqual(3, a.UnspentPoints); Assert.AreEqual(3, b.UnspentPoints); Assert.AreEqual(0, party.Progress);
+        party.Register(a); Assert.AreEqual(3, a.UnspentPoints);
     }
     [Test] public void MultipleLevelsRetainRemainderAndLateMembersCatchUp()
     {
         var party = new PartyProgression(); Assert.AreEqual(2, party.AwardExperience(260));
         Assert.AreEqual(3, party.Level); Assert.AreEqual(10, party.Progress);
-        var member = Member(); party.Register(member); Assert.AreEqual(3, member.Level); Assert.AreEqual(4, member.UnspentPoints);
+        var member = Member(); party.Register(member); Assert.AreEqual(3, member.Level); Assert.AreEqual(6, member.UnspentPoints);
     }
     [Test] public void LevelCapAndZeroRewardsCannotRepeatedlyGrantPoints()
     {
         var party = new PartyProgression { LevelCap = 2 }; var member = Member(); party.Register(member);
         party.AwardExperience(10000); party.AwardExperience(10000); party.AwardExperience(0); party.AwardExperience(-50);
-        Assert.AreEqual(2, member.Level); Assert.AreEqual(2, member.UnspentPoints); Assert.AreEqual(20000, party.Experience);
+        Assert.AreEqual(2, member.Level); Assert.AreEqual(3, member.UnspentPoints); Assert.AreEqual(20000, party.Experience);
     }
     [Test] public void GrowthAndAllocationReachCombatStatsWithoutOverwritingBaseStats()
     {
-        var member = Member(); member.Vitality = 0; member.Strength = 5; member.Initiative = 10;
+        var member = Member(); member.Vitality = 0; member.Strength = 5; member.Speed = 10;
         var party = new PartyProgression(); party.Register(member); party.AwardExperience(100);
-        Assert.IsTrue(member.SpendPoint(CharacterStat.Strength)); Assert.IsTrue(member.SpendPoint(CharacterStat.Initiative));
-        Assert.IsFalse(member.SpendPoint(CharacterStat.Magic)); Assert.AreEqual(5, member.Strength);
+        Assert.IsTrue(member.SpendPoint(CharacterStat.Strength)); Assert.IsTrue(member.SpendPoint(CharacterStat.Speed));
+        Assert.IsTrue(member.SpendPoint(CharacterStat.Soul)); Assert.IsFalse(member.SpendPoint(CharacterStat.Magic)); Assert.AreEqual(5, member.Strength);
         var unit = new GridUnit("Test", Vector2Int.zero); member.Configure(unit);
-        Assert.AreEqual(110, unit.MaxHealth); Assert.AreEqual(6, unit.Strength); Assert.AreEqual(11, member.EffectiveInitiative);
+        Assert.AreEqual(110, unit.MaxHealth); Assert.AreEqual(6, unit.Strength); Assert.AreEqual(11, member.EffectiveSpeed);
     }
     [Test] public void VictoryRewardCanOnlyBeClaimedOncePerGroup()
     {

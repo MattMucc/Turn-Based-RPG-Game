@@ -29,7 +29,7 @@ public sealed partial class ProgressionMenu
         if(treeNodes.Count==0){
             selectedSkillNode=null;
             Label(Rect("Empty skill tree",body,16,112,width-32,120),"This character's Skill Tree is not available yet.",18);
-            Detail("Character Skill Tree","Unique Skills will use Training Points to learn. These are separate from the SP spent using Skills in combat.\n\nCharacter kits and their learning rules are still being defined.");return;
+            Detail("Character Skill Tree","Unique Skills will use Skill Points to learn. These are separate from the AP spent using Skills in combat.\n\nCharacter kits and their learning rules are still being defined.");return;
         }
         if(!treeNodes.Contains(selectedSkillNode))selectedSkillNode=treeNodes[0];
         Vector2 minimum=new Vector2(treeNodes.Min(n=>n.Position.x),treeNodes.Min(n=>n.Position.y));
@@ -92,13 +92,13 @@ public sealed partial class ProgressionMenu
         foreach(var card in skillCards){card.graphic.Selected=card.node==node;card.graphic.SetVerticesDirty();}
         bool learned=SkillLearned(node),met=SkillRequirementsMet(node);
         string state=learned?"Learned":met?"Level and prerequisites met":"Locked";
-        string text=$"{(node.Passive?"Passive":"Active Skill")} · {state}\n\n{node.Description}\n\nREQUIREMENTS\nCharacter level: {Member.Level} / {Mathf.Max(1,node.RequiredLevel)}\nTraining Point cost: {Mathf.Max(0,node.TrainingPointCost)}\n\nPREREQUISITES";
+        string text=$"{(node.Passive?"Passive":"Active Skill")} · {state}\n\n{node.Description}\n\nREQUIREMENTS\nCharacter level: {Member.Level} / {Mathf.Max(1,node.RequiredLevel)}\nSkill Point cost: {Mathf.Max(0,node.SkillPointCost)}\n\nPREREQUISITES";
         var prerequisites=node.Prerequisites??new List<string>();
         if(prerequisites.Count==0)text+="\nNone";
         foreach(var id in prerequisites.Distinct()){
             var parent=Prerequisite(id);text+="\n"+(parent==null?"Unavailable prerequisite":$"{parent.Name} · {(SkillLearned(parent)?"Learned":"Not learned")}");
         }
-        text+=learned?"\n\nThis Skill is already in this character's combat Skills.":"\n\nLearning is not available yet. Training Point balances and learning rules will be added with the character kits.";
+        text+=learned?"\n\nThis Skill is already in this character's combat Skills.":"\n\nLearning is not available yet. Skill Point balances and learning rules will be added with the character kits.";
         if(node.Passive)text+="\nPassive learning and effects are not implemented yet.";
         Detail(node.Name,text,node.Icon);
     }

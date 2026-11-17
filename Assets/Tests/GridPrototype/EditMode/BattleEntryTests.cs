@@ -104,7 +104,7 @@ public class BattleEntryTests
         for (int i = 0; i < 4; i++)
         {
             var actor = Make("Entry actor " + i); actor.transform.position = Feet()[i]; figures.Add(actor.transform);
-            actor.AddComponent<BattleCharacterInfo>().Initiative = i == 3 ? 100 : 10;
+            actor.AddComponent<BattleCharacterInfo>().Speed = i == 3 ? 100 : 10;
         }
         var source = Make("Exploration camera").AddComponent<Camera>();
         source.transform.position = origin + new Vector3(0, 3, -4); source.transform.rotation = Quaternion.Euler(12, 0, 0);

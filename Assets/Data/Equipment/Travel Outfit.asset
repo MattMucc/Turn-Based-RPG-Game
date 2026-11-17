@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.EquipmentDefinition
   Id: travel-outfit
   DisplayName: Travel Outfit
-  Description: Prototype equipment for testing. Values and weapon access are provisional.
+  Description: Light clothing offering physical and magical protection.
   Image: {fileID: 0}
   Kind: 1
   WeaponType: 0
@@ -24,7 +24,7 @@ MonoBehaviour:
     Magic: 0
     PhysicalDefense: 2
     MagicalDefense: 2
-    Initiative: 0
+    Speed: 0
   Attacks: []
   MasteryExperiencePerAttack: 1
   Mastery: []
@@ -39,7 +39,7 @@ MonoBehaviour:
       Magic: 0
       PhysicalDefense: 1
       MagicalDefense: 1
-      Initiative: 0
+      Speed: 0
   - Fee: 75
     Materials:
     - MaterialId: iron
@@ -52,7 +52,7 @@ MonoBehaviour:
       Magic: 0
       PhysicalDefense: 1
       MagicalDefense: 1
-      Initiative: 0
+      Speed: 0
   - Fee: 150
     Materials:
     - MaterialId: steel
@@ -67,4 +67,4 @@ MonoBehaviour:
       Magic: 0
       PhysicalDefense: 1
       MagicalDefense: 1
-      Initiative: 0
+      Speed: 0

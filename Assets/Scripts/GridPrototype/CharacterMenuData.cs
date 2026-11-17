@@ -33,7 +33,7 @@ namespace Game.GridPrototype
         public Vector2 Position;
         public List<string> Prerequisites = new();
         [Min(1)] public int RequiredLevel = 1;
-        [Min(0)] public int TrainingPointCost;
+        [Min(0)] [UnityEngine.Serialization.FormerlySerializedAs("TrainingPointCost")] public int SkillPointCost;
         [Tooltip("Name of the learned personal Skill, used to display its unlocked state.")]
         public string ActionName;
     }

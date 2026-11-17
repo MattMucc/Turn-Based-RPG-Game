@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 namespace Game.GridPrototype
 {
@@ -20,9 +21,27 @@ namespace Game.GridPrototype
             if(string.IsNullOrEmpty(json)||json.Length>16000000)throw new InvalidDataException("The save file is empty or too large.");
             var envelope=JsonUtility.FromJson<Envelope>(json);
             if(envelope==null||envelope.Version!=1||string.IsNullOrEmpty(envelope.Payload)||envelope.Checksum!=Hash(envelope.Payload))throw new InvalidDataException("The save is damaged or uses an unsupported version.");
-            var data=JsonUtility.FromJson<GameSaveData>(envelope.Payload);
+            var data=JsonUtility.FromJson<GameSaveData>(MigrateResourceNames(envelope.Payload));
             if(data==null||data.Version!=1||string.IsNullOrWhiteSpace(data.Scene)||data.Characters==null||data.Characters.Count==0||data.Inventory==null)throw new InvalidDataException("The save does not contain a supported game state.");
             return data;
+        }
+        // Authenticate the original payload first. Only rename JSON property tokens,
+        // never quoted descriptions or saved names that happen to contain these words.
+        static string MigrateResourceNames(string payload)
+        {
+            return Regex.Replace(payload, "\"(?:\\\\.|[^\"\\\\])*\"", match =>
+            {
+                int next = match.Index + match.Length;
+                while (next < payload.Length && char.IsWhiteSpace(payload[next])) next++;
+                if (next >= payload.Length || payload[next] != ':') return match.Value;
+                switch (match.Value)
+                {
+                    case "\"Initiative\"": return "\"Speed\"";
+                    case "\"SkillPointCost\"": return "\"ActionPointCost\"";
+                    case "\"SkillPointRecovery\"": return "\"ActionPointRecovery\"";
+                    default: return match.Value;
+                }
+            });
         }
         static string Hash(string text){using(var hash=SHA256.Create())return Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(text)));}
         public void Write(int slot,string encoded,bool overwrite)
