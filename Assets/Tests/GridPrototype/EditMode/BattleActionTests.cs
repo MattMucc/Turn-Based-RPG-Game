@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Reflection;
 using System.Collections.Generic;
@@ -39,6 +40,39 @@ public class BattleActionTests
         for (int i = objects.Count - 1; i >= 0; i--) if (objects[i]) Object.DestroyImmediate(objects[i]);
         objects.Clear(); Physics.SyncTransforms();
         foreach(var pair in savedPreferences){if(pair.Value.HasValue)PlayerPrefs.SetInt(pair.Key,pair.Value.Value);else PlayerPrefs.DeleteKey(pair.Key);}savedPreferences.Clear();PlayerPrefs.Save();
+    }
+    [Test] public void EnemyResourceBudgetPaysForComboAndFallsBackToBasicAttack()
+    {
+        var unit=new GridUnit("Enemy",Vector2Int.zero);
+        Assert.AreEqual(3,unit.ActionPoints);unit.BeginTurn();Assert.AreEqual(4,unit.ActionPoints);
+        Assert.IsTrue(InSceneGridBattle.TryCommitEnemyAttack(unit,true,3,out bool combo));Assert.IsTrue(combo);
+        Assert.AreEqual(1,unit.ActionPoints);Assert.IsFalse(InSceneGridBattle.TryCommitEnemyAttack(unit,true,3,out _));
+        unit.EndTurn();unit.BeginTurn();Assert.AreEqual(2,unit.ActionPoints);
+        Assert.IsTrue(InSceneGridBattle.TryCommitEnemyAttack(unit,true,3,out combo));Assert.IsFalse(combo);Assert.AreEqual(2,unit.ActionPoints);
+    }
+    [TestCase(false,1)]
+    [TestCase(true,0)]
+    public void EnemyBasicAttackRecoversOnceWhileComboDoesNot(bool combo,int gain)
+    {
+        var unit=battle.Combatants[1];int before=unit.ActionPoints;
+        var sequence=BeginEnemySequence(combo);battle.AdvanceFacing(1);
+        if(battle.CurrentImpact==null)Assert.IsTrue(sequence.MoveNext());
+        battle.AdvanceDefense(10);Assert.AreEqual(before+gain,unit.ActionPoints);
+        battle.AdvanceDefense(10);Assert.AreEqual(before+gain,unit.ActionPoints);
+    }
+    [Test] public void ResourceHudShowsLivePartyAndHoveredEnemyValuesWithoutSettingsButtons()
+    {
+        var root=Create("Resource HUD");root.AddComponent<RectTransform>();
+        var type=Type.GetType("BattleHud, Assembly-CSharp",true);var hud=root.AddComponent(type);
+        type.GetMethod("Bind").Invoke(hud,new object[]{battle,TMP_Settings.defaultFontAsset});
+        Assert.IsNull(root.transform.Find("Defense timing"));Assert.IsNull(root.transform.Find("Order placement"));
+        var party=root.transform.Find("Party resources");Assert.IsNotNull(party);
+        battle.Combatants[0].InitializeActionPoints(2);battle.Combatants[0].SpendMovement(1);
+        battle.TargetFocus.Pin(battle.Targetables[1]);
+        type.GetMethod("Render").Invoke(hud,null);
+        Assert.IsTrue(party.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("AP 2 / 9")&&t.text.Contains("Move 2 / 10")));
+        Assert.IsTrue(root.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("AP 3 / 9")&&t.text.Contains("MP")));
+        Assert.IsTrue(battle.Info(1).Details(battle.Combatants[1],"Enemy").Contains("Movement"));
     }
     [TestCase(100,false,1)]
     [TestCase(0,false,0)]
@@ -374,8 +408,8 @@ public class BattleActionTests
         hover(true); Assert.AreEqual(BattleTargetPattern.Area, battle.HoveredAction.Pattern); Assert.IsNull(battle.ChosenAction);
         hover(false); Assert.IsNull(battle.HoveredAction);
         Assert.That(area.GetComponentInChildren<TMP_Text>().color.grayscale, Is.LessThan(0.15f));
-        Find("Turn order: Top").onClick.Invoke(); Find("Turn order: Right");
-        Find("Auto camera: On").onClick.Invoke(); Assert.IsFalse(battle.AutoCamera);
+        Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Order placement"||b.name=="Automatic camera"||b.name=="Defense timing"));
+        Assert.IsTrue(battle.AutoCamera);
         Find("Multi-target Skill").onClick.Invoke();
         Assert.IsFalse(Find("Area Skill").interactable);
         Assert.IsTrue(Find("Multi-target Skill").interactable);

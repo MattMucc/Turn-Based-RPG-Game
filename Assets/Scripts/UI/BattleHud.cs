@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-public sealed class BattleHud : MonoBehaviour
+public sealed partial class BattleHud : MonoBehaviour
 {
     private sealed class Card
     {
@@ -74,12 +74,7 @@ public sealed class BattleHud : MonoBehaviour
         top=PlayerPrefs.GetInt("PlayerMenu.OrderTop",1)!=0;
         autoCamera=PlayerPrefs.GetInt("PlayerMenu.AutoCamera",1)!=0;
         if(PlayerPrefs.HasKey("PlayerMenu.Assisted"))ApplyPartyAssistance(PlayerPrefs.GetInt("PlayerMenu.Assisted")!=0);
-        layoutLabel = Setting("Order placement", new Vector2(-12, 42), () => { top = !top; PlayerPrefs.SetInt("PlayerMenu.OrderTop",top?1:0);PlayerPrefs.Save();ApplyLayout(); });
-        cameraLabel = Setting("Automatic camera", new Vector2(-12, 12), () =>
-        { autoCamera = !autoCamera; PlayerPrefs.SetInt("PlayerMenu.AutoCamera",autoCamera?1:0);PlayerPrefs.Save();battle.SetAutoCamera(autoCamera); cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off"); });
-        cameraLabel.text = "Auto camera: " + (autoCamera ? "On" : "Off");
-        assistanceLabel = Setting("Defense timing", new Vector2(-12, 72), () =>
-        { if (!battle.DefenseActive && !battle.SignatureActive) {bool assisted=!battle.DefenseSettings.Assisted;ApplyPartyAssistance(assisted);PlayerPrefs.SetInt("PlayerMenu.Assisted",assisted?1:0);PlayerPrefs.Save();} });
+        BuildResourceCards();
         BuildDefense(); BuildSignature(); BuildTargetDetails(); BuildInspection(); battle.ContextRequested += ShowContext; battle.TargetContextRequested += ShowTargetContext;
         battle.SetAutoCamera(autoCamera); ApplyLayout(); Render();
     }
@@ -141,7 +136,7 @@ public sealed class BattleHud : MonoBehaviour
         orderPanel.pivot = top ? new Vector2(0.5f, 1) : Vector2.one;
         orderPanel.anchoredPosition = top ? new Vector2(0, -6) : new Vector2(-12, -6);
         orderPanel.sizeDelta = top ? new Vector2(Mathf.Min(Mathf.Max(120, root.rect.width - 48), count * 56 + 8), 70)
-            : new Vector2(60, Mathf.Min(Mathf.Max(70, root.rect.height - 200), count * 66 + 8));
+            : new Vector2(60, Mathf.Min(Mathf.Max(70, root.rect.height - 430), count * 66 + 8));
         orderContent.anchorMin = orderContent.anchorMax = new Vector2(0, 1); orderContent.pivot = new Vector2(0, 1);
         orderContent.sizeDelta = top ? new Vector2(count * 56 + 8, 70) : new Vector2(60, count * 66 + 8);
         orderScroll.horizontal = top; orderScroll.vertical = !top;
@@ -154,11 +149,11 @@ public sealed class BattleHud : MonoBehaviour
         orderScroll.horizontalNormalizedPosition = 0; orderScroll.verticalNormalizedPosition = 1;
         if (targetPanel)
         {
-            targetPanel.anchorMin = targetPanel.anchorMax = top ? new Vector2(0.5f, 1) : Vector2.one;
-            targetPanel.pivot = top ? new Vector2(0.5f, 1) : Vector2.one;
-            targetPanel.anchoredPosition = top ? new Vector2(0, -80) : new Vector2(-12, -orderPanel.sizeDelta.y - 14);
+            targetPanel.anchorMin = targetPanel.anchorMax = new Vector2(0.5f, 1);
+            targetPanel.pivot = new Vector2(0.5f, 1);
+            targetPanel.anchoredPosition = top ? new Vector2(0, -80) : new Vector2(0, -12);
         }
-        layoutLabel.text = "Turn order: " + (top ? "Top" : "Right");
+        if(layoutLabel) layoutLabel.text = "Turn order: " + (top ? "Top" : "Right");
     }
     private static void FitPortraitNumber(TMP_Text text, RectTransform portrait, float relativeSize)
     {
@@ -198,11 +193,13 @@ public sealed class BattleHud : MonoBehaviour
         var fill = targetFill.gameObject.AddComponent<Image>(); fill.color = new Color(0.75f, 0.12f, 0.1f); fill.raycastTarget = false;
         targetHealth = Text(track, 12);
         targetShield = MakeShield(targetPanel, 22, 10, out targetShieldFill, out targetShieldText);
+        var resources=Rect("Target resources",targetPanel);resources.anchorMin=resources.anchorMax=new Vector2(.5f,0);resources.anchoredPosition=new Vector2(0,-18);resources.sizeDelta=new Vector2(380,24);
+        targetResources=Text(resources,12);targetResources.outlineWidth=.2f;targetResources.outlineColor=Color.black;
         var statusRect = Rect("Target status effects", targetPanel);
-        statusRect.anchorMin = statusRect.anchorMax = new Vector2(.5f,0);statusRect.anchoredPosition=new Vector2(0,-22);statusRect.sizeDelta=new Vector2(280,36);
+        statusRect.anchorMin = statusRect.anchorMax = new Vector2(.5f,0);statusRect.anchoredPosition=new Vector2(0,-50);statusRect.sizeDelta=new Vector2(280,36);
         targetStatuses=statusRect.gameObject.AddComponent<BattleStatusRow>();targetStatuses.Initialize(root,font);
         var previewRect = Rect("Damage preview and mitigation", targetPanel);
-        previewRect.anchorMin = previewRect.anchorMax = new Vector2(.5f,0); previewRect.anchoredPosition = new Vector2(0,-66); previewRect.sizeDelta = new Vector2(360,48);
+        previewRect.anchorMin = previewRect.anchorMax = new Vector2(.5f,0); previewRect.anchoredPosition = new Vector2(0,-94); previewRect.sizeDelta = new Vector2(360,48);
         damagePreview = Text(previewRect,12); damagePreview.outlineWidth = .2f; damagePreview.outlineColor = Color.black;
         targetPanel.gameObject.SetActive(false);
     }
@@ -211,6 +208,7 @@ public sealed class BattleHud : MonoBehaviour
         if(targetDismissVersion!=battle.TargetFocus.DismissVersion)
         { targetDismissVersion=battle.TargetFocus.DismissVersion;lastStatusTarget=null;targetStatusGrace=0; }
         var target = battle.TargetFocus.Displayed;
+        if(target==null && !battle.IsAlly(battle.CurrentActorIndex))target=battle.Targetables[battle.CurrentActorIndex];
         if(target!=null){lastStatusTarget=target;targetStatusGrace=Time.unscaledTime+.35f;}
         else if(lastStatusTarget?.Alive==true && (targetStatuses.PointerInside || Time.unscaledTime<targetStatusGrace))target=lastStatusTarget;
         targetPanel.gameObject.SetActive(target != null && !battle.InspectionOpen);
@@ -220,7 +218,9 @@ public sealed class BattleHud : MonoBehaviour
         targetStatuses.Show(target.StatusUnit, target.Unit == null);
         UpdateShield(targetShield, targetShieldFill, targetShieldText, target.StatusUnit);
         targetFill.parent.gameObject.SetActive(target.HasHealth);
-        targetName.text = target.Name; targetHealth.text = $"{target.Health} / {target.MaxHealth}";
+        var info=target.Unit!=null?battle.Info(target.ActorIndex):null;
+        targetName.text = target.Name + (info && info.Level>0 ? $"  ·  Lv {info.Level}" : "") + (info && !string.IsNullOrWhiteSpace(info.Race) ? "  ·  "+info.Race : "");
+        targetResources.text=target.Unit==null?"":ResourceLine(target.Unit); targetHealth.text = $"{target.Health} / {target.MaxHealth}";
         targetFill.anchorMax = new Vector2(Mathf.Clamp01(target.Health / (float)Mathf.Max(1, target.MaxHealth)), 1);
     }
     private void BuildSignature()
@@ -393,8 +393,8 @@ public sealed class BattleHud : MonoBehaviour
     }
     private void DrawDefense()
     {
-        assistanceLabel.text = "Timing: " + (battle.DefenseSettings.Assisted ? "Assisted" : "Standard");
-        assistanceLabel.GetComponentInParent<Button>().interactable = !battle.DefenseActive && !battle.SignatureActive;
+        if(assistanceLabel) assistanceLabel.text = "Timing: " + (battle.DefenseSettings.Assisted ? "Assisted" : "Standard");
+        if(assistanceLabel) assistanceLabel.GetComponentInParent<Button>().interactable = !battle.DefenseActive && !battle.SignatureActive;
         defensePanel.gameObject.SetActive(battle.DefenseActive);
         if (!battle.DefenseActive) return;
         if (inspectionLayer.gameObject.activeSelf) CloseInspection();
@@ -529,7 +529,7 @@ public sealed class BattleHud : MonoBehaviour
         if (!battle) return;
         if (battle.InspectionOpen && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) CloseInspection();
         if (battle.InspectionOpen && examinePanel.gameObject.activeSelf) UpdateExamine();
-        DrawDefense(); DrawSignature(); DrawTargetDetails(); if(overhead)overhead.Render();
+        DrawResourceCards(); DrawDefense(); DrawSignature(); DrawTargetDetails(); if(overhead)overhead.Render();
         var order = battle.UpcomingTurns();
         if (lastActor != battle.CurrentActorIndex || lastCount != order.Count)
         { ApplyLayout(); lastActor = battle.CurrentActorIndex; lastCount = order.Count; }

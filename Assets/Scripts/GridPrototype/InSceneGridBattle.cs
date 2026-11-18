@@ -715,6 +715,8 @@ namespace Game.GridPrototype
                 int damage = impact.Damage(rawDamage, false, eligible);
                 var result = impact.ForTarget(eligible);
                 perfectParries &= result == DefenseResult.Parried;
+                if(enemyBasicAttack && !enemyAttackRewarded)
+                { var attacker=turnOrder[DefenseAttackerIndex];attacker.RestoreActionPoints(attacker.AttackActionPointGain); enemyAttackRewarded=true; }
                 int barrierBeforeHit = defender.Barrier;
                 damage = defender.TakeDamage(damage);
                 if (result != DefenseResult.Dodged && result != DefenseResult.Parried && CombatMath.Roll(DefenseSettings.EnemyStatusChance, UnityEngine.Random.value))
@@ -761,12 +763,14 @@ namespace Game.GridPrototype
                 default: return "Watch the wind-up";
             }
         }
+        private bool enemyBasicAttack, enemyAttackRewarded;
         public int DefenseAttackerIndex { get; private set; } = -1;
         public int DefenseDefenderIndex => defenderIndex;
         public bool DefensePresentationActive => DefenseAttackerIndex >= 0;
         private IEnumerator EnemyAttack(int index, bool combo)
         {
             DefenseAttackerIndex = index;
+            enemyBasicAttack = !combo; enemyAttackRewarded = false;
             DefenseSettings = allyDefense[defenderIndex];
             busy = true; perfectParries = true; InspectionOpen = false;
             actors[index].rotation = GridTargeting.Facing(Grid.Point(turnOrder[defenderIndex].Position) - Grid.Point(turnOrder[index].Position));
@@ -870,6 +874,12 @@ namespace Game.GridPrototype
             CancelAction(); StartCoroutine(EnemyRound()); ActionResolved?.Invoke();
         }
 
+        public static bool TryCommitEnemyAttack(GridUnit unit,bool preferCombo,int comboCost,out bool combo)
+        {
+            combo=preferCombo&&unit.CanAffordActionPoints(Mathf.Max(1,comboCost));
+            return unit.SpendActionWithActionPoints(combo?Mathf.Max(1,comboCost):0);
+        }
+
         private IEnumerator EnemyRound(bool advance = true)
         {
             busy = true;
@@ -900,8 +910,11 @@ namespace Game.GridPrototype
                         yield return Move(path, actorIndex);
                 }
                 busy = true;
-                if (CanStrike(Active, turnOrder[defenderIndex]) && Active.SpendAction())
-                    yield return EnemyAttack(i, (i + round) % 2 != 0);
+                if (CanStrike(Active, turnOrder[defenderIndex]))
+                {
+                    int cost = Mathf.Max(1, Info(i).EnemyComboActionPointCost);
+                    if(TryCommitEnemyAttack(Active,(i+round)%2!=0,cost,out bool combo))yield return EnemyAttack(i, combo);
+                }
                 if (closing) yield break;
                 yield return new WaitForSeconds(0.9f);
                 AdvanceTurn();

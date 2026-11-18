@@ -93,6 +93,8 @@ namespace Game.GridPrototype
             storedMagicPoints = (int)System.Math.Min(EffectiveMaxMagicPoints,
                 (long)(storedMagicPoints < 0 ? EffectiveMaxMagicPoints : storedMagicPoints) + amount);
         }
+        [Header("Enemy prototype") ]
+        [Min(1)] public int EnemyComboActionPointCost = 3;
         [Header("Status tuning")]
         [Min(0)] public int BurningDamagePerTick = 5, RegenerationHealingPerTick = 5;
         public void Configure(GridUnit unit)
@@ -125,7 +127,7 @@ namespace Game.GridPrototype
             string live = unit.EffectDetails();
             if (!string.IsNullOrEmpty(live)) statuses = live + (statuses == "None" ? "" : "\n" + statuses);
             if (unit.EffectiveBlock) statuses = "Blocking" + (statuses == "None" ? "" : "\n" + statuses);
-            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nMP  {unit.MagicPoints} / {unit.MaxMagicPoints}\nAP  {unit.ActionPoints} / {GridUnit.MaximumActionPoints}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nSoul  {StatDescription(CharacterStat.Soul)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nSpeed  {EffectiveSpeed}{(Speed < 0 && EffectiveSpeed == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
+            return $"<b>{name}</b>\nHealth  {unit.Health} / {unit.MaxHealth}\nMP  {unit.MagicPoints} / {unit.MaxMagicPoints}\nAP  {unit.ActionPoints} / {GridUnit.MaximumActionPoints}\nMovement  {unit.Movement} / {GridUnit.MaximumMovement}\nLevel  {(Level > 0 ? Level.ToString() : "Not assigned")}\nRace  {Assigned(Race)}\nRole  {Assigned(Role)}\n\n<b>Stats</b>\nVitality  {StatDescription(CharacterStat.Vitality)}\nStrength  {StatDescription(CharacterStat.Strength)}\nMagic  {StatDescription(CharacterStat.Magic)}\nSoul  {StatDescription(CharacterStat.Soul)}\nPhysical Defense  {StatDescription(CharacterStat.PhysicalDefense)}\nMagical Defense  {StatDescription(CharacterStat.MagicalDefense)}\nSpeed  {EffectiveSpeed}{(Speed < 0 && EffectiveSpeed == 0 ? " (unassigned; defaults to 0)" : "")}\n\n<b>Statuses</b>\n{statuses}\n\n<b>Resistances</b>\n{Assigned(Resistances)}";
         }
         private static string Assigned(string value) => string.IsNullOrWhiteSpace(value) ? "Not assigned" : value;
     }
