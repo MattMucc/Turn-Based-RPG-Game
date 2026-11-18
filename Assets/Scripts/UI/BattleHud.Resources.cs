@@ -37,7 +37,7 @@ public sealed partial class BattleHud
             var card=new ResourceCard{Index=i,Rect=Rect("Party resources",root)};
             card.Rect.anchorMin=card.Rect.anchorMax=new Vector2(1,0);card.Rect.pivot=new Vector2(1,0);
             card.Rect.gameObject.AddComponent<Image>().color=Dark;
-            card.Name=Text(ResourceRect("Name and level",card.Rect,-18,16),11);card.Name.alignment=TextAlignmentOptions.MidlineLeft;card.Name.overflowMode=TextOverflowModes.Ellipsis;card.Name.textWrappingMode=TextWrappingModes.NoWrap;
+            card.Name=Text(ResourceRect("Name and level",card.Rect,-12,12),10);card.Name.rectTransform.offsetMin=new Vector2(6,0);card.Name.rectTransform.offsetMax=new Vector2(-6,0);card.Name.alignment=TextAlignmentOptions.MidlineLeft;card.Name.overflowMode=TextOverflowModes.Ellipsis;card.Name.textWrappingMode=TextWrappingModes.NoWrap;
             card.Health=ResourceBar("Health",card.Rect,6,new Color(.75f,.12f,.1f),out card.HealthText);
             card.Mana=ResourceBar("Mana",card.Rect,18,new Color(.2f,.4f,.9f),out card.ManaText);
             card.Resources=Text(ResourceRect("AP and movement",card.Rect,30,14),10);
@@ -59,7 +59,7 @@ public sealed partial class BattleHud
             bool hasStatuses=StatusPresentation.For(unit,false).Count>0;
             float height=hasStatuses?68:50;
             card.Statuses.gameObject.SetActive(hasStatuses);
-            card.Rect.anchoredPosition=new Vector2(-12,bottom);card.Rect.sizeDelta=new Vector2(expanded?220:190,height);bottom+=height+24;
+            card.Rect.anchoredPosition=new Vector2(-12,bottom);card.Rect.sizeDelta=new Vector2(expanded?220:190,height);bottom+=height+14;
             card.Rect.GetComponent<Image>().color=expanded?new Color(.07f,.19f,.25f,.97f):Dark;
             card.Name.text=$"{battle.DisplayName(card.Index)}  ·  Lv {(info?info.Level:1)}";
             card.Health.anchorMax=new Vector2(unit.MaxHealth>0?(float)unit.Health/unit.MaxHealth:0,1);

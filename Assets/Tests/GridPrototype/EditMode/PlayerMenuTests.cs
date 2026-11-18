@@ -250,7 +250,19 @@ public class PlayerMenuTests
         var smith=Make("Test blacksmith").AddComponent(Type.GetType("Blacksmith, Assembly-CSharp",true));smith.transform.position=party[0].transform.position;
         menuType.GetMethod("OpenBlacksmith").Invoke(menu,new object[]{smith});
         smith.transform.position+=Vector3.right*10;Assert.IsFalse((bool)managerType.GetMethod("TryUpgradeEquipment").Invoke(manager,outside));smith.transform.position=party[0].transform.position;
+        Find("Armor").onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No equipment in this category."));
+        Assert.IsNotNull(Find("Leave"));
+        Find("Weapons").onClick.Invoke();
+        var slots=menu.GetComponentsInChildren<Button>().Where(b=>b.name=="Upgrade sword").ToArray();
+        Assert.AreEqual(2,slots.Length);
+        foreach(var slot in slots){var rect=(RectTransform)slot.transform;Assert.AreEqual(rect.rect.width,rect.rect.height,.01f);}
+        slots[1].onClick.Invoke();
+        Assert.AreEqual("two",menuType.GetField("upgradeSelection",Hidden).GetValue(menu));
+        menu.GetComponentsInChildren<Button>().First(b=>b.name=="Upgrade sword").onClick.Invoke();
         Find("Review upgrade").onClick.Invoke();
+        Assert.IsFalse(Find("Weapons").interactable);
+        Assert.IsTrue(menu.GetComponentsInChildren<Button>().Where(b=>b.name=="Upgrade sword").All(b=>!b.interactable));
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Iron: 2 / 3")));
         Assert.AreEqual(0,inventory.Owned[0].UpgradeLevel);Find("Cancel upgrade").onClick.Invoke();Assert.AreEqual(3,inventory.Materials[0].Quantity);
         Find("Review upgrade").onClick.Invoke();Find("Confirm upgrade").onClick.Invoke();

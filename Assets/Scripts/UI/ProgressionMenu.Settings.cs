@@ -88,7 +88,12 @@ public sealed partial class ProgressionMenu
         var go=TMP_DefaultControls.CreateDropdown(new TMP_DefaultControls.Resources());go.name=name;go.transform.SetParent(parent,false);
         var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=new Vector2(12,-y);rect.sizeDelta=new Vector2(width,36);
         var dropdown=go.GetComponent<TMP_Dropdown>();dropdown.ClearOptions();dropdown.AddOptions(new System.Collections.Generic.List<string>(choices));dropdown.SetValueWithoutNotify(current);dropdown.onValueChanged.AddListener(changed);
-        foreach(var text in go.GetComponentsInChildren<TMP_Text>(true)){text.font=TMP_Settings.defaultFontAsset;text.color=new Color(.06f,.1f,.14f);text.fontSize=15;}
+        foreach(var text in go.GetComponentsInChildren<TMP_Text>(true)){text.font=TMP_Settings.defaultFontAsset;text.color=Color.white;text.fontSize=15;}
+        foreach(var image in go.GetComponentsInChildren<Image>(true))image.color=new Color(.035f,.075f,.12f,1);
+        var colors=dropdown.colors;colors.normalColor=Color.white;colors.highlightedColor=new Color(.65f,.85f,1);colors.selectedColor=colors.highlightedColor;dropdown.colors=colors;
+        var arrow=go.transform.Find("Arrow");
+        if(arrow){arrow.GetComponent<Image>().enabled=false;var marker=new GameObject("Direction",typeof(RectTransform));marker.transform.SetParent(arrow,false);var markerRect=(RectTransform)marker.transform;markerRect.anchorMin=Vector2.zero;markerRect.anchorMax=Vector2.one;markerRect.offsetMin=markerRect.offsetMax=Vector2.zero;var graphic=marker.AddComponent<DropdownArrow>();graphic.Bind(dropdown);}
+        foreach(var toggle in go.GetComponentsInChildren<Toggle>(true)){if(toggle.graphic)toggle.graphic.color=new Color(.3f,.8f,1);}
         return dropdown;
     }
     string SettingsDefaultsDescription()=>settingsTab==SettingsTab.Audio?"Master volume: 100%":settingsTab==SettingsTab.UI?"Controller icons: Auto\nTurn order: Top":"Defense timing: Standard\nAutomatic battle camera: On";
