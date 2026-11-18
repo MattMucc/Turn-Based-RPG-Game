@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Game.GridPrototype;
 using TMPro;
 using UnityEngine;
@@ -24,7 +24,7 @@ public sealed class Blacksmith : MonoBehaviour
         var camera=Camera.main;if(!camera){promptCanvas.gameObject.SetActive(false);return;}
         var screen=camera.WorldToScreenPoint(transform.position+Vector3.up*2);if(screen.z<=0){promptCanvas.gameObject.SetActive(false);return;}
         prompt.position=screen;
-        bool controller=GameManager.Instance.Input&&GameManager.Instance.Input.CurrentScheme==PlayerInputReader.ControlScheme.Gamepad;var catalog=ControllerGlyphs.Catalog;
+        bool controller=GameManager.Instance.Input&&ControllerGlyphs.ShowController(GameManager.Instance.Input);var catalog=ControllerGlyphs.Catalog;
         glyph.sprite=controller&&catalog&&catalog.Buttons!=null&&catalog.Buttons.Length>3?ControllerGlyphs.Resolve(catalog.Buttons[3].Xbox,out _):!controller&&catalog&&catalog.OverworldKeys!=null&&catalog.OverworldKeys.Length>1?catalog.OverworldKeys[1]:null;
         glyph.material=null;glyph.color=Color.white;glyph.enabled=glyph.sprite;if(controller&&glyph.sprite)ControllerGlyphs.StyleFace(glyph);
         caption.text=(glyph.sprite?"":controller?(ControllerGlyphs.PlayStation?"Triangle · ":"Y · "):"E · ")+DisplayName;

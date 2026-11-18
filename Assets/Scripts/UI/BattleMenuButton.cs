@@ -76,6 +76,7 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     private void OnDestroy() { if (source) source.OnControlSchemeChanged -= UpdateIcon; }
     private void UpdateIcon(PlayerInputReader.ControlScheme scheme)
     {
+        if(source)scheme=ControllerGlyphs.ShowController(source)?PlayerInputReader.ControlScheme.Gamepad:PlayerInputReader.ControlScheme.Keyboard;
         displayedScheme = scheme;
         EnsureShortcut();
         if (icon)

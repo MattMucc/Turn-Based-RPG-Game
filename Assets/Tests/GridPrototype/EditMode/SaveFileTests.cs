@@ -14,12 +14,13 @@ public class SaveFileTests
         var data=Data("composition");data.Groups.Add(new SavedGroup{Id="group",HasComposition=true,SpawnKeys=new System.Collections.Generic.List<string>{"wolf","wolf","support"}});
         CollectionAssert.AreEqual(data.Groups[0].SpawnKeys,SaveFileStore.Decode(SaveFileStore.Encode(data)).Groups[0].SpawnKeys);
     }
-    [Test]public void FourSlotsAreIndependentAndManualOverwriteRequiresConfirmation()
+    [Test]public void TwentySlotsAndCheckpointAreIndependentAndManualOverwriteRequiresConfirmation()
     {
-        for(int i=0;i<4;i++)store.Write(i,SaveFileStore.Encode(Data("slot"+i)),false);
-        for(int i=0;i<4;i++){Assert.AreEqual("slot"+i,store.Read(i,out bool backup).CaptainName);Assert.IsFalse(backup);}
+        for(int i=0;i<=SaveFileStore.CheckpointSlot;i++)store.Write(i,SaveFileStore.Encode(Data("slot"+i)),false);
+        for(int i=0;i<=SaveFileStore.CheckpointSlot;i++){Assert.AreEqual("slot"+i,store.Read(i,out bool backup).CaptainName);Assert.IsFalse(backup);}
         Assert.Throws<IOException>(()=>store.Write(0,SaveFileStore.Encode(Data("changed")),false));Assert.AreEqual("slot0",store.Read(0,out _).CaptainName);
-        Assert.Throws<ArgumentOutOfRangeException>(()=>store.PathFor(4));
+        Assert.AreEqual("manual-4.json",Path.GetFileName(store.PathFor(3)));Assert.AreEqual("checkpoint.json",Path.GetFileName(store.PathFor(SaveFileStore.CheckpointSlot)));
+        Assert.Throws<ArgumentOutOfRangeException>(()=>store.PathFor(SaveFileStore.CheckpointSlot+1));
     }
     [Test]public void CorruptPrimaryRecoversBackupAndInvalidDataNeverReplacesGameplay()
     {

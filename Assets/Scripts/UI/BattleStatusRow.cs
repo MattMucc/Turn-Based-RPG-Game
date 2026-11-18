@@ -47,7 +47,7 @@ public sealed class BattleStatusRow : MonoBehaviour
             }
             var entry=entries[i];entry.Rect.gameObject.SetActive(true);entry.Rect.name=statuses[i].Name;
             float size=Mathf.Clamp(IconSize,12,30);entry.Rect.sizeDelta=new Vector2(size,size);
-            entry.Rect.anchoredPosition=new Vector2((i-(statuses.Count-1)*.5f)*(size+4),0);
+            entry.Rect.anchoredPosition=new Vector2((i-(statuses.Count-1)*.5f)*(size+(size<24?4:6)),0);
             entry.Count.fontSize=size<24?8:11;entry.Count.rectTransform.anchoredPosition=new Vector2(0,-size*.3f);
             entry.Count.rectTransform.sizeDelta=new Vector2(size+4,size<24?10:13);
             entry.Graphic.Symbol=statuses[i].Symbol;entry.Graphic.SetVerticesDirty();entry.Count.text=statuses[i].Count;

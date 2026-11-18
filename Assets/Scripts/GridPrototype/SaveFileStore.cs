@@ -10,9 +10,10 @@ namespace Game.GridPrototype
     public sealed class SaveFileStore
     {
         [Serializable] public sealed class Envelope {public int Version=1;public string Payload,Checksum;}
+        public const int ManualSlotCount=20, CheckpointSlot=20;
         readonly string directory;
         public SaveFileStore(string directory){this.directory=directory;}
-        public string PathFor(int slot){if(slot<0||slot>3)throw new ArgumentOutOfRangeException(nameof(slot));return Path.Combine(directory,slot==3?"checkpoint.json":"manual-"+(slot+1)+".json");}
+        public string PathFor(int slot){if(slot<0||slot>CheckpointSlot)throw new ArgumentOutOfRangeException(nameof(slot));return Path.Combine(directory,slot==CheckpointSlot?"checkpoint.json":"manual-"+(slot+1)+".json");}
         public bool Exists(int slot)=>File.Exists(PathFor(slot))||File.Exists(PathFor(slot)+".bak");
         public static string Encode(GameSaveData data)
         {var payload=JsonUtility.ToJson(data);return JsonUtility.ToJson(new Envelope{Payload=payload,Checksum=Hash(payload)});}

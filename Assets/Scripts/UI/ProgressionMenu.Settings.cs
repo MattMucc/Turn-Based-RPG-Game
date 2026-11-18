@@ -6,11 +6,13 @@ using UnityEngine.UI;
 
 public sealed partial class ProgressionMenu
 {
-    enum SettingsTab { Audio, Display, Controls, Battle }
+    enum SettingsTab { Battle, Graphics, UI, Audio }
     SettingsTab settingsTab;
     string settingsSelection;
     bool resetSettingsPending;
-    bool? pendingFullscreen;
+    FullScreenMode? pendingFullscreen;
+    FullScreenMode previousDisplayMode,requestedDisplayMode;
+    const string DisplayModeKey="PlayerMenu.DisplayMode";
     readonly DisplayChangePreview displayPreview=new();
     TMP_Text displayCountdown;
     const string AutoCameraKey="PlayerMenu.AutoCamera", OrderTopKey="PlayerMenu.OrderTop", FullscreenKey="PlayerMenu.Fullscreen";
@@ -18,12 +20,12 @@ public sealed partial class ProgressionMenu
     {
         ApplySavedMenuSettings();
         // Applying saved window state in a build is safe; never alter the Unity editor window at startup.
-        if(!Application.isEditor && PlayerPrefs.HasKey(FullscreenKey))Screen.fullScreen=PlayerPrefs.GetInt(FullscreenKey)!=0;
+        if(!Application.isEditor){if(PlayerPrefs.HasKey(DisplayModeKey))Screen.fullScreenMode=(FullScreenMode)PlayerPrefs.GetInt(DisplayModeKey);else if(PlayerPrefs.HasKey(FullscreenKey))Screen.fullScreen=PlayerPrefs.GetInt(FullscreenKey)!=0;}
     }
     void ApplySavedMenuSettings()
     {
         if(!Manager)return;
-        if(Manager.Input&&PlayerPrefs.HasKey("PlayerMenu.Icons"))Manager.Input.ControllerIcons=(ControllerIconStyle)Mathf.Clamp(PlayerPrefs.GetInt("PlayerMenu.Icons"),0,2);
+        if(Manager.Input&&PlayerPrefs.HasKey("PlayerMenu.Icons"))Manager.Input.ControllerIcons=(ControllerIconStyle)Mathf.Clamp(PlayerPrefs.GetInt("PlayerMenu.Icons"),0,3);
         if(PlayerPrefs.HasKey("PlayerMenu.Assisted"))ApplyAssistance(PlayerPrefs.GetInt("PlayerMenu.Assisted")!=0);
     }
     void ApplyAssistance(bool assisted)
@@ -32,13 +34,8 @@ public sealed partial class ProgressionMenu
     void SettingsRebuild(string selected){settingsSelection=selected;Rebuild();}
     void Settings()
     {
-        float width=Mathf.Max(300,body.rect.width),tabWidth=(width-18)/4;
-        for(int i=0;i<4;i++){
-            var tab=(SettingsTab)i;var b=Button(body,tab.ToString(),i*(tabWidth+6),0,tabWidth,()=>{
-                CancelDisplayChange();resetSettingsPending=false;settingsTab=tab;SettingsRebuild(tab.ToString());});
-            if(tab==settingsTab)b.image.color=new Color(.16f,.36f,.44f);
-        }
-        var list=List(body,"Settings options",0,54,width,Mathf.Max(230,body.rect.height-54),410);
+        float width=Mathf.Max(300,body.rect.width);
+        var list=List(body,"Settings options",0,0,width,Mathf.Max(230,body.rect.height),410);
         width-=20;
         if(displayPreview.Active){
             displayCountdown=Label(Rect("Display countdown",list,12,16,width-24,80),"",19);
@@ -54,61 +51,75 @@ public sealed partial class ProgressionMenu
             Detail("Restore defaults",SettingsDefaultsDescription()+"\n\nOnly this settings category will change. Party progress and shortcuts are unaffected.");return;
         }
         if(settingsTab==SettingsTab.Audio){
-            Label(Rect("Volume readout",list,12,12,width-24,40),$"Master volume: {Mathf.RoundToInt(AudioListener.volume*100)}%",21);
-            var track=Rect("Volume track",list,12,60,width-24,12);track.gameObject.AddComponent<Image>().color=new Color(.08f,.12f,.16f);
-            Rect("Volume fill",track,0,0,(width-24)*Mathf.Clamp01(AudioListener.volume),12).gameObject.AddComponent<Image>().color=Accent;
-            Button(list,"Volume -",12,92,(width-32)/2,()=>SetVolume(-.05f),()=>Detail("Master volume","Adjusts all game audio in 5% steps. Zero silences the game."));
-            Button(list,"Volume +",20+(width-32)/2,92,(width-32)/2,()=>SetVolume(.05f),()=>Detail("Master volume","Adjusts all game audio in 5% steps. Zero silences the game."));
-            Button(list,"Restore defaults",12,164,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
-            Detail("Audio","Master volume adjusts all game audio. Changes apply immediately and are remembered between sessions.");
-        }else if(settingsTab==SettingsTab.Display){
-            bool chosen=pendingFullscreen??Screen.fullScreen;
-            Button(list,"Display mode: "+(chosen?"Fullscreen":"Windowed"),12,12,width-24,()=>{pendingFullscreen=!chosen;SettingsRebuild("Display mode");},()=>Detail("Display mode","Fullscreen or Windowed. Unconfirmed changes revert after 15 seconds."));
-            Button(list,"Apply display change",12,64,width-24,BeginDisplayChange).interactable=chosen!=Screen.fullScreen;
-            Detail("Display","Choose a mode, then Apply. A 15-second confirmation protects against an unwanted display change. Only a kept mode is saved.");
-        }else if(settingsTab==SettingsTab.Controls){
-            var style=Manager.Input?Manager.Input.ControllerIcons:ControllerIconStyle.Auto;
-            Button(list,"Controller icons: "+style,12,12,width-24,()=>{
-                if(Manager.Input){Manager.Input.ControllerIcons=(ControllerIconStyle)(((int)style+1)%3);PlayerPrefs.SetInt("PlayerMenu.Icons",(int)Manager.Input.ControllerIcons);PlayerPrefs.Save();}SettingsRebuild("Controller icons");
-            },()=>Detail("Controller icons","Auto follows the detected controller. Xbox and PlayStation override the icon appearance. This does not change button bindings.\n\nFavorite action shortcuts are configured in Abilities.")).interactable=Manager.Input;
-            Button(list,"Restore defaults",12,76,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
-            Detail("Controls","Automatic, Xbox, or PlayStation controller icons.\n\nFavorite actions are configured in Abilities. Full control rebinding is not available yet.");
+            var readout=Label(Rect("Volume readout",list,12,12,width-24,32),$"Master Volume: {Mathf.RoundToInt(AudioListener.volume*100)}%",19);
+            var go=DefaultControls.CreateSlider(new DefaultControls.Resources());go.name="Master Volume";go.transform.SetParent(list,false);
+            var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=new Vector2(12,-56);rect.sizeDelta=new Vector2(width-24,28);
+            var slider=go.GetComponent<Slider>();slider.minValue=0;slider.maxValue=100;slider.wholeNumbers=true;slider.SetValueWithoutNotify(Mathf.Round(AudioListener.volume*100));
+            slider.onValueChanged.AddListener(value=>{AudioListener.volume=value/100;readout.text=$"Master Volume: {value:0}%";PlayerPrefs.SetFloat("PlayerMenu.Volume",AudioListener.volume);PlayerPrefs.Save();});
+            Button(list,"Restore defaults",12,110,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
+            Detail("Audio","Master volume adjusts all game audio.");
+        }else if(settingsTab==SettingsTab.Graphics){
+            var modes=new[]{FullScreenMode.Windowed,FullScreenMode.FullScreenWindow,FullScreenMode.ExclusiveFullScreen};
+            var chosen=pendingFullscreen??Screen.fullScreenMode;
+            Label(Rect("Mode label",list,12,12,width-24,24),"Display mode",17);
+            var apply=Button(list,"Apply display change",12,104,width-24,BeginDisplayChange);apply.interactable=chosen!=Screen.fullScreenMode;
+            SettingsDropdown(list,"Display mode",48,width-24,new[]{"Windowed","Borderless","Fullscreen"},Mathf.Max(0,Array.IndexOf(modes,chosen)),value=>{pendingFullscreen=modes[value];apply.interactable=pendingFullscreen!=Screen.fullScreenMode;});
+            Detail("Graphics","Windowed, borderless window or fullscreen. Unconfirmed display changes revert after 15 seconds.");
+        }else if(settingsTab==SettingsTab.UI){
+            Label(Rect("Icon label",list,12,12,width-24,24),"Input icons",17);
+            SettingsDropdown(list,"Controller icons",44,width-24,new[]{"Auto","Xbox","PlayStation","Keyboard"},Manager.Input?(int)Manager.Input.ControllerIcons:0,value=>{
+                if(Manager.Input)Manager.Input.ControllerIcons=(ControllerIconStyle)value;PlayerPrefs.SetInt("PlayerMenu.Icons",value);PlayerPrefs.Save();
+            });
+            Label(Rect("Order label",list,12,96,width-24,24),"Turn order display",17);
+            SettingsDropdown(list,"Turn order",128,width-24,new[]{"Top","Right"},PlayerPrefs.GetInt(OrderTopKey,1)!=0?0:1,value=>RememberBool(OrderTopKey,value==0));
+            Button(list,"Restore defaults",12,188,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
+            Detail("UI","Input icon appearance and turn order placement. Icon overrides do not change controls.");
         }else{
             var defense=Member.GetComponent<DefensePrototypeSettings>();bool assisted=PlayerPrefs.HasKey("PlayerMenu.Assisted")?PlayerPrefs.GetInt("PlayerMenu.Assisted")!=0:defense&&defense.Assisted;
-            bool auto=PlayerPrefs.GetInt(AutoCameraKey,1)!=0,top=PlayerPrefs.GetInt(OrderTopKey,1)!=0;
-            Button(list,"Defense timing: "+(assisted?"Assisted":"Standard"),12,12,width-24,()=>{ApplyAssistance(!assisted);RememberBool("PlayerMenu.Assisted",!assisted);SettingsRebuild("Defense timing");},()=>Detail("Defense timing","Assisted widens dodge and parry windows using each character's configured assistance multiplier. It does not automatically defend or change attack timing. Applies to all party members."));
-            Button(list,"Automatic battle camera: "+(auto?"On":"Off"),12,64,width-24,()=>{RememberBool(AutoCameraKey,!auto);SettingsRebuild("Automatic battle camera");},()=>Detail("Automatic battle camera","Automatically focuses and follows the active combatant. Off leaves camera positioning to you. Manual camera controls remain available."));
-            Button(list,"Turn order: "+(top?"Top":"Right"),12,116,width-24,()=>{RememberBool(OrderTopKey,!top);SettingsRebuild("Turn order");},()=>Detail("Turn order placement","Choose whether the portrait turn order appears across the top or down the right side of battle."));
-            Button(list,"Restore defaults",12,184,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
-            Detail("Battle","Configure defense timing and battle presentation. Choices are remembered for future battles and can also be changed using the existing battle controls.");
+            bool auto=PlayerPrefs.GetInt(AutoCameraKey,1)!=0;
+            Button(list,"Defense timing: "+(assisted?"Assisted":"Standard"),12,12,width-24,()=>{ApplyAssistance(!assisted);RememberBool("PlayerMenu.Assisted",!assisted);SettingsRebuild("Defense timing");});
+            Button(list,"Automatic battle camera: "+(auto?"On":"Off"),12,64,width-24,()=>{RememberBool(AutoCameraKey,!auto);SettingsRebuild("Automatic battle camera");});
+            Button(list,"Restore defaults",12,128,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
+            Detail("Battle","Assisted timing widens dodge and parry windows. Automatic camera follows the acting combatant.");
         }
     }
-    string SettingsDefaultsDescription()=>settingsTab==SettingsTab.Audio?"Master volume: 100%":settingsTab==SettingsTab.Controls?"Controller icons: Auto":"Defense timing: Standard\nAutomatic battle camera: On\nTurn order: Top";
+    TMP_Dropdown SettingsDropdown(Transform parent,string name,float y,float width,string[] choices,int current,UnityEngine.Events.UnityAction<int> changed)
+    {
+        var go=TMP_DefaultControls.CreateDropdown(new TMP_DefaultControls.Resources());go.name=name;go.transform.SetParent(parent,false);
+        var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=new Vector2(12,-y);rect.sizeDelta=new Vector2(width,36);
+        var dropdown=go.GetComponent<TMP_Dropdown>();dropdown.ClearOptions();dropdown.AddOptions(new System.Collections.Generic.List<string>(choices));dropdown.SetValueWithoutNotify(current);dropdown.onValueChanged.AddListener(changed);
+        foreach(var text in go.GetComponentsInChildren<TMP_Text>(true)){text.font=TMP_Settings.defaultFontAsset;text.color=new Color(.06f,.1f,.14f);text.fontSize=15;}
+        return dropdown;
+    }
+    string SettingsDefaultsDescription()=>settingsTab==SettingsTab.Audio?"Master volume: 100%":settingsTab==SettingsTab.UI?"Controller icons: Auto\nTurn order: Top":"Defense timing: Standard\nAutomatic battle camera: On";
     void ResetSettingsCategory()
     {
         if(!resetSettingsPending)return;resetSettingsPending=false;
         if(settingsTab==SettingsTab.Audio){AudioListener.volume=1;PlayerPrefs.SetFloat("PlayerMenu.Volume",1);}
-        else if(settingsTab==SettingsTab.Controls){if(Manager.Input)Manager.Input.ControllerIcons=ControllerIconStyle.Auto;PlayerPrefs.SetInt("PlayerMenu.Icons",0);}
-        else if(settingsTab==SettingsTab.Battle){ApplyAssistance(false);PlayerPrefs.SetInt("PlayerMenu.Assisted",0);PlayerPrefs.SetInt(AutoCameraKey,1);PlayerPrefs.SetInt(OrderTopKey,1);}
+        else if(settingsTab==SettingsTab.UI){if(Manager.Input)Manager.Input.ControllerIcons=ControllerIconStyle.Auto;PlayerPrefs.SetInt("PlayerMenu.Icons",0);PlayerPrefs.SetInt(OrderTopKey,1);}
+        else if(settingsTab==SettingsTab.Battle){ApplyAssistance(false);PlayerPrefs.SetInt("PlayerMenu.Assisted",0);PlayerPrefs.SetInt(AutoCameraKey,1);}
         PlayerPrefs.Save();SettingsRebuild("Restore defaults");
     }
-    void SetVolume(float delta){AudioListener.volume=Mathf.Clamp01(Mathf.Round((AudioListener.volume+delta)*100)/100);PlayerPrefs.SetFloat("PlayerMenu.Volume",AudioListener.volume);PlayerPrefs.Save();SettingsRebuild(delta<0?"Volume -":"Volume +");}
     void RestoreSettingsSelection()
-    {var button=buttons.Find(b=>b&&b.IsInteractable()&&settingsSelection!=null&&b.name.StartsWith(settingsSelection));if(button)events.SetSelectedGameObject(button.gameObject);}
+    {
+        if(settingsSelection==null)return;
+        foreach(var control in body.GetComponentsInChildren<Selectable>())if(control.IsInteractable()&&control.name.StartsWith(settingsSelection)){events.SetSelectedGameObject(control.gameObject);return;}
+    }
     void BeginDisplayChange()
     {
-        if(!pendingFullscreen.HasValue||pendingFullscreen==Screen.fullScreen)return;
-        displayPreview.Begin(Screen.fullScreen,pendingFullscreen.Value,Time.realtimeSinceStartup);
-        Screen.fullScreen=displayPreview.Requested;SettingsRebuild("Revert display settings");
+        if(!pendingFullscreen.HasValue||pendingFullscreen==Screen.fullScreenMode)return;
+        previousDisplayMode=Screen.fullScreenMode;requestedDisplayMode=pendingFullscreen.Value;
+        displayPreview.Begin(false,true,Time.realtimeSinceStartup);
+        if(!Application.isEditor)Screen.fullScreenMode=requestedDisplayMode;SettingsRebuild("Revert display settings");
     }
     void KeepDisplayChange()
     {
         if(!displayPreview.Active)return;
         if(displayPreview.Expired(Time.realtimeSinceStartup)){CancelDisplayChange();SettingsRebuild("Display mode");return;}
-        RememberBool(FullscreenKey,displayPreview.Requested);displayPreview.End();pendingFullscreen=null;SettingsRebuild("Display mode");
+        PlayerPrefs.SetInt(DisplayModeKey,(int)requestedDisplayMode);PlayerPrefs.Save();displayPreview.End();pendingFullscreen=null;SettingsRebuild("Display mode");
     }
     void CancelDisplayChange()
-    {if(displayPreview.Active){Screen.fullScreen=displayPreview.Original;displayPreview.End();}pendingFullscreen=null;}
+    {if(displayPreview.Active){if(!Application.isEditor)Screen.fullScreenMode=previousDisplayMode;displayPreview.End();}pendingFullscreen=null;}
     void UpdateDisplayCountdown(){if(displayCountdown)displayCountdown.text=$"Keep this display mode?\nReverting in {Mathf.CeilToInt(Mathf.Max(0,displayPreview.Deadline-Time.realtimeSinceStartup))} seconds";}
     void TickDisplayPreview()
     {

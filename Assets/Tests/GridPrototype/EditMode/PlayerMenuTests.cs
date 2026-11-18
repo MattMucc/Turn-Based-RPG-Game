@@ -69,6 +69,7 @@ public class PlayerMenuTests
             AudioListener.volume=volume;PlayerPrefs.Save();
         }
     }
+    TMP_Dropdown Dropdown(string name)=>menu.GetComponentsInChildren<TMP_Dropdown>().First(d=>d.name==name);
     [Test] public void SystemCombinesDestinationsAndCancelsPendingSettingsOnTabChange()
     {
         Open();Find("System").onClick.Invoke();
@@ -77,28 +78,28 @@ public class PlayerMenuTests
         Assert.IsFalse(shell.Find("Selected member").gameObject.activeSelf);
         Assert.AreEqual("System",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
         bool screen=Screen.fullScreen;
-        Find("Display").onClick.Invoke();Find("Display mode").onClick.Invoke();
+        Find("Graphics").onClick.Invoke();Dropdown("Display mode").value=(Dropdown("Display mode").value+1)%3;
         Find("Save / Load").onClick.Invoke();Assert.AreEqual(screen,Screen.fullScreen);
         Assert.IsNull(menuType.GetField("pendingFullscreen",Hidden).GetValue(menu));
         Assert.IsNotNull(Find("Save Game"));Assert.IsNotNull(Find("Load Last Checkpoint"));
-        Find("Settings").onClick.Invoke();Assert.IsFalse(Find("Apply display change").interactable);
+        Find("Graphics").onClick.Invoke();Assert.IsFalse(Find("Apply display change").interactable);
         Find("Audio").onClick.Invoke();Find("Restore defaults").onClick.Invoke();
-        Find("Save / Load").onClick.Invoke();Find("Settings").onClick.Invoke();
+        Find("Save / Load").onClick.Invoke();Find("Audio").onClick.Invoke();
         Assert.IsFalse((bool)menuType.GetField("resetSettingsPending",Hidden).GetValue(menu));
-        Assert.IsNotNull(Find("Volume -"));
+        Assert.IsNotNull(menu.GetComponentInChildren<Slider>());
         Page("Party");Assert.IsTrue(shell.Find("Selected member").gameObject.activeSelf);
     }
     [Test] public void SettingsVolumeRetainsFocusAndDefaultsRequireConfirmation()
     {
         WithSettingsSnapshot(()=>{
             Open();Page("Settings");Find("Audio").onClick.Invoke();AudioListener.volume=.5f;
-            Find("Volume -").onClick.Invoke();Assert.AreEqual(.45f,AudioListener.volume,.001f);Assert.AreEqual(.45f,PlayerPrefs.GetFloat("PlayerMenu.Volume"),.001f);
+            menu.GetComponentInChildren<Slider>().value=45;Assert.AreEqual(.45f,AudioListener.volume,.001f);Assert.AreEqual(.45f,PlayerPrefs.GetFloat("PlayerMenu.Volume"),.001f);Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="Master Volume: 45%"));
             var events=(UnityEngine.EventSystems.EventSystem)menuType.GetField("events",Hidden).GetValue(menu);
-            Assert.AreEqual("Volume -",events.currentSelectedGameObject.name);
+            Assert.IsNotNull(menu.GetComponentInChildren<Slider>());
             Find("Restore defaults").onClick.Invoke();Assert.AreEqual(.45f,AudioListener.volume,.001f);
             Find("Cancel defaults").onClick.Invoke();Assert.AreEqual(.45f,AudioListener.volume,.001f);
             Find("Restore defaults").onClick.Invoke();Find("Confirm defaults").onClick.Invoke();Assert.AreEqual(1,AudioListener.volume);
-            Find("Volume +").onClick.Invoke();Assert.AreEqual(1,AudioListener.volume);
+            menu.GetComponentInChildren<Slider>().value=100;Assert.AreEqual(1,AudioListener.volume);
         });
     }
     [Test] public void SettingsBattleAppliesToWholeRosterAndSavedPreferencesReload()
@@ -107,12 +108,15 @@ public class PlayerMenuTests
             PlayerPrefs.SetInt("PlayerMenu.Assisted",0);PlayerPrefs.SetInt("PlayerMenu.AutoCamera",1);PlayerPrefs.SetInt("PlayerMenu.OrderTop",1);
             Open();Page("Settings");Find("Battle").onClick.Invoke();Find("Defense timing").onClick.Invoke();
             foreach(var member in party.Concat(reserves))Assert.IsTrue(member.GetComponent<DefensePrototypeSettings>().Assisted);
-            Find("Automatic battle camera").onClick.Invoke();Find("Turn order").onClick.Invoke();
+            Find("Automatic battle camera").onClick.Invoke();Find("UI").onClick.Invoke();
+            CollectionAssert.AreEqual(new[]{"Auto","Xbox","PlayStation","Keyboard"},Dropdown("Controller icons").options.Select(o=>o.text).ToArray());
+            Dropdown("Controller icons").value=3;Assert.AreEqual(3,PlayerPrefs.GetInt("PlayerMenu.Icons"));
+            Dropdown("Turn order").value=1;
             Assert.AreEqual(0,PlayerPrefs.GetInt("PlayerMenu.AutoCamera"));Assert.AreEqual(0,PlayerPrefs.GetInt("PlayerMenu.OrderTop"));
             foreach(var member in party.Concat(reserves))member.GetComponent<DefensePrototypeSettings>().Assisted=false;
             menuType.GetMethod("ApplySavedMenuSettings",Hidden).Invoke(menu,null);
             foreach(var member in party.Concat(reserves))Assert.IsTrue(member.GetComponent<DefensePrototypeSettings>().Assisted);
-            Find("Restore defaults").onClick.Invoke();Find("Confirm defaults").onClick.Invoke();
+            Find("Restore defaults").onClick.Invoke();Find("Confirm defaults").onClick.Invoke();Find("Battle").onClick.Invoke();Find("Restore defaults").onClick.Invoke();Find("Confirm defaults").onClick.Invoke();
             foreach(var member in party.Concat(reserves))Assert.IsFalse(member.GetComponent<DefensePrototypeSettings>().Assisted);
             Assert.AreEqual(1,PlayerPrefs.GetInt("PlayerMenu.AutoCamera"));Assert.AreEqual(1,PlayerPrefs.GetInt("PlayerMenu.OrderTop"));
         });
@@ -120,8 +124,9 @@ public class PlayerMenuTests
     [Test] public void DisplaySelectionIsStagedAndBackDoesNotChangeTheScreen()
     {
         WithSettingsSnapshot(()=>{
-            bool original=Screen.fullScreen;Open();Page("Settings");Find("Display").onClick.Invoke();
-            Find("Display mode").onClick.Invoke();Assert.AreEqual(original,Screen.fullScreen);Assert.IsTrue(Find("Apply display change").interactable);
+            bool original=Screen.fullScreen;Open();Page("Settings");Find("Graphics").onClick.Invoke();
+            CollectionAssert.AreEqual(new[]{"Windowed","Borderless","Fullscreen"},Dropdown("Display mode").options.Select(o=>o.text).ToArray());
+            Dropdown("Display mode").value=(Dropdown("Display mode").value+1)%3;Assert.AreEqual(original,Screen.fullScreen);Assert.IsTrue(Find("Apply display change").interactable);
             menuType.GetMethod("Back").Invoke(menu,null);Assert.AreEqual(original,Screen.fullScreen);Assert.IsFalse(Find("Apply display change").interactable);
             // Validate the deadline independently; never exercise Screen setters in editor tests.
             var preview=new DisplayChangePreview();preview.Begin(false,true,100);
@@ -328,14 +333,14 @@ public class PlayerMenuTests
         var service=(Component)managerType.GetProperty("Saves").GetValue(manager);service.GetType().GetField("store",Hidden).SetValue(service,store);
         var battleType=Type.GetType("BattleManager, Assembly-CSharp",true);var singleton=battleType.GetField("<Instance>k__BackingField",BindingFlags.Static|BindingFlags.NonPublic);var previous=singleton.GetValue(null);
         try{
-            Open();Page("Saves");Assert.IsFalse(Find("Load Last Checkpoint").interactable);Find("Save Game").onClick.Invoke();Find("Save slot 1").onClick.Invoke();
+            Open();Page("Saves");Assert.IsFalse(Find("Load Last Checkpoint").interactable);Find("Save Game").onClick.Invoke();Assert.IsNotNull(Find("Save slot 20"));Find("Save slot 1").onClick.Invoke();
             Assert.IsNotNull(Find("Confirm overwrite"));Find("Cancel save/load").onClick.Invoke();Assert.AreEqual("Test captain",store.Read(0,out _).CaptainName);
-            menuType.GetMethod("Back").Invoke(menu,null);Find("Load Game").onClick.Invoke();Find("Load slot 1").onClick.Invoke();Assert.IsNotNull(Find("Confirm load"));menuType.GetMethod("Back").Invoke(menu,null);
+            menuType.GetMethod("Back").Invoke(menu,null);Find("Load Game").onClick.Invoke();Assert.AreEqual(1,menu.GetComponentsInChildren<Button>().Count(b=>b.name.StartsWith("Load slot ")));Find("Load slot 1").onClick.Invoke();Assert.IsNotNull(Find("Confirm load"));menuType.GetMethod("Back").Invoke(menu,null);
             var active=service.GetType().GetField("<ActiveSlot>k__BackingField",Hidden);
             var checkpointA=new GameSaveData{Scene=saved.Scene,CaptainName="Checkpoint A",Inventory=new PartyInventory()};checkpointA.Characters.Add(new SavedCharacter{Id="test"});
             saved.CheckpointPayload=SaveFileStore.Encode(checkpointA);store.Write(0,SaveFileStore.Encode(saved),true);
             saved.CheckpointPayload=null;store.Write(1,SaveFileStore.Encode(saved),false);
-            store.Write(3,SaveFileStore.Encode(checkpointA),false);
+            store.Write(SaveFileStore.CheckpointSlot,SaveFileStore.Encode(checkpointA),false);
             active.SetValue(service,0);
             object[] arguments={false};var read=service.GetType().GetMethod("ReadCheckpoint");
             Assert.AreEqual("Checkpoint A",((GameSaveData)read.Invoke(service,arguments)).CaptainName);
@@ -354,7 +359,7 @@ public class PlayerMenuTests
         var checkpoint=Make("Checkpoint UI test").AddComponent(Type.GetType("SaveCheckpoint, Assembly-CSharp",true));
         menuType.GetMethod("OpenCheckpoint").Invoke(menu,new object[]{checkpoint});Find("Rest").onClick.Invoke();Assert.IsNotNull(Find("Confirm rest"));
         Assert.AreEqual(0,party[0].StoredHealth);Find("Cancel rest").onClick.Invoke();Find("Save").onClick.Invoke();
-        Assert.IsNotNull(Find("Save slot 3"));Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name.StartsWith("Load slot")));Assert.AreEqual(0,party[0].StoredHealth);
+        Assert.IsNotNull(Find("Save slot 20"));Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name.StartsWith("Load slot")));Assert.AreEqual(0,party[0].StoredHealth);
         menuType.GetMethod("Back").Invoke(menu,null);Find("Leave").onClick.Invoke();Assert.IsFalse((bool)menuType.GetProperty("IsOpen").GetValue(menu));
     }
     [Test] public void RestRecoversReservesResetsOnlyRoamingAndRestoresExactSavedComposition()
@@ -668,12 +673,15 @@ public class PlayerMenuTests
         var slot=(RectTransform)Find("Weapon").transform;Assert.AreEqual(slot.rect.width,slot.rect.height);
         Assert.IsTrue(menu.GetComponentsInChildren<RawImage>().Any(i=>i.name=="Equipped character"));
         Find("Weapon").onClick.Invoke();
+        menuType.GetMethod("UpdateMenuInteractionState",Hidden).Invoke(menu,null);
+        Assert.IsTrue(Find("Cancel").IsInteractable());Assert.IsTrue(Find("Party sword").IsInteractable());
+        Find("Cancel").onClick.Invoke();Assert.IsNull(menuType.GetField("partyModal",Hidden).GetValue(menu));Find("Weapon").onClick.Invoke();
         Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name.StartsWith("Party bow")));
         Find("Party sword").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
         Find("Back").onClick.Invoke();Assert.IsNotNull(menuType.GetField("partyModal",Hidden).GetValue(menu));
         Find("Party sword").onClick.Invoke();Find("Confirm equip").onClick.Invoke();Assert.AreEqual("party-sword",profile.InstanceAt(EquipmentSlot.Weapon));
         Assert.AreEqual("Party",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
-        Find("Weapon").onClick.Invoke();Find("Unequip").onClick.Invoke();Find("Confirm unequip").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
+        Find("Weapon").onClick.Invoke();menuType.GetMethod("UpdateMenuInteractionState",Hidden).Invoke(menu,null);Assert.IsTrue(Find("Unequip").IsInteractable());Find("Unequip").onClick.Invoke();Find("Confirm unequip").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
     }
     [Test] public void CaptainSelectionReordersOnlyActiveParty()
     {

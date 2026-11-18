@@ -6,7 +6,7 @@ using UnityEngine.InputSystem.DualShock;
 using UnityEngine.UI;
 using UnityEngine.Sprites;
 
-public enum ControllerIconStyle { Auto, Xbox, PlayStation }
+public enum ControllerIconStyle { Auto, Xbox, PlayStation, Keyboard }
 
 // Shared, build-safe sprite catalogue. Native device layouts take priority over product names.
 public sealed class ControllerGlyphs : ScriptableObject
@@ -26,6 +26,11 @@ public sealed class ControllerGlyphs : ScriptableObject
         if (pad is DualShockGamepad) return true;
         string identity = (pad.layout + " " + pad.description.product + " " + pad.description.manufacturer).ToLowerInvariant();
         return identity.Contains("dualsense") || identity.Contains("dualshock") || identity.Contains("sony") || identity.Contains("playstation");
+    }
+    public static bool ShowController(PlayerInputReader source)
+    {
+        if(!source)return false;
+        return source.ControllerIcons==ControllerIconStyle.Auto ? source.CurrentScheme==PlayerInputReader.ControlScheme.Gamepad : source.ControllerIcons!=ControllerIconStyle.Keyboard;
     }
     public static bool PlayStation
     {

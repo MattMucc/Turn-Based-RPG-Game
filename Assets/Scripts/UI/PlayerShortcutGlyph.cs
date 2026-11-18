@@ -12,7 +12,7 @@ public sealed class PlayerShortcutGlyph : MonoBehaviour
     { slot=index;key=keyImage;trigger=triggerImage;plus=separator;fallback=fallbackText;Refresh(false); }
     void Update()
     {
-        bool controller=GameManager.Instance && GameManager.Instance.Input && GameManager.Instance.Input.CurrentScheme==PlayerInputReader.ControlScheme.Gamepad;
+        bool controller=GameManager.Instance && GameManager.Instance.Input && ControllerGlyphs.ShowController(GameManager.Instance.Input);
         if(!initialized||controller!=previousController||ControllerGlyphs.PlayStation!=previousSony)Refresh(controller);
     }
     public void Refresh(bool controller)

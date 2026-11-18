@@ -276,7 +276,7 @@ public sealed partial class BattleHud : MonoBehaviour
         if (inspectionLayer.gameObject.activeSelf) CloseInspection();
         var qte = battle.CurrentQte;
         bool controller = GameManager.Instance && GameManager.Instance.Input
-            && GameManager.Instance.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad;
+            && ControllerGlyphs.ShowController(GameManager.Instance.Input);
         bool dual = qte != null && qte.Mode == QteMode.DualInput;
         bool sequence = qte != null && qte.Mode == QteMode.FixedSequence;
         bool mash = qte != null && qte.Mode == QteMode.RepeatedTap;
@@ -408,7 +408,7 @@ public sealed partial class BattleHud : MonoBehaviour
         if (!battle.DefenseActive) return;
         if (inspectionLayer.gameObject.activeSelf) CloseInspection();
         defenseCaption.text = battle.DefenseCaption;
-        bool controller = GameManager.Instance && GameManager.Instance.Input && GameManager.Instance.Input.CurrentScheme == PlayerInputReader.ControlScheme.Gamepad;
+        bool controller = GameManager.Instance && GameManager.Instance.Input && ControllerGlyphs.ShowController(GameManager.Instance.Input);
         defensePrompt.text = controller ? ControllerGlyphs.PlayStation ? "Circle: Dodge   |   R1: Parry" : "B: Dodge   |   RB: Parry" : "Space: Dodge   |   R: Parry";
         defenseResult.text = battle.DefenseFeedback;
         var hit = battle.CurrentImpact;

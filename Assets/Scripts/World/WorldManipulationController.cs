@@ -217,7 +217,7 @@ public sealed class WorldManipulationController : MonoBehaviour
         help=Label("Controls",panel,new Vector2(12,-36),new Vector2(368,76),12);
         status=Label("Feedback",panel,new Vector2(12,-116),new Vector2(368,46),13);
         restoreButton=MakeButton(panel,"Restore",12,Restore);modeButton=MakeButton(panel,"Mode",106,ToggleMode);dismissButton=MakeButton(panel,"Dismiss",200,Dismiss);MakeButton(panel,"Close",294,Close);
-        RefreshButtonIcons(Manager && Manager.Input && Manager.Input.CurrentScheme==PlayerInputReader.ControlScheme.Gamepad);
+        RefreshButtonIcons(Manager && ControllerGlyphs.ShowController(Manager.Input));
         cursorRect=Rect("Controller cursor",ui.transform,Vector2.zero,new Vector2(10,10));cursorRect.pivot=new Vector2(.5f,.5f);var image=cursorRect.gameObject.AddComponent<Image>();image.color=Color.white;image.raycastTarget=false;
     }
     void OnDisable()=>Close();
