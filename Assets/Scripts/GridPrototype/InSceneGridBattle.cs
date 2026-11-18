@@ -578,6 +578,7 @@ namespace Game.GridPrototype
         }
         private IEnumerator ResolveHits(List<List<BattleTarget>> batches, List<Vector2Int> cells, int damage, bool sequential, BattleActionOption action)
         {
+            bool anyHitLanded=false;
             var masteryWeapon=IsAlly(actorIndex)?actors[actorIndex].GetComponent<CharacterEquipment>()?.Weapon:null;
             int previousMasteryLevel=WeaponMastery.Level(masteryWeapon);
             var mastery=new WeaponMasteryUse(masteryWeapon,action);
@@ -598,6 +599,7 @@ namespace Game.GridPrototype
                         int barrier = victim.Barrier;
                         int magicBefore = victim.MagicPoints;
                         bool landed = action.ApplyHit(Active, victim, damage, UnityEngine.Random.value, UnityEngine.Random.value, out int dealt);
+                        anyHitLanded |= landed;
                         if (action.Effect == ActionEffect.Damage) Feedback(target, landed, dealt, barrier - victim.Barrier, victim.EffectiveBlock);
                         else if (action.Effect == ActionEffect.Heal) {
                             RecentHitFeedback = target.Name + $": +{-dealt} HP healed"; RecentHitFeedbackUntil = Time.unscaledTime + 2;
@@ -613,6 +615,7 @@ namespace Game.GridPrototype
                     else if (action.Effect == ActionEffect.Push) TryPush(target);
                     else if (action.Effect == ActionEffect.Damage && CombatMath.Roll(action.HitChance, UnityEngine.Random.value))
                     {
+                        anyHitLanded=true;
                         target.Destructible.TakeDamage(CombatMath.Damage(Active, new GridUnit("Scenery", Vector2Int.zero), damage, action.DamageType, action.Scaling, action.StatScaling));
                         var effects=target.Transform.GetComponent<BattleObjectStatus>();
                         if(effects && target.Alive && CombatMath.Roll(action.StatusChance,UnityEngine.Random.value))effects.ApplyStatus(action.InflictedStatus,action.StatusStacks);
@@ -624,7 +627,7 @@ namespace Game.GridPrototype
                 if (sequential) yield return new WaitForSeconds(0.4f);
             }
             if (!sequential) yield return new WaitForSeconds(0.4f);
-            action.CompleteResourceRecovery(Active);
+            if(action.Category!=BattleActionCategory.Attack || anyHitLanded)action.CompleteResourceRecovery(Active);
             int masteryGain=mastery.Complete(Active);
             int spellGain=spellMastery.Complete();
             if(spellGain>0){RecentHitFeedback+=$"\n{SpellDefinition.Find(action.SpellId).DisplayName}: +{spellGain} mastery XP";RecentHitFeedbackUntil=Time.unscaledTime+3;}
@@ -715,7 +718,7 @@ namespace Game.GridPrototype
                 int damage = impact.Damage(rawDamage, false, eligible);
                 var result = impact.ForTarget(eligible);
                 perfectParries &= result == DefenseResult.Parried;
-                if(enemyBasicAttack && !enemyAttackRewarded)
+                if(enemyBasicAttack && !enemyAttackRewarded && result!=DefenseResult.Dodged && result!=DefenseResult.Parried)
                 { var attacker=turnOrder[DefenseAttackerIndex];attacker.RestoreActionPoints(attacker.AttackActionPointGain); enemyAttackRewarded=true; }
                 int barrierBeforeHit = defender.Barrier;
                 damage = defender.TakeDamage(damage);

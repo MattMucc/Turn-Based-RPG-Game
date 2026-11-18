@@ -27,7 +27,8 @@ public sealed partial class BattleHud : MonoBehaviour
     private int targetDismissVersion;
     private TMP_Text damagePreview;
     private TMP_Text examineText, layoutLabel, cameraLabel, targetName, targetHealth, targetShieldText;
-    private RectTransform targetShield, targetShieldFill;
+    private RectTransform targetShield, targetShieldFill, targetMana, targetManaFill;
+    private TMP_Text targetManaText;
     private RectTransform targetPanel, targetFill, defensePanel, defenseMarker, impactLine, dodgeWindow, parryWindow;
     private TMP_Text defenseCaption, defensePrompt, defenseResult, assistanceLabel;
     private RectTransform qteLayer, qtePrompt, qteFill;
@@ -193,10 +194,16 @@ public sealed partial class BattleHud : MonoBehaviour
         var fill = targetFill.gameObject.AddComponent<Image>(); fill.color = new Color(0.75f, 0.12f, 0.1f); fill.raycastTarget = false;
         targetHealth = Text(track, 12);
         targetShield = MakeShield(targetPanel, 22, 10, out targetShieldFill, out targetShieldText);
-        var resources=Rect("Target resources",targetPanel);resources.anchorMin=resources.anchorMax=new Vector2(.5f,0);resources.anchoredPosition=new Vector2(0,-18);resources.sizeDelta=new Vector2(380,24);
+        targetMana=Rect("Target mana",targetPanel);targetMana.anchorMin=Vector2.zero;targetMana.anchorMax=new Vector2(1,0);
+        targetMana.offsetMin=new Vector2(0,-13);targetMana.offsetMax=new Vector2(0,-2);
+        var manaBack=targetMana.gameObject.AddComponent<Image>();manaBack.color=new Color(.03f,.06f,.12f);manaBack.raycastTarget=false;
+        targetManaFill=Rect("Mana remaining",targetMana);Stretch(targetManaFill);
+        var manaImage=targetManaFill.gameObject.AddComponent<Image>();manaImage.color=new Color(.15f,.4f,.95f);manaImage.raycastTarget=false;
+        targetManaText=Text(targetMana,10);targetManaText.rectTransform.offsetMin=Vector2.zero;targetManaText.rectTransform.offsetMax=Vector2.zero;
+        var resources=Rect("Target resources",targetPanel);resources.anchorMin=resources.anchorMax=new Vector2(.5f,0);resources.anchoredPosition=new Vector2(0,-27);resources.sizeDelta=new Vector2(380,24);
         targetResources=Text(resources,12);targetResources.outlineWidth=.2f;targetResources.outlineColor=Color.black;
         var statusRect = Rect("Target status effects", targetPanel);
-        statusRect.anchorMin = statusRect.anchorMax = new Vector2(.5f,0);statusRect.anchoredPosition=new Vector2(0,-50);statusRect.sizeDelta=new Vector2(280,36);
+        statusRect.anchorMin = statusRect.anchorMax = new Vector2(.5f,0);statusRect.anchoredPosition=new Vector2(0,-56);statusRect.sizeDelta=new Vector2(280,36);
         targetStatuses=statusRect.gameObject.AddComponent<BattleStatusRow>();targetStatuses.Initialize(root,font);
         var previewRect = Rect("Damage preview and mitigation", targetPanel);
         previewRect.anchorMin = previewRect.anchorMax = new Vector2(.5f,0); previewRect.anchoredPosition = new Vector2(0,-94); previewRect.sizeDelta = new Vector2(360,48);
@@ -220,6 +227,8 @@ public sealed partial class BattleHud : MonoBehaviour
         targetFill.parent.gameObject.SetActive(target.HasHealth);
         var info=target.Unit!=null?battle.Info(target.ActorIndex):null;
         targetName.text = target.Name + (info && info.Level>0 ? $"  ·  Lv {info.Level}" : "") + (info && !string.IsNullOrWhiteSpace(info.Race) ? "  ·  "+info.Race : "");
+        targetMana.gameObject.SetActive(target.Unit!=null);
+        if(target.Unit!=null){targetManaFill.anchorMax=new Vector2(target.Unit.MaxMagicPoints>0?(float)target.Unit.MagicPoints/target.Unit.MaxMagicPoints:0,1);targetManaText.text=$"MP {target.Unit.MagicPoints} / {target.Unit.MaxMagicPoints}";}
         targetResources.text=target.Unit==null?"":ResourceLine(target.Unit); targetHealth.text = $"{target.Health} / {target.MaxHealth}";
         targetFill.anchorMax = new Vector2(Mathf.Clamp01(target.Health / (float)Mathf.Max(1, target.MaxHealth)), 1);
     }

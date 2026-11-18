@@ -16,18 +16,18 @@ public sealed partial class BattleHud
     readonly List<ResourceCard> resourceCards=new();
     TMP_Text targetResources;
     int lastControlled=-1;
-    static string ResourceLine(GridUnit unit)=>$"MP {unit.MagicPoints} / {unit.MaxMagicPoints}    AP {unit.ActionPoints} / {GridUnit.MaximumActionPoints}    Move {unit.Movement} / {GridUnit.MaximumMovement}";
+    static string ResourceLine(GridUnit unit)=>$"AP {unit.ActionPoints} / {GridUnit.MaximumActionPoints}    Move {unit.Movement} / {GridUnit.MaximumMovement}";
 
     RectTransform ResourceRect(string name,Transform parent,float y,float height)
     {
         var rect=Rect(name,parent);rect.anchorMin=new Vector2(0,1);rect.anchorMax=Vector2.one;
-        rect.pivot=new Vector2(.5f,1);rect.offsetMin=new Vector2(10,-y-height);rect.offsetMax=new Vector2(-10,-y);return rect;
+        rect.pivot=new Vector2(.5f,1);rect.offsetMin=new Vector2(6,-y-height);rect.offsetMax=new Vector2(-6,-y);return rect;
     }
     RectTransform ResourceBar(string name,Transform parent,float y,Color color,out TMP_Text label)
     {
-        var track=ResourceRect(name,parent,y,14);track.gameObject.AddComponent<Image>().color=new Color(.02f,.03f,.05f);
+        var track=ResourceRect(name,parent,y,10);track.gameObject.AddComponent<Image>().color=new Color(.02f,.03f,.05f);
         var fill=Rect("Fill",track);Stretch(fill);var image=fill.gameObject.AddComponent<Image>();image.color=color;image.raycastTarget=false;
-        label=Text(track,11);return fill;
+        label=Text(track,9);label.rectTransform.offsetMin=Vector2.zero;label.rectTransform.offsetMax=Vector2.zero;return fill;
     }
     void BuildResourceCards()
     {
@@ -37,12 +37,12 @@ public sealed partial class BattleHud
             var card=new ResourceCard{Index=i,Rect=Rect("Party resources",root)};
             card.Rect.anchorMin=card.Rect.anchorMax=new Vector2(1,0);card.Rect.pivot=new Vector2(1,0);
             card.Rect.gameObject.AddComponent<Image>().color=Dark;
-            card.Name=Text(ResourceRect("Name and level",card.Rect,4,20),14);card.Name.alignment=TextAlignmentOptions.MidlineLeft;
-            card.Health=ResourceBar("Health",card.Rect,27,new Color(.75f,.12f,.1f),out card.HealthText);
-            card.Mana=ResourceBar("Mana",card.Rect,44,new Color(.2f,.4f,.9f),out card.ManaText);
-            card.Resources=Text(ResourceRect("AP and movement",card.Rect,60,20),12);
-            var status=ResourceRect("Statuses",card.Rect,88,30);
-            card.Statuses=status.gameObject.AddComponent<BattleStatusRow>();card.Statuses.Initialize(root,font);
+            card.Name=Text(ResourceRect("Name and level",card.Rect,2,16),11);card.Name.alignment=TextAlignmentOptions.MidlineLeft;card.Name.overflowMode=TextOverflowModes.Ellipsis;card.Name.textWrappingMode=TextWrappingModes.NoWrap;
+            card.Health=ResourceBar("Health",card.Rect,20,new Color(.75f,.12f,.1f),out card.HealthText);
+            card.Mana=ResourceBar("Mana",card.Rect,32,new Color(.2f,.4f,.9f),out card.ManaText);
+            card.Resources=Text(ResourceRect("AP and movement",card.Rect,44,16),10);
+            var status=ResourceRect("Statuses",card.Rect,61,16);
+            card.Statuses=status.gameObject.AddComponent<BattleStatusRow>();card.Statuses.Initialize(root,font);card.Statuses.IconSize=16;
             resourceCards.Add(card);
         }
     }
@@ -56,7 +56,7 @@ public sealed partial class BattleHud
         {
             var card=resourceCards[n];var unit=battle.Combatants[card.Index];var info=battle.Info(card.Index);
             bool expanded=card.Index==emphasized;
-            card.Rect.anchoredPosition=new Vector2(-12,bottom);card.Rect.sizeDelta=new Vector2(expanded?340:280,expanded?124:114);bottom+=expanded?130:120;
+            card.Rect.anchoredPosition=new Vector2(-12,bottom);card.Rect.sizeDelta=new Vector2(expanded?220:190,80);bottom+=85;
             card.Rect.GetComponent<Image>().color=expanded?new Color(.07f,.19f,.25f,.97f):Dark;
             card.Name.text=$"{battle.DisplayName(card.Index)}  ·  Lv {(info?info.Level:1)}";
             card.Health.anchorMax=new Vector2(unit.MaxHealth>0?(float)unit.Health/unit.MaxHealth:0,1);

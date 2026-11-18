@@ -60,6 +60,17 @@ public class BattleActionTests
         battle.AdvanceDefense(10);Assert.AreEqual(before+gain,unit.ActionPoints);
         battle.AdvanceDefense(10);Assert.AreEqual(before+gain,unit.ActionPoints);
     }
+    [TestCase(true,false)]
+    [TestCase(false,true)]
+    public void AvoidedEnemyBasicAttackDoesNotRecoverAP(bool dodge,bool parry)
+    {
+        var unit=battle.Combatants[1];int before=unit.ActionPoints;
+        var sequence=BeginEnemySequence(false);battle.AdvanceFacing(1);
+        if(battle.CurrentImpact==null)Assert.IsTrue(sequence.MoveNext());
+        battle.AdvanceDefense(battle.CurrentImpact.Duration-.05f);
+        battle.AdvanceDefense(0,dodge,parry);battle.AdvanceDefense(1);
+        Assert.AreEqual(before,unit.ActionPoints);
+    }
     [Test] public void ResourceHudShowsLivePartyAndHoveredEnemyValuesWithoutSettingsButtons()
     {
         var root=Create("Resource HUD");root.AddComponent<RectTransform>();
@@ -71,7 +82,13 @@ public class BattleActionTests
         battle.TargetFocus.Pin(battle.Targetables[1]);
         type.GetMethod("Render").Invoke(hud,null);
         Assert.IsTrue(party.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("AP 2 / 9")&&t.text.Contains("Move 2 / 10")));
-        Assert.IsTrue(root.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("AP 3 / 9")&&t.text.Contains("MP")));
+        Assert.IsTrue(root.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("AP 3 / 9")));
+        Assert.LessOrEqual(((RectTransform)party).rect.width,220);Assert.AreEqual(80,((RectTransform)party).rect.height);
+        var mana=(RectTransform)root.transform.Find("Hovered or pinned target/Target mana");
+        Assert.IsNotNull(mana);Assert.IsTrue(mana.gameObject.activeSelf);
+        battle.Combatants[1].InitializeMagicPoints(24,12);type.GetMethod("Render").Invoke(hud,null);
+        Assert.AreEqual(.5f,((RectTransform)mana.Find("Mana remaining")).anchorMax.x,.001f);
+        Assert.IsTrue(mana.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="MP 12 / 24"));
         Assert.IsTrue(battle.Info(1).Details(battle.Combatants[1],"Enemy").Contains("Movement"));
     }
     [TestCase(100,false,1)]
@@ -180,17 +197,19 @@ public class BattleActionTests
         while (sequence.MoveNext()) { }
         Assert.AreEqual(0, unit.ActionPoints); Assert.AreEqual(3, unit.Movement);
     }
-    [Test] public void MultiHitBasicAttackRecoversOnePointOnlyAfterAllHits()
+    [TestCase(0,0)]
+    [TestCase(100,1)]
+    public void MultiHitBasicAttackRecoversOnlyWhenAtLeastOneHitLands(int hitChance,int recovery)
     {
         var unit = battle.Combatants[battle.CurrentActorIndex];
-        var attack = new BattleActionOption { Name = "Test attack", Pattern = BattleTargetPattern.Multiple, MaxTargets = 3, Damage = 0, HitChance = 0 };
+        var attack = new BattleActionOption { Name = "Test attack", Pattern = BattleTargetPattern.Multiple, MaxTargets = 3, Damage = 0, HitChance = hitChance };
         battle.Loadout.Options.Add(attack);
         Assert.IsTrue(battle.ChooseAction(attack));
         for (int i = 0; i < 3; i++) Assert.IsTrue(battle.ToggleTarget(unit.Position));
         Assert.IsTrue(battle.TryPrepareAction(out var sequence)); Assert.AreEqual(4, unit.ActionPoints);
         Assert.IsTrue(sequence.MoveNext()); Assert.AreEqual(4, unit.ActionPoints);
         while (sequence.MoveNext()) { }
-        Assert.AreEqual(5, unit.ActionPoints);
+        Assert.AreEqual(4+recovery, unit.ActionPoints);
     }
     [Test] public void DetailsMatchDamageCalculationWithoutActionCostOrSingleHitSuffix()
     {
