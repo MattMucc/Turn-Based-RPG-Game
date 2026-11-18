@@ -150,9 +150,13 @@ public class PlayerMenuTests
         Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Locked sweep"));
         Assert.IsFalse(loadout.Options.Any(a=>a.Name=="Locked sweep"));
         Assert.AreEqual(0,inventory.Owned[0].MasteryExperience);
-        Find("Locked sweep · Unlocked").onClick.Invoke();
+        Assert.AreEqual(1,menu.GetComponentsInChildren<Button>().Count(b=>b.name.StartsWith("Locked sweep")));
+        Assert.IsFalse(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains(" · Copy ")));
+        equipment.ApplySlot(EquipmentSlot.Weapon,"mastered");Page("Abilities");
+        Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Locked sweep · Locked"));
+        Find("Locked sweep").onClick.Invoke();
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Weapon XP 10 / 10")));
-        Assert.AreEqual("new",equipment.InstanceAt(EquipmentSlot.Weapon));
+        Assert.AreEqual("mastered",equipment.InstanceAt(EquipmentSlot.Weapon));
     }
     [Test] public void CombinedAbilityWorkspaceSearchesLargeSpellCollectionAndKeepsFourSlots()
     {
@@ -170,11 +174,11 @@ public class PlayerMenuTests
     }
     [Test] public void CombinedAbilityShortcutsConfirmCancelClearAndKeepSharedItems()
     {
-        Open();Page("Abilities");Find("Strike · Unlocked").onClick.Invoke();var loadout=party[0].GetComponent<BattleActionLoadout>();
+        Open();Page("Abilities");Find("Strike").onClick.Invoke();var loadout=party[0].GetComponent<BattleActionLoadout>();
         Find("Shortcut 4").onClick.Invoke();Assert.IsNull(loadout.Favorite(BattleActionCategory.Attack,3));Find("Cancel").onClick.Invoke();
         Find("Shortcut 4").onClick.Invoke();Find("Confirm shortcut").onClick.Invoke();Assert.AreEqual("Strike",loadout.Favorite(BattleActionCategory.Attack,3).Name);
         Find("Shortcut 4").onClick.Invoke();Find("Clear slot").onClick.Invoke();Assert.IsNull(loadout.Favorite(BattleActionCategory.Attack,3));
-        Find("Items").onClick.Invoke();Find("Mana Potion · Unlocked").onClick.Invoke();Find("Shortcut 4").onClick.Invoke();Find("Confirm shortcut").onClick.Invoke();
+        Find("Items").onClick.Invoke();Find("Mana Potion").onClick.Invoke();Find("Shortcut 4").onClick.Invoke();Find("Confirm shortcut").onClick.Invoke();
         Assert.AreEqual("Mana Potion",loadout.Favorite(BattleActionCategory.Item,3).Name);
         Assert.AreEqual(3,((PartyInventory)managerType.GetField("Inventory").GetValue(manager)).Count("mana-potion"));
     }
@@ -660,7 +664,10 @@ public class PlayerMenuTests
         var gear=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var sword=EquipmentAsset("Party sword");var bow=EquipmentAsset("Party bow",EquipmentKind.Weapon,WeaponType.Bow);
         gear.Owned.Add(new OwnedEquipment{InstanceId="party-sword",Definition=sword});gear.Owned.Add(new OwnedEquipment{InstanceId="party-bow",Definition=bow});
         var profile=party[0].gameObject.AddComponent<CharacterEquipment>();profile.AllowedWeaponTypes=new[]{WeaponType.Shortsword};
-        Open();Find("Equipment").onClick.Invoke();Find("Weapon").onClick.Invoke();
+        Open();Find("Equipment").onClick.Invoke();
+        var slot=(RectTransform)Find("Weapon").transform;Assert.AreEqual(slot.rect.width,slot.rect.height);
+        Assert.IsTrue(menu.GetComponentsInChildren<RawImage>().Any(i=>i.name=="Equipped character"));
+        Find("Weapon").onClick.Invoke();
         Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name.StartsWith("Party bow")));
         Find("Party sword").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));
         Find("Back").onClick.Invoke();Assert.IsNotNull(menuType.GetField("partyModal",Hidden).GetValue(menu));

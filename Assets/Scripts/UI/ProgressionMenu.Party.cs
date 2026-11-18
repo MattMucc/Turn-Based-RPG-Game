@@ -215,20 +215,25 @@ public sealed partial class ProgressionMenu
     {
         Manager.BindEquipment(); var profile = Member.GetComponent<CharacterEquipment>();
         if (!profile) { ShowMember(Member); Label(Rect("No equipment", partyContent, 0, 0, partyContent.rect.width, 60), "No equipment slots available."); return; }
-        InventoryEntries(); float width = partyContent.rect.width, cardWidth = (width - 12) / 2;
-        int i = 0;
+        InventoryEntries(); float width=partyContent.rect.width;
+        float size=Mathf.Clamp(width*.19f,60,88), centerWidth=Mathf.Max(80,width-2*size-32);
+        var picture=Rect("Equipped character",partyContent,size+16,20,centerWidth,260).gameObject.AddComponent<RawImage>();
+        picture.texture=Portrait(Member);picture.raycastTarget=false;
         foreach (EquipmentSlot slot in Enum.GetValues(typeof(EquipmentSlot)))
         {
-            var currentSlot = slot; var copy = profile.CopyAt(slot); var item = copy?.Definition;
-            var button = Button(partyContent, SlotName(slot), (i % 2) * (cardWidth + 12), (i / 2) * 144, cardWidth,
-                () => OpenPartyEquipmentPicker(currentSlot), () => { equipmentSlot = currentSlot; PreviewEquipment(profile.InstanceAt(currentSlot)); }, 132);
-            if (copy != null) DrawInventoryIcon(button.transform, inventoryEquipment.First(p => p.Value == copy).Key, 12, 48, 40);
-            Label(Rect("Equipped item", button.transform, 64, 48, cardWidth - 76, 68), item ? item.DisplayName + $"\n<size=12>Upgrade +{copy.UpgradeLevel}</size>" : "Empty", 15);
-            var pointer = button.gameObject.AddComponent<PlayerInventoryPointer>();
-            pointer.Context = () => OpenPartyEquipmentActions(currentSlot);
-            i++;
+            var currentSlot=slot;var copy=profile.CopyAt(slot);
+            bool right=slot==EquipmentSlot.Weapon||slot==EquipmentSlot.Armor;
+            bool lower=slot==EquipmentSlot.Weapon||slot==EquipmentSlot.AccessoryTwo;
+            float x=right?width-size:0,y=lower?160:40;
+            var button=Button(partyContent,SlotName(slot),x,y,size,
+                ()=>OpenPartyEquipmentPicker(currentSlot),()=>{equipmentSlot=currentSlot;PreviewEquipment(profile.InstanceAt(currentSlot));},size);
+            button.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+            if(copy!=null)DrawInventoryIcon(button.transform,inventoryEquipment.First(p=>p.Value==copy).Key,6,6,size-12);
+            else {var empty=Label(Rect("Empty slot",button.transform,4,4,size-8,size-8),"Empty",12);empty.alignment=TextAlignmentOptions.Center;}
+            Label(Rect("Slot caption",partyContent,x,y+size+4,size,22),SlotName(slot),12).alignment=TextAlignmentOptions.Center;
+            var pointer=button.gameObject.AddComponent<PlayerInventoryPointer>();pointer.Context=()=>OpenPartyEquipmentActions(currentSlot);
         }
-        Label(Rect("Weapon access", partyContent, 0, 304, width, 48), "Weapon types: " + string.Join(", ", profile.AllowedWeaponTypes), 14);
+        Label(Rect("Weapon access",partyContent,0,288,width,48),"Weapon types: "+string.Join(", ",profile.AllowedWeaponTypes),14);
         equipmentSlot = EquipmentSlot.Weapon; PreviewEquipment(profile.InstanceAt(equipmentSlot));
     }
     void OpenPartyEquipmentActions(EquipmentSlot slot)
@@ -312,7 +317,6 @@ public sealed partial class ProgressionMenu
             int a = action.CalculateDamage(before, null, action.Damage), b = action.CalculateDamage(after, null, action.Damage);
             if (a != b) text += $"\n{action.Name}: {a} → {b} damage";
         }
-        text += "\n\nDamage shown before target defenses. Current HP and MP are not restored.";
         Detail(DisplayName(Member), text, Portrait(Member));
     }
     void ConfirmPartyAllocation()

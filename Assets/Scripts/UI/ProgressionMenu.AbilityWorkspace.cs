@@ -66,7 +66,7 @@ public sealed partial class ProgressionMenu
         var list = List(abilityListRoot, "Ability entries", left, 0, width, height, entries.Count * 72);
         foreach (var entry in entries)
         {
-            var button = Button(list, entry.Action.Name + " · " + (entry.Unlocked ? "Unlocked" : "Locked"), 0, abilityCards.Count * 72,
+            var button = Button(list, entry.Action.Name + (!entry.Unlocked ? " · Locked" : abilityCategory==BattleActionCategory.Attack||abilityCategory==BattleActionCategory.Item ? "" : " · Unlocked"), 0, abilityCards.Count * 72,
                 width - 10, () => ShowAbility(entry), () => ShowAbility(entry), 66);
             var label = button.GetComponentInChildren<TMP_Text>();
             label.text += "\n<size=12>" + entry.Source + "</size>"; label.enableAutoSizing = true; label.fontSizeMin = 11; label.fontSizeMax = 16;

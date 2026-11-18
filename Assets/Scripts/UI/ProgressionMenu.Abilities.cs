@@ -41,9 +41,8 @@ public sealed partial class ProgressionMenu
         if (loadout) foreach (var action in loadout.Options.Where(a => a != null && a.Category == abilityCategory))
         {
             if(abilityCategory==BattleActionCategory.Magic&&!string.IsNullOrEmpty(action.SpellId))continue;
-            // Owned weapons are expanded below, including their locked milestones. Keep unarmed actions.
-            if (abilityCategory == BattleActionCategory.Attack && !string.IsNullOrEmpty(action.EquipmentActionId) &&
-                Manager.Equipment.Owned.Any(w => w?.Definition && w.Definition.Id + ":" + action.Name == action.EquipmentActionId)) continue;
+            // The equipped weapon is expanded below, including locked milestones. Keep shared attacks.
+            if (abilityCategory == BattleActionCategory.Attack && !string.IsNullOrEmpty(action.EquipmentActionId)) continue;
             entries.Add(new AbilityEntry { Key = "learned:" + action.Name, Action = action, Source = "Available to " + DisplayName(Member) });
         }
         if(loadout&&abilityCategory==BattleActionCategory.Magic)foreach(var learned in loadout.LearnedSpells) {
@@ -55,12 +54,11 @@ public sealed partial class ProgressionMenu
         }
         if (abilityCategory == BattleActionCategory.Attack)
         {
-            int index = 0;
-            foreach (var copy in Manager.Equipment.Owned.Where(w => w?.Definition && w.Definition.Kind == EquipmentKind.Weapon))
+            var equipped=Member.GetComponent<CharacterEquipment>()?.Weapon;
+            foreach (var copy in Manager.Equipment.Owned.Where(w => w==equipped && w?.Definition && w.Definition.Kind == EquipmentKind.Weapon))
             {
-                index++;
                 var seen = new HashSet<string>();
-                string source = copy.Definition.DisplayName + " · Copy " + index;
+                string source = copy.Definition.DisplayName;
                 void Add(BattleActionOption action, WeaponMasteryMilestone milestone)
                 {
                     if (action == null || action.Category != BattleActionCategory.Attack || !seen.Add(action.Name)) return;
