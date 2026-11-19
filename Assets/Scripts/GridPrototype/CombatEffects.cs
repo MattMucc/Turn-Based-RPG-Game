@@ -71,6 +71,7 @@ namespace Game.GridPrototype
             var entries = new List<string>();
             foreach (var entry in stacks) if (entry.Value > 0) entries.Add(entry.Key + ": " + entry.Value + " stacks");
             if (Barrier > 0) entries.Add("Barrier: " + Barrier);
+            string debt=DebtDetails();if(!string.IsNullOrEmpty(debt))entries.Add(debt);
             return string.Join("\n", entries);
         }
     }

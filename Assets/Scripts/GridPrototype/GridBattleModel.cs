@@ -53,7 +53,9 @@ namespace Game.GridPrototype
             if (movementGrant < 0) throw new ArgumentOutOfRangeException(nameof(movementGrant));
             TickStartEffects();
             if (Health <= 0) return;
+            BeginDebtTurn();
             RestoreActionPoints(TurnActionPointGain);
+            movementGrant=CollectMovementGrant(movementGrant);
             Movement = (int)Math.Min(MaximumMovement, (long)Movement + deferredMovement + movementGrant); deferredMovement = 0;
             ActionAvailable = true;
             Blocking = false;
@@ -80,7 +82,7 @@ namespace Game.GridPrototype
             if (!SpendActionWithActionPoints(actionPointCost)) return false;
             Movement = (int)Math.Min(MaximumMovement, (long)Movement + movementGain); return true;
         }
-        public void EndTurn() { if (TurnOpen) TickEndEffects(); TurnOpen = false; ActionAvailable = false; }
+        public void EndTurn() { if (TurnOpen) { TickEndEffects(); CollectDueContracts(); } TurnOpen = false; ActionAvailable = false; }
     }
 
     public sealed class GridRoute

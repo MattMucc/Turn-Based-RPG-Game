@@ -12,6 +12,7 @@ public sealed class BattleActionOptionDrawer : PropertyDrawer
     static int Radius(SerializedProperty p) => Mathf.Max(0, p.FindPropertyRelative(Area(p) ? "Radius" : "Reach").intValue);
     static float GridSize(SerializedProperty p) => Mathf.Min(240, (Radius(p) * 2 + 1) * 26);
     static bool Hidden(SerializedProperty p, SerializedProperty child) => child.name == "DisabledPatternCells" ||
+        ((child.name=="Contract"||child.name=="MovementGranted")&&p.FindPropertyRelative("DebtSkill").enumValueIndex!=(int)DebtSkill.Borrow) ||
         (child.name == "RotateAreaTowardTarget" && !Area(p));
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)

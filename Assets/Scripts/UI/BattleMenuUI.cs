@@ -319,6 +319,7 @@ public partial class BattleMenuUI : MonoBehaviour
     {
         if (!battle.ChooseAction(option)) return;
         if (option.Effect == ActionEffect.Dash) { Root(); return; }
+        if(option.DebtSkill==DebtSkill.Settle||option.DebtSkill==DebtSkill.Transfer){ContractPage();return;}
         Open(category, category==BattleActionCategory.Magic&&!string.IsNullOrEmpty(option.SpellId)&&battle.Loadout.Options.Count(a=>a.SpellId==option.SpellId)>1?option.SpellId:null);
         battle.GridInputEnabled = battle.KeyboardGridInputEnabled = true;
         highlighted = -1; tooltip.text = ControllerGlyphs.Adapt(ActionDetails(option)); tooltipPanel.SetActive(true);
@@ -337,7 +338,11 @@ public partial class BattleMenuUI : MonoBehaviour
         if (editingFavorites) { if (assigningFavorite != null) EditFavorites(); else Open(category); return; }
         battle.CancelAction(); if(spellFamily!=null){Open(BattleActionCategory.Magic);return;} Root();
     }
-    private string ActionDetails(BattleActionOption option) => option.TooltipFor(battle.Combatants[battle.CurrentActorIndex]);
+    private string ActionDetails(BattleActionOption option) {
+        var unit=battle.Combatants[battle.CurrentActorIndex];string text=option.TooltipFor(unit);
+        if(option.DebtSkill==DebtSkill.Transfer&&battle.SelectedContracts.Count==1){var contract=unit.Contracts.FirstOrDefault(c=>c.Id==battle.SelectedContracts[0]);if(contract!=null)text+="\n\n"+contract.Details(unit);}
+        return text;
+    }
     private void ShowTooltip(int index)
     { if (index >= 0 && index < descriptions.Count) { tooltip.text = ControllerGlyphs.Adapt(previewOptions[index] != null ? ActionDetails(previewOptions[index]) : descriptions[index]); tooltipPanel.SetActive(true); if (battle) battle.HoverAction(previewOptions[index]); } }
     private void FitTooltip()
@@ -441,7 +446,7 @@ public partial class BattleMenuUI : MonoBehaviour
         if (battle.EntryActive) { UpdateAvailability(); return; }
         if (battle.PartyInputBlocked) return;
         UpdateAvailability();
-        bool targeting = battle.ChosenAction != null;
+        bool targeting = battle.ChosenAction != null&&!battle.ChoosingContracts;
         FitTooltip();
         if (battle.InteractionBlocked || (hud && hud.InspectionDismissedFrame == Time.frameCount)) return;
         if (!battle.PlayerReady) return;

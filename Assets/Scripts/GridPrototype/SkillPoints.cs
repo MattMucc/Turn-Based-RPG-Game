@@ -13,7 +13,7 @@ namespace Game.GridPrototype
         public int RestoreActionPoints(int amount)
         {
             int before = ActionPoints;
-            ActionPoints = (int)Math.Min(MaximumActionPoints, (long)ActionPoints + Math.Max(0, amount));
+            ActionPoints = (int)Math.Min(MaximumActionPoints, (long)ActionPoints + CollectAPGain(amount));
             return ActionPoints - before;
         }
         public bool CanAffordActionPoints(int cost) => cost >= 0 && ActionPoints >= cost;

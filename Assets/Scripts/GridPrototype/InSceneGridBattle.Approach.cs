@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,6 +10,7 @@ namespace Game.GridPrototype
         public bool TryActionApproach(BattleActionOption action, IReadOnlyList<Vector2Int> cells, out GridRoute route)
         {
             route = null;
+            if(action!=null&&(action.DebtSkill==DebtSkill.Settle||cells.Any(cell=>!ValidDebtTarget(action,cell))))return false;
             if (action == null || cells.Count == 0 || !ActionReady) return false;
             bool Fits(Vector2Int origin)
             {

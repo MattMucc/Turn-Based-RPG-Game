@@ -74,6 +74,17 @@ public class ControllerNavigationTests : InputTestFixture
     private BattleNavigationState State => (BattleNavigationState)navType.GetProperty("State").GetValue(nav);
     private GridCameraController Camera => battle.BattleCamera.GetComponent<GridCameraController>();
 
+    [TestCase(3)] [TestCase(4)] public void DebtContractSelectionStaysInCommandNavigation(int skillIndex){
+        var unit=battle.Combatants[0];var c=unit.Borrow(new DebtTerms(),"Test debt");var action=DebtStartingKit.Create()[skillIndex];battle.Loadout.Options.Add(action);
+        menuType.GetMethod("Open",Private).Invoke(menu,new object[]{BattleActionCategory.Skill,null});menuType.GetMethod("Select",Private).Invoke(menu,new object[]{action});
+        Press(pad.dpad.down);Tick();Release(pad.dpad.down);Tick();Assert.AreEqual(BattleControllerArea.Commands,State.Area);Assert.IsTrue(battle.ChoosingContracts);
+        menuType.GetMethod("ClearControllerCommands").Invoke(menu,null);menuType.GetMethod("ControllerCommands").Invoke(menu,new object[]{0,false});
+        Press(pad.buttonSouth);Tick();Release(pad.buttonSouth);Tick();
+        Assert.AreEqual(1,battle.SelectedContracts.Count);Assert.IsTrue(unit.ActionAvailable);
+        if(skillIndex==3){Assert.IsFalse(battle.ChoosingContracts);Assert.AreEqual(BattleControllerArea.Battlefield,State.Area);}
+        else Assert.AreEqual(BattleControllerArea.Commands,State.Area);
+        menuType.GetMethod("ControllerBack").Invoke(menu,null);Assert.IsNull(battle.ChosenAction);Assert.IsTrue(unit.ActionAvailable);Assert.AreEqual(1,unit.Contracts.Count);
+    }
     [Test] public void DualHudShowsBothLanesAndIndependentHeldFeedback()
     {
         battle.SetAutoCamera(false);

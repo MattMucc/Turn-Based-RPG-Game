@@ -1,0 +1,20 @@
+Debt starting kit
+
+Edit Assets/Resources/DebtStartingKit.asset. Prototype Debt's BattleActionLoadout references it through Character Library, separate from the shared common action library. Other characters do not inherit this kit. Existing saved personal actions do not replace the character library. Dash remains a common Skill.
+
+All three offensive Skills cost 2 AP and use the existing single-press QTE for +8 base power on success. Prototype tuning: On Credit 32 base power/reach 1; Borrowed Momentum 18/reach 1, +3 movement capped at 10; Unfair Terms 8/reach 3, 100% Exposed x2 on a landed hit. All use Soul scaling 1. These combat tuning values are adjustable, not final balance.
+
+Contracts are created at action commitment, even on a miss or empty-cell attack. Each use creates one distinct contract. DueInTurns counts upcoming turns of the current debtor; the creation turn is excluded. Collection happens at turn end, after ordinary status expiration, giving the debtor their full due turn to act. No skipped-turn mechanic was introduced. Benched or knocked-out characters do not receive normal turns; obligations remain on their battle unit until they can act again. Contracts are battle state, not stored overworld debt.
+
+Credit: repay 2 AP, due next turn; default loses 3 AP, with any shortfall withheld from subsequent AP gains.
+Footing: repay 2 movement, due in two upcoming turns; default withholds 3 from future turn-start movement grants, preserving banked movement.
+Vigor: repay 1 AP and 2 movement, due in three upcoming turns; default applies 2 Weakened stacks.
+
+Settle Accounts: select personal contracts in the command menu, then confirm the displayed combined price. One action and 1 AP activation plus every selected repayment price. Insufficient or stale selections cannot spend resources. Cancellation is free. Moving afterward remains available if any movement remains.
+Assign Liability: select one contract, then an in-range living hostile. Costs one action and 2 AP. Guaranteed transfer; no damage or QTE roll. Remaining debtor turns are preserved, with at least one upcoming recipient turn to respond. No empty-cell, ally or object transfers. Normal automatic approach spends movement if needed.
+
+Enemy AI attempts to settle affordable due contracts before moving/attacking, paying one action, 1 AP and their repayments; it then ends its turn. Unaffordable contracts default at turn end. No extra action is granted.
+
+Contracts use the existing modular command buttons, status badges/tooltips, and Examine content. Their badge number is upcoming turns remaining, or ! when due this turn. AP/movement collection balances have separate badges. Settle Accounts and transfer are deterministic utility actions; offensive Skills retain the existing QTE presentation.
+
+Validation uses EditMode checks. User owns runtime feel, balance and presentation playtesting.

@@ -1,3 +1,4 @@
+using System.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -205,7 +206,7 @@ namespace Game.GridPrototype
         }
         private bool TargetableObstacle(Vector2Int cell) => Grid.Board.Contains(cell) && Grid.HasSurface[cell.x, cell.y]
             && battleTargets.Exists(t => t.Alive && t.Destructible && t.Occupies(Grid, cell));
-        public bool CanAim(Vector2Int cell, BattleActionOption action) => action != null && Grid.Board.Contains(cell)
+        public bool CanAim(Vector2Int cell, BattleActionOption action) => action != null && action.DebtSkill!=DebtSkill.Settle && ValidDebtTarget(action,cell) && Grid.Board.Contains(cell)
             && Grid.HasSurface[cell.x, cell.y] && GridTargeting.CanTarget(Grid.Board, Active.Position, cell, action, Sight, TargetableObstacle);
         public HashSet<Vector2Int> ActionFootprint(Vector2Int cell, BattleActionOption action)
         {
@@ -416,12 +417,12 @@ namespace Game.GridPrototype
         {
             if (!ActionReady || option == null || !CanAfford(option) || !Loadout.Options.Contains(option)) return false;
             if (option.Effect == ActionEffect.Dash) { Dash(option); return !Active.ActionAvailable; }
-            HoveredAction = null; ChosenAction = option; targets.Clear(); selected = Active.Position;
+            HoveredAction = null; ChosenAction = option; targets.Clear(); selectedContracts.Clear(); selected = Active.Position;
             message = "Choose any cell in reach, including empty cells or allies. Multi-target actions start when all hits are assigned."; Refresh(); return true;
         }
 
         public void CancelAction()
-        { if (busy && IsAlly(actorIndex) && !Active.ActionAvailable) return; HoveredAction = null; ChosenAction = null; targets.Clear(); if (Grid != null && !closing) Refresh(); }
+        { if (busy && IsAlly(actorIndex) && !Active.ActionAvailable) return; HoveredAction = null; ChosenAction = null; targets.Clear(); selectedContracts.Clear(); if (Grid != null && !closing) Refresh(); }
 
         public void HoverAction(BattleActionOption option)
         {
@@ -486,6 +487,8 @@ namespace Game.GridPrototype
         {
             sequence = null;
             if (!ActionReady || !ReadyToResolve || !CanAfford(ChosenAction)) return false;
+            if(ChosenAction.DebtSkill==DebtSkill.Settle)return false;
+            if(ChosenAction.DebtSkill==DebtSkill.Transfer&&(selectedContracts.Count!=1||!Active.Contracts.Any(c=>c.Id==selectedContracts[0])||targets.Count!=1||!ValidDebtTarget(ChosenAction,targets[0])))return false;
             if (!TryActionApproach(ChosenAction, targets, out var approach)) return false;
             var action = ChosenAction;
             var aimedCells = new List<Vector2Int>(targets);
@@ -499,7 +502,11 @@ namespace Game.GridPrototype
                     if (target.Alive && target.HasHealth && footprint.Overlaps(TargetCells(target))) hit.Add(target);
                 batches.Add(hit);
             }
-            if (!Active.SpendActionWithActionPoints(action.EffectiveActionPointCost, action.EffectiveMagicPointCost)) return false;
+            if(action.DebtSkill==DebtSkill.Transfer){
+                if(!Active.TransferDebt(selectedContracts[0],DebtRecipient(aimedCells[0]),action.EffectiveActionPointCost))return false;
+                RecentHitFeedback=Active.LastDebtNotice;RecentHitFeedbackUntil=Time.unscaledTime+3;
+            }else if (!Active.SpendActionWithActionPoints(action.EffectiveActionPointCost, action.EffectiveMagicPointCost)) return false;
+            action.CommitDebt(Active);
             if (action.Category == BattleActionCategory.Item) action.Quantity--;
             busy = true;
             if (action.SignatureQte)
@@ -894,6 +901,10 @@ namespace Game.GridPrototype
                 defenderIndex = SelectEnemyTarget(i);
                 if (defenderIndex < 0) { ResolveOutcome(); yield break; }
                 yield return new WaitForSeconds(0.6f);
+                if(Active.TryEnemySettlement()){
+                    RecentHitFeedback=Active.Name+": "+Active.LastDebtNotice;RecentHitFeedbackUntil=Time.unscaledTime+3;
+                    yield return new WaitForSeconds(.9f);AdvanceTurn();continue;
+                }
                 if (!CanStrike(Active, turnOrder[defenderIndex]))
                 {
                     var choices = Grid.Board.Reachable(Active, Active.Movement);
@@ -929,6 +940,7 @@ namespace Game.GridPrototype
         private void AdvanceTurn()
         {
             Active.EndTurn();
+            if(!string.IsNullOrEmpty(Active.LastDebtNotice)){RecentHitFeedback=Active.Name+": "+Active.LastDebtNotice;RecentHitFeedbackUntil=Time.unscaledTime+3;}
             for (int attempts = 0; attempts < turnOrder.Count; attempts++)
             {
                 actorIndex = initiativeOrder.Next(actorIndex, i => turnOrder[i].Health > 0);

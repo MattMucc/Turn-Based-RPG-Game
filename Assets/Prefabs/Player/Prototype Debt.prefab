@@ -222,6 +222,7 @@ MonoBehaviour:
     Magic: 0
     PhysicalDefense: 0
     MagicalDefense: 0
+    Soul: 0
     Speed: 0
   AllocatedPoints:
     Vitality: 0
@@ -229,12 +230,21 @@ MonoBehaviour:
     Magic: 0
     PhysicalDefense: 0
     MagicalDefense: 0
+    Soul: 0
     Speed: 0
   unspentPoints: 0
   rewardedLevel: 1
   storedHealth: -1
   BaseHealth: 100
   HealthPerVitality: 10
+  StartingActionPoints: 3
+  ActionPointsPerTurn: 1
+  ActionPointsPerBasicAttack: 1
+  StartingMaxMagicPoints: 24
+  MagicPointsPerLevel: 2
+  MagicPointsPerMagic: 2
+  FocusMagicRecovery: 8
+  EnemyComboActionPointCost: 3
   BurningDamagePerTick: 5
   RegenerationHealingPerTick: 5
   Portrait: {fileID: 0}
@@ -248,6 +258,7 @@ MonoBehaviour:
   PhysicalDefense: 15
   MagicalDefense: 5
   Speed: 8
+  Soul: 0
   Resistances: 
   Statuses: 
 --- !u!114 &5341953824463325816
@@ -275,6 +286,7 @@ MonoBehaviour:
   encounterStrikeReach: 3.5
   encounterStrikeHalfAngle: 60
   encounterStrikeCooldown: 0.4
+  displayEncounterStrikeDebug: 0
   baseJumpHeight: 2
   holdJumpMultiplier: 2
   coyoteTime: 0.2
@@ -288,7 +300,6 @@ MonoBehaviour:
   groundCheckDistance: 0.2
   groundCheckRadius: 0.3
   displayGroundCheckDebug: 0
-  input: {fileID: 0}
   controller: {fileID: 1007967909954935270}
   animator: {fileID: 1541049716788618860}
   cameraYaw: {fileID: 0}
@@ -344,17 +355,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.BattleActionLoadout
   SharedLibrary: {fileID: 11400000, guid: 8e9c3de4cfe491b438949f20e58ed5a5, type: 2}
+  CharacterLibrary: {fileID: 11400000, guid: dbdfeff6c9a67e34a92b06985cac48af, type: 2}
   personalOptions:
   - Name: Heavy Slash
+    DebtSkill: 0
+    Contract:
+      Kind: 0
+      RepayAP: 2
+      RepayMovement: 0
+      DueInTurns: 1
+      DefaultAmount: 3
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
     FavoriteSlot: 0
     Description: Prototype party attack.
     Category: 0
+    ActionPointCost: 1
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
     Pattern: 0
     Reach: 1
     Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
     MaxTargets: 3
     Damage: 12
-    ItemId:
+    ItemId: 
     quantity: 0
     Healing: 0
     Effect: 0
@@ -373,10 +404,10 @@ MonoBehaviour:
     QteHoldDuration: 2
     QteProgressDrainPerSecond: 0.2
     QteTapDrainDelay: 0.3
-    QteSequence:
+    QteSequence: 
     QteDuration: 1.5
     QteBonusDamage: 15
-  favoritesInitialized: 0
+  LearnedSpells: []
 --- !u!114 &3003055958351131635
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -424,9 +455,24 @@ MonoBehaviour:
   catchUpSpeed: 9
   trailSpacing: 0.2
   gravity: -30
-  leader: {fileID: 0}
-  sideOffset: 0
   settleRadius: 0.6
+--- !u!114 &7297571538031942536
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2713249943951413015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b86def6e7e9fa054a8c61771f33b6ad0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.CharacterEquipment
+  AllowedWeaponTypes: 0100000002000000
+  weapon: starter-weapon-1
+  armor: starter-armor-1
+  accessoryOne: 
+  accessoryTwo: 
 --- !u!1 &3479316304952442349
 GameObject:
   m_ObjectHideFlags: 0
@@ -548,20 +594,3 @@ Transform:
   m_Children: []
   m_Father: {fileID: 952925571111150995}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &7297571538031942536
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2713249943951413015}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b86def6e7e9fa054a8c61771f33b6ad0, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.CharacterEquipment
-  AllowedWeaponTypes: 0100000002000000
-  weapon: starter-weapon-1
-  armor: starter-armor-1
-  accessoryOne:
-  accessoryTwo:

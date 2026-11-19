@@ -350,6 +350,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: 25cf65227d887924382ee72863221c9b, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -396,6 +404,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -442,6 +458,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -488,6 +512,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: 77b2154037b5120498e6863eace0005a, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -534,6 +566,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -580,6 +620,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: af2170474ac981240ba08302a9f18a69, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -626,6 +674,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: 40b42f009e2846c41ba3a10db85e30a5, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -672,6 +728,14 @@ MonoBehaviour:
   - Equipment: {fileID: 11400000, guid: af1edc47581dbd74ead6295a883cf788, type: 2}
     Item:
       Name: 
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -718,6 +782,14 @@ MonoBehaviour:
   - Equipment: {fileID: 0}
     Item:
       Name: Health Potion
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -764,6 +836,14 @@ MonoBehaviour:
   - Equipment: {fileID: 0}
     Item:
       Name: Mana Potion
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -1521,6 +1601,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb96c3e22e66827419edd84e188d0d7c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleMenuUI
+  battleLayout: {fileID: 0}
   attackButton: {fileID: 1423944360}
   skillsButton: {fileID: 1663630666}
   itemsButton: {fileID: 892792672}
@@ -2148,6 +2229,14 @@ MonoBehaviour:
   Inventory:
     Items:
     - Name: Health Potion
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -2190,6 +2279,14 @@ MonoBehaviour:
       QteDuration: 1.5
       QteBonusDamage: 15
     - Name: Mana Potion
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -2232,6 +2329,14 @@ MonoBehaviour:
       QteDuration: 1.5
       QteBonusDamage: 15
     - Name: Fireball Spellbook
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -2274,6 +2379,14 @@ MonoBehaviour:
       QteDuration: 1.5
       QteBonusDamage: 15
     - Name: Mend Spellbook
+      DebtSkill: 0
+      Contract:
+        Kind: 0
+        RepayAP: 2
+        RepayMovement: 0
+        DueInTurns: 1
+        DefaultAmount: 3
+      MovementGranted: 0
       Image: {fileID: 0}
       SpellId: 
       SpellTier: 0
@@ -2376,14 +2489,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProgressionMenu
   abilitiesLayout: {fileID: 0}
+  checkpointLayout: {fileID: 0}
   abilitiesDetailsLayout: {fileID: 0}
   shopDetailsLayout: {fileID: 0}
   blacksmithDetailsLayout: {fileID: 0}
   growthLayout: {fileID: 0}
   inventoryLayout: {fileID: 0}
+  interactionLayout: {fileID: 0}
+  shopLayout: {fileID: 0}
+  blacksmithLayout: {fileID: 0}
   formationLayout: {fileID: 0}
   equipmentLayout: {fileID: 0}
   attributesLayout: {fileID: 0}
+  shellLayout: {fileID: 0}
   systemLayout: {fileID: 0}
 --- !u!4 &1018846185 stripped
 Transform:

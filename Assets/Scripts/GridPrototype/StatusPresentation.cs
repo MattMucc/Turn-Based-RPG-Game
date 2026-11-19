@@ -24,6 +24,9 @@ namespace Game.GridPrototype
                 n = unit.Stacks(effect); if (n == 0) continue;
                 result.Add(new StatusPresentation(effect.ToString(), n.ToString(), $"{n} afflicted turns remaining. " + (effect == CombatStatus.Weakened ? "Deals 20% less attack and spell damage." : "Physical and Magical Defense are reduced by 25%.") + "\nRemoves one stack at the end of an afflicted turn if present at its start.", effect == CombatStatus.Weakened ? 5 : 6));
             }
+            foreach(var contract in unit.Contracts)result.Add(new StatusPresentation(contract.Terms.Kind+" contract",contract.TurnsRemaining(unit)==0?"!":contract.TurnsRemaining(unit).ToString(),contract.Details(unit),7+(int)contract.Terms.Kind));
+            if(unit.APCollection>0)result.Add(new StatusPresentation("AP collection",unit.APCollection.ToString(),"Withholds the next "+unit.APCollection+" AP from future gains.",7));
+            if(unit.MovementCollection>0)result.Add(new StatusPresentation("Movement collection",unit.MovementCollection.ToString(),"Withholds the next "+unit.MovementCollection+" movement points from turn-start grants. Banked movement is unchanged.",8));
             return result;
         }
     }

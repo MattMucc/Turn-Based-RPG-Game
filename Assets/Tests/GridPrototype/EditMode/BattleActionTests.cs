@@ -41,6 +41,24 @@ public class BattleActionTests
         objects.Clear(); Physics.SyncTransforms();
         foreach(var pair in savedPreferences){if(pair.Value.HasValue)PlayerPrefs.SetInt(pair.Key,pair.Value.Value);else PlayerPrefs.DeleteKey(pair.Key);}savedPreferences.Clear();PlayerPrefs.Save();
     }
+    [Test] public void DebtOffenseCommitsOnceEvenWhenTheHitMisses(){
+        var unit=battle.Combatants[0];var action=DebtStartingKit.Create()[0];action.SignatureQte=false;action.HitChance=0;battle.Loadout.Options.Add(action);int hp=battle.Combatants[1].Health,ap=unit.ActionPoints;
+        Assert.IsTrue(battle.ChooseAction(action));Assert.IsTrue(battle.ToggleTarget(cells[1]));Assert.IsTrue(battle.TryPrepareAction(out var sequence));
+        Assert.AreEqual(ap-2,unit.ActionPoints);Assert.AreEqual(1,unit.Contracts.Count);Assert.IsFalse(battle.TryPrepareAction(out _));while(sequence.MoveNext()){}
+        Assert.AreEqual(hp,battle.Combatants[1].Health);Assert.AreEqual(1,unit.Contracts.Count);Assert.IsFalse(unit.ActionAvailable);
+    }
+    [Test] public void DebtTransferRejectsEmptyAndFriendlyCellsThenTransfersOnce(){
+        var unit=battle.Combatants[0];var contract=unit.Borrow(new DebtTerms(),"Test");var option=DebtStartingKit.Create()[3];battle.Loadout.Options.Add(option);
+        Assert.IsTrue(battle.ChooseAction(option));Assert.IsTrue(battle.ToggleContract(contract.Id));
+        Assert.IsFalse(battle.ToggleTarget(cells[0]));Assert.IsFalse(battle.ToggleTarget(new Vector2Int(2,3)));
+        Assert.IsTrue(battle.ToggleTarget(cells[1]));Assert.IsTrue(battle.TryPrepareAction(out var sequence));Assert.AreEqual(0,unit.Contracts.Count);Assert.AreEqual(1,battle.Combatants[1].Contracts.Count);Assert.IsFalse(battle.TryPrepareAction(out _));
+        while(sequence.MoveNext()){} Assert.IsFalse(unit.ActionAvailable);
+    }
+    [Test] public void DebtSettlementCancellationPreservesResourcesAndSelectedConfirmationPays(){
+        var unit=battle.Combatants[0];var contract=unit.Borrow(new DebtTerms(),"Test");var option=DebtStartingKit.Create()[4];battle.Loadout.Options.Add(option);int before=unit.ActionPoints;
+        Assert.IsTrue(battle.ChooseAction(option));battle.ToggleContract(contract.Id);battle.CancelAction();Assert.AreEqual(before,unit.ActionPoints);Assert.AreEqual(1,unit.Contracts.Count);
+        battle.ChooseAction(option);battle.ToggleContract(contract.Id);Assert.IsTrue(battle.SettleContracts());Assert.AreEqual(before-3,unit.ActionPoints);Assert.AreEqual(0,unit.Contracts.Count);Assert.IsFalse(battle.SettleContracts());
+    }
     [Test] public void EnemyResourceBudgetPaysForComboAndFallsBackToBasicAttack()
     {
         var unit=new GridUnit("Enemy",Vector2Int.zero);

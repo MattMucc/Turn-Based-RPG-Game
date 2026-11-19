@@ -11,6 +11,11 @@ namespace Game.GridPrototype
     public sealed class BattleActionOption
     {
         public string Name;
+        public DebtSkill DebtSkill;
+        public DebtTerms Contract=new();
+        [Min(0)] public int MovementGranted;
+        public void CommitDebt(GridUnit source){if(DebtSkill!=DebtSkill.Borrow)return;source.Borrow(Contract,Name);source.GainMovement(MovementGranted);}
+
         public Texture Image;
         [HideInInspector] public string SpellId;
         [HideInInspector] public int SpellTier;
@@ -29,7 +34,7 @@ namespace Game.GridPrototype
         [Min(0)] public int MagicRestored;
         public int EffectiveMagicPointCost => Category == BattleActionCategory.Magic ? Mathf.Max(0, MagicPointCost) : 0;
         public int EffectiveActionPointCost => Category == BattleActionCategory.Skill ? Mathf.Clamp(ActionPointCost, 1, 9) : 0;
-        public bool CanUse(GridUnit source) => Available && source != null && (Effect != ActionEffect.Dash || source.Movement < GridUnit.MaximumMovement) && source.CanAffordActionPoints(EffectiveActionPointCost) && source.CanAffordMagicPoints(EffectiveMagicPointCost);
+        public bool CanUse(GridUnit source) => Available && source != null && ((DebtSkill!=DebtSkill.Transfer && DebtSkill!=DebtSkill.Settle)||source.Contracts.Count>0) && (Effect != ActionEffect.Dash || source.Movement < GridUnit.MaximumMovement) && source.CanAffordActionPoints(EffectiveActionPointCost) && source.CanAffordMagicPoints(EffectiveMagicPointCost);
         public void CompleteResourceRecovery(GridUnit source)
         {
             if (Category == BattleActionCategory.Attack && Effect == ActionEffect.Damage) source.RestoreActionPoints(source.AttackActionPointGain);
@@ -103,6 +108,8 @@ namespace Game.GridPrototype
                 if (source != null && !source.CanAffordActionPoints(EffectiveActionPointCost)) result += Row("Available", $"{source.ActionPoints} AP — insufficient");
                 if (ActionPointRecovery > 0) result += Row("Recovery", $"{Mathf.Clamp(ActionPointRecovery, 0, 9)} AP after use");
             }
+            if(DebtSkill==DebtSkill.Settle)return result+" + selected repayments";
+            if(DebtSkill==DebtSkill.Borrow){result+=Row("Contract",Contract.Kind.ToString())+Row("Repayment",Contract.Price)+Row("Due",Contract.DueInTurns+" upcoming turn(s), at turn end")+"\n\n"+Contract.Penalty;if(MovementGranted>0)result+=Row("Movement","Up to +"+MovementGranted);}
             if (Effect == ActionEffect.Dash) return result + Row("Movement", source == null ? "Up to +3 (maximum 10)" : $"+{Mathf.Min(3, GridUnit.MaximumMovement - source.Movement)} (maximum 10)");
             result += Row("Reach", $"{Reach} tiles");
             if (Effect == ActionEffect.Damage)
@@ -137,7 +144,9 @@ namespace Game.GridPrototype
     // These are demonstration options, not approved character kits or balance.
     public sealed class BattleActionLoadout : MonoBehaviour
     {
-        public SharedBattleActionLibrary SharedLibrary;
+        public SharedBattleActionLibrary SharedLibrary,CharacterLibrary;
+        SharedBattleActionLibrary cachedCharacterLibrary;
+        int cachedCharacterRevision=-1;
         [UnityEngine.Serialization.FormerlySerializedAs("Options")]
         [SerializeField] private List<BattleActionOption> personalOptions = CreateDefaultOptions();
         public List<BattleActionOption> PersonalOptions => personalOptions;
@@ -192,12 +201,12 @@ namespace Game.GridPrototype
             get
             {
                 var equipment=GetComponent<CharacterEquipment>();
-                if (!SharedLibrary && inventory == null && !equipment && LearnedSpells.Count == 0) return personalOptions;
-                if (combinedOptions != null && cachedMasteryExperience == (equipment?.Weapon?.MasteryExperience ?? -1) && cachedEquipmentRevision == (equipment ? equipment.Revision : -1) && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
+                if (!SharedLibrary && !CharacterLibrary && inventory == null && !equipment && LearnedSpells.Count == 0) return personalOptions;
+                if (combinedOptions != null && cachedCharacterLibrary==CharacterLibrary && cachedCharacterRevision==(CharacterLibrary?CharacterLibrary.Revision:-1) && cachedMasteryExperience == (equipment?.Weapon?.MasteryExperience ?? -1) && cachedEquipmentRevision == (equipment ? equipment.Revision : -1) && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
                 if (cachedLibrary != SharedLibrary) sharedInstances.Clear();
                 combinedOptions = new List<BattleActionOption>();
                 var names = new HashSet<string>();
-                foreach (var definition in SharedLibrary ? SharedLibrary.Actions : new List<BattleActionOption>())
+                foreach (var definition in System.Linq.Enumerable.Concat(SharedLibrary ? SharedLibrary.Actions : new List<BattleActionOption>(),CharacterLibrary ? CharacterLibrary.Actions : new List<BattleActionOption>()))
                 {
                     if (equipment && definition != null && definition.Category == BattleActionCategory.Attack && definition.Effect == ActionEffect.Damage) continue;
                     if (definition == null || definition.Category == BattleActionCategory.Item || string.IsNullOrWhiteSpace(definition.Name) || !names.Add(definition.Name)) continue;
@@ -246,6 +255,7 @@ namespace Game.GridPrototype
                         copy.BindStock(source); itemInstances[id] = copy; combinedOptions.Add(copy);
                     }
                 }
+                cachedCharacterLibrary=CharacterLibrary;cachedCharacterRevision=CharacterLibrary?CharacterLibrary.Revision:-1;
                 cachedLibrary = SharedLibrary; cachedRevision = SharedLibrary ? SharedLibrary.Revision : -1;
                 cachedInventoryRevision = inventory?.Revision ?? -1; cachedItemCount = inventory?.Items.Count ?? -1; favoritesInitialized = false;
                 return combinedOptions;

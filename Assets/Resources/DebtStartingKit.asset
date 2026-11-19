@@ -1,0 +1,266 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54a1d82c4c79aed4499af34c3509857e, type: 3}
+  m_Name: DebtStartingKit
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.SharedBattleActionLibrary
+  Actions:
+  - Name: On Credit
+    DebtSkill: 1
+    Contract:
+      Kind: 0
+      RepayAP: 2
+      RepayMovement: 0
+      DueInTurns: 1
+      DefaultAmount: 3
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: 0
+    Description: Borrow power for a heavy single-target blow.
+    Category: 1
+    ActionPointCost: 2
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 32
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 3
+    StatScaling: 1
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 2
+    BarrierGranted: 0
+    SignatureQte: 1
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 8
+  - Name: Borrowed Momentum
+    DebtSkill: 1
+    Contract:
+      Kind: 1
+      RepayAP: 0
+      RepayMovement: 2
+      DueInTurns: 2
+      DefaultAmount: 3
+    MovementGranted: 3
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: 1
+    Description: Strike and gain up to 3 movement points.
+    Category: 1
+    ActionPointCost: 2
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 18
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 3
+    StatScaling: 1
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 2
+    BarrierGranted: 0
+    SignatureQte: 1
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 8
+  - Name: Unfair Terms
+    DebtSkill: 1
+    Contract:
+      Kind: 2
+      RepayAP: 1
+      RepayMovement: 2
+      DueInTurns: 3
+      DefaultAmount: 2
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: 2
+    Description: A weakening bargain exposes the target's defenses.
+    Category: 1
+    ActionPointCost: 2
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 3
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 8
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 0
+    DamageType: 0
+    Element: 0
+    Scaling: 3
+    StatScaling: 1
+    HitChance: 100
+    InflictedStatus: 5
+    StatusChance: 100
+    StatusStacks: 2
+    BarrierGranted: 0
+    SignatureQte: 1
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 8
+  - Name: Assign Liability
+    DebtSkill: 2
+    Contract:
+      Kind: 0
+      RepayAP: 2
+      RepayMovement: 0
+      DueInTurns: 1
+      DefaultAmount: 3
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: 3
+    Description: Transfer one personal contract to an enemy, preserving its remaining
+      deadline.
+    Category: 1
+    ActionPointCost: 2
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 3
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 0
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 1
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Settle Accounts
+    DebtSkill: 3
+    Contract:
+      Kind: 0
+      RepayAP: 2
+      RepayMovement: 0
+      DueInTurns: 1
+      DefaultAmount: 3
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: -1
+    Description: Pay and clear selected personal contracts in one action.
+    Category: 1
+    ActionPointCost: 1
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 0
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 1
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 15

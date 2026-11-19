@@ -122,6 +122,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         if (repeatRemaining > 0) return Vector2Int.zero;
         repeatRemaining = 0.12f; return direction;
     }
+    bool lastChoosingContracts;
     private void Navigate(BattleControllerArea area)
     {
         ClearHover(); menu.ClearControllerCommands(); hud.ClearControllerPortrait();
@@ -189,10 +190,12 @@ public sealed class BattleControllerNavigation : MonoBehaviour
                 DrawMode(); return;
             }
             else if (State.Mode != BattleControllerMode.Navigation)
-                Navigate(battle.ChosenAction != null ? BattleControllerArea.Battlefield : BattleControllerArea.Commands);
+                Navigate(battle.ChosenAction != null&&!battle.ChoosingContracts ? BattleControllerArea.Battlefield : BattleControllerArea.Commands);
         }
-        if (State.Mode == BattleControllerMode.Navigation && battle.ChosenAction != null && battle.ChosenAction != lastAction)
+        if(State.Mode==BattleControllerMode.Navigation&&battle.ChoosingContracts&&State.Area!=BattleControllerArea.Commands)Navigate(BattleControllerArea.Commands);
+        if (State.Mode == BattleControllerMode.Navigation && battle.ChosenAction != null && !battle.ChoosingContracts && (battle.ChosenAction != lastAction||lastChoosingContracts))
             Navigate(BattleControllerArea.Battlefield);
+        lastChoosingContracts=battle.ChoosingContracts;
         lastAction = battle.ChosenAction;
         if (left != Vector2.zero && direction == Vector2Int.zero && !cameraModifier && State.Mode == BattleControllerMode.Navigation)
         { ClearHover(); menu.ClearControllerCommands(); hud.ClearControllerPortrait(); State.UseCursor(); }
