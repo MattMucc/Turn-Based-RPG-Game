@@ -6,12 +6,17 @@ public partial class BattleMenuUI {
   browsing=true;moving=false;battle.GridInputEnabled=battle.KeyboardGridInputEnabled=false;BeginList();
   var unit=battle.Combatants[battle.CurrentActorIndex];
   foreach(var contract in unit.Contracts){
+   if(action.DebtSkill==DebtSkill.Extend&&contract.Extended)continue;
    var id=contract.Id;bool selected=battle.SelectedContracts.Contains(id);
    Row((selected?"✓ ":"")+contract.Terms.Kind+" · "+contract.Deadline(unit),()=>{
     if(!battle.ToggleContract(id))return;
     if(action.DebtSkill==DebtSkill.Transfer){Open(category);battle.GridInputEnabled=battle.KeyboardGridInputEnabled=true;}
+    else if(action.DebtSkill==DebtSkill.Extend)battle.UseQuickSkill();
     else ContractPage();
-   },contract.Details(unit),()=>battle.ActionReady);
+   },contract.Details(unit),()=>battle.CanChooseAction(action));
+  }
+  if(action.DebtSkill==DebtSkill.Redistribute){
+   Row("Assign recipients · "+battle.SelectedContracts.Count+" / 3",()=>{if(battle.StartDebtAssignments()){Open(category);battle.GridInputEnabled=battle.KeyboardGridInputEnabled=true;}},"Selected contracts are assigned in selection order.",()=>battle.SelectedContracts.Count>0&&battle.ActionReady);
   }
   if(action.DebtSkill==DebtSkill.Settle){
    unit.QuoteSettlement(battle.SelectedContracts,action.EffectiveActionPointCost,out int ap,out int movement);

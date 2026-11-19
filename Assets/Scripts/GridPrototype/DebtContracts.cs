@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 namespace Game.GridPrototype {
- public enum DebtSkill { None, Borrow, Transfer, Settle }
+ public enum DebtSkill { None, Borrow, Transfer, Settle, Loan, Extend, Redistribute }
  public enum DebtKind { Credit, Footing, Vigor }
  [Serializable] public sealed class DebtTerms {
   public DebtKind Kind;
@@ -18,15 +18,29 @@ namespace Game.GridPrototype {
   public readonly string Id=Guid.NewGuid().ToString("N"),Source;
   public readonly DebtTerms Terms;
   internal int DueTurn;
+  public bool Extended{get;internal set;}
+  internal GridUnit LoanOrigin;
   internal DebtContract(DebtTerms terms,string source,int due){Terms=terms.Copy();Source=source;DueTurn=due;}
   public int TurnsRemaining(GridUnit owner)=>Math.Max(0,DueTurn-owner.DebtTurn);
   public string Deadline(GridUnit owner)=>TurnsRemaining(owner)==0?"Due this turn":"Due in "+TurnsRemaining(owner)+" turn(s)";
-  public string Details(GridUnit owner)=>Terms.Kind+" · "+Source+"\n"+Deadline(owner)+" (turn end)\nRepayment: "+Terms.Price+"\nDefault: "+Terms.Penalty;
+  public string Details(GridUnit owner)=>Terms.Kind+" · "+Source+"\n"+Deadline(owner)+" (turn end)\nRepayment: "+Terms.Price+"\nDefault: "+Terms.Penalty+(Extended?"\nExtension already used.":"");
  }
  public sealed partial class GridUnit {
   readonly List<DebtContract> contracts=new();
   public IReadOnlyList<DebtContract> Contracts=>contracts;
   public int DebtTurn{get;private set;}
+  public bool ConsolidatedPayment;
+  public string NegotiatedSkill;
+  public bool QuickSkillAvailable{get;private set;}
+  DebtContract outstandingLoan;
+  public bool HasOutstandingLoan=>outstandingLoan!=null;
+  public bool HasExtendableContract=>contracts.Any(c=>!c.Extended);
+  public void SuppressQuickSkill()=>QuickSkillAvailable=false;
+  bool SpendQuick(int cost){if(!TurnOpen||Health<=0||!QuickSkillAvailable||!CanAffordActionPoints(cost))return false;ActionPoints-=cost;QuickSkillAvailable=false;return true;}
+  public bool TakeLoan(int cost,int recovery,DebtTerms terms){if(HasOutstandingLoan||terms==null||!SpendQuick(cost))return false;outstandingLoan=Borrow(terms,"Loan");outstandingLoan.LoanOrigin=this;RestoreActionPoints(recovery);return true;}
+  public bool ExtendContract(string id,int cost){var c=contracts.Find(c=>c.Id==id);if(c==null||c.Extended||!SpendQuick(cost))return false;c.DueTurn++;c.Extended=true;return true;}
+  static void ReleaseLoan(DebtContract c){if(c.LoanOrigin!=null&&c.LoanOrigin.outstandingLoan==c)c.LoanOrigin.outstandingLoan=null;}
+
   public int APCollection{get;private set;}
   public int MovementCollection{get;private set;}
   public string LastDebtNotice{get;private set;}="";
@@ -34,7 +48,7 @@ namespace Game.GridPrototype {
   public int GainMovement(int amount){int old=Movement;Movement=(int)Math.Min(MaximumMovement,(long)Movement+Math.Max(0,amount));return Movement-old;}
   internal int CollectAPGain(int amount){int n=Math.Min(APCollection,Math.Max(0,amount));APCollection-=n;return Math.Max(0,amount)-n;}
   internal int CollectMovementGrant(int amount){int n=Math.Min(MovementCollection,Math.Max(0,amount));MovementCollection-=n;return Math.Max(0,amount)-n;}
-  internal void BeginDebtTurn(){DebtTurn++;LastDebtNotice="";}
+  internal void BeginDebtTurn(){DebtTurn++;QuickSkillAvailable=true;LastDebtNotice="";}
   internal void CollectDueContracts(){
    if(Health<=0)return;
    var notices=new List<string>();
@@ -43,12 +57,13 @@ namespace Game.GridPrototype {
     if(c.Terms.Kind==DebtKind.Credit){int paid=Math.Min(ActionPoints,amount);ActionPoints-=paid;APCollection=(int)Math.Min(int.MaxValue,(long)APCollection+amount-paid);}
     else if(c.Terms.Kind==DebtKind.Footing)MovementCollection=(int)Math.Min(int.MaxValue,(long)MovementCollection+amount);
     else ApplyStatus(CombatStatus.Weakened,amount);
-    contracts.Remove(c);notices.Add(c.Terms.Kind+" defaulted: "+c.Terms.Penalty);
+    ReleaseLoan(c);contracts.Remove(c);notices.Add(c.Terms.Kind+" defaulted: "+c.Terms.Penalty);
    }
    LastDebtNotice=string.Join("\n",notices);
   }
   public bool QuoteSettlement(IEnumerable<string> ids,int fee,out int ap,out int movement){
    ap=Math.Max(0,fee);movement=0;var selected=ids?.ToList();if(selected==null||selected.Count==0||selected.Distinct().Count()!=selected.Count)return false;
+   if(ConsolidatedPayment&&selected.Count>=2)ap=0;
    foreach(var id in selected){var c=contracts.Find(c=>c.Id==id);if(c==null)return false;ap=(int)Math.Min(int.MaxValue,(long)ap+c.Terms.RepayAP);movement=(int)Math.Min(int.MaxValue,(long)movement+c.Terms.RepayMovement);}
    return true;
   }
@@ -56,13 +71,15 @@ namespace Game.GridPrototype {
   public bool Settle(IEnumerable<string> ids,int fee){
    var selected=ids?.ToArray();if(!CanSettle(selected,fee))return false;
    QuoteSettlement(selected,fee,out int ap,out int move);if(!SpendActionWithActionPoints(ap))return false;
-   if(move>0)SpendMovement(move);contracts.RemoveAll(c=>selected.Contains(c.Id));LastDebtNotice="Settled "+selected.Length+" contract(s): "+ap+" AP, "+move+" movement.";return true;
+   if(move>0)SpendMovement(move);foreach(var c in contracts.Where(c=>selected.Contains(c.Id)))ReleaseLoan(c);contracts.RemoveAll(c=>selected.Contains(c.Id));LastDebtNotice="Settled "+selected.Length+" contract(s): "+ap+" AP, "+move+" movement.";return true;
   }
-  public bool TransferDebt(string id,GridUnit target,int fee){
-   var c=contracts.Find(c=>c.Id==id);if(c==null||target==null||target==this||target.Health<=0||Health<=0)return false;
-   if(!SpendActionWithActionPoints(fee))return false;
-   int remaining=Math.Max(1,c.TurnsRemaining(this));contracts.Remove(c);c.DueTurn=target.DebtTurn+remaining;target.contracts.Add(c);
-   LastDebtNotice="Transferred "+c.Terms.Kind+" to "+target.Name+".";return true;
+  public bool TransferDebt(string id,GridUnit target,int fee)=>TransferDebts(new[]{id},new[]{target},fee);
+  public bool TransferDebts(IReadOnlyList<string> ids,IReadOnlyList<GridUnit> recipients,int fee){
+   if(ids==null||recipients==null||ids.Count<1||ids.Count>3||ids.Count!=recipients.Count||ids.Distinct().Count()!=ids.Count||Health<=0)return false;
+   var selected=ids.Select(id=>contracts.Find(c=>c.Id==id)).ToArray();
+   if(selected.Any(c=>c==null)||recipients.Any(t=>t==null||t==this||t.Health<=0)||!SpendActionWithActionPoints(fee))return false;
+   for(int i=0;i<selected.Length;i++){var c=selected[i];var target=recipients[i];int remaining=Math.Max(1,c.TurnsRemaining(this));contracts.Remove(c);c.DueTurn=target.DebtTurn+remaining;target.contracts.Add(c);}
+   LastDebtNotice="Transferred "+selected.Length+" contract(s).";return true;
   }
   public bool TryEnemySettlement(){
    int ap=1,move=0;var selected=new List<string>();

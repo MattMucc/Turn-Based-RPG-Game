@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Game.GridPrototype
 {
     // Authored stats and prototype formula tuning; level growth and allocated points are applied; equipped stat modifiers are applied.
-    public sealed class BattleCharacterInfo : MonoBehaviour
+    public sealed partial class BattleCharacterInfo : MonoBehaviour
     {
         public int EffectiveSpeed => Stat(CharacterStat.Speed);
         [Header("Level growth (prototype tuning)")]
@@ -16,8 +16,8 @@ namespace Game.GridPrototype
         public int StoredHealth => storedHealth;
         private int storedMagicPoints = -1;
         public int StoredMagicPoints => storedMagicPoints;
-        public void CaptureProgress(SavedCharacter saved){saved.Level=Level;saved.Unspent=unspentPoints;saved.Rewarded=rewardedLevel;saved.Allocated=JsonUtility.FromJson<StatValues>(JsonUtility.ToJson(AllocatedPoints));saved.Health=storedHealth;saved.Magic=storedMagicPoints;}
-        public void RestoreProgress(SavedCharacter saved){Level=saved.Level;unspentPoints=saved.Unspent;rewardedLevel=saved.Rewarded;AllocatedPoints=JsonUtility.FromJson<StatValues>(JsonUtility.ToJson(saved.Allocated));storedHealth=saved.Health;storedMagicPoints=saved.Magic;}
+        public void CaptureProgress(SavedCharacter saved){CaptureSkills(saved);saved.Level=Level;saved.Unspent=unspentPoints;saved.Rewarded=rewardedLevel;saved.Allocated=JsonUtility.FromJson<StatValues>(JsonUtility.ToJson(AllocatedPoints));saved.Health=storedHealth;saved.Magic=storedMagicPoints;}
+        public void RestoreProgress(SavedCharacter saved){RestoreSkills(saved);Level=saved.Level;unspentPoints=saved.Unspent;rewardedLevel=saved.Rewarded;AllocatedPoints=JsonUtility.FromJson<StatValues>(JsonUtility.ToJson(saved.Allocated));storedHealth=saved.Health;storedMagicPoints=saved.Magic;}
 
         public void StoreMagicPoints(GridUnit unit) => storedMagicPoints = Mathf.Clamp(unit.MagicPoints, 0, unit.MaxMagicPoints);
         public void StoreHealth(GridUnit unit) => storedHealth = Mathf.Clamp(unit.Health, 0, unit.MaxHealth);
@@ -99,6 +99,7 @@ namespace Game.GridPrototype
         [Min(0)] public int BurningDamagePerTick = 5, RegenerationHealingPerTick = 5;
         public void Configure(GridUnit unit)
         {
+            ConfigureDebt(unit);
             unit.InitializeMagicPoints(EffectiveMaxMagicPoints, storedMagicPoints);
             unit.FocusRecovery = Mathf.Max(0, FocusMagicRecovery);
             unit.InitializeActionPoints(StartingActionPoints);

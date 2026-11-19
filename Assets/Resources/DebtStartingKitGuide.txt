@@ -18,3 +18,18 @@ Enemy AI attempts to settle affordable due contracts before moving/attacking, pa
 Contracts use the existing modular command buttons, status badges/tooltips, and Examine content. Their badge number is upcoming turns remaining, or ! when due this turn. AP/movement collection balances have separate badges. Settle Accounts and transfer are deterministic utility actions; offensive Skills retain the existing QTE presentation.
 
 Validation uses EditMode checks. User owns runtime feel, balance and presentation playtesting.
+
+Debt Skill Tree
+Prototype Debt's CharacterMenuData holds the editable nodes, levels, costs, prerequisite IDs and positions. Growth uses the modular Growth layout and Learn button prefab. The UI preview's Debt tree toggle reads this character's authored tree (including an open Debt prefab stage).
+
+Earn 1 Skill Point per level gained: level 1 starts with zero, level 3 has earned two. Stat allocation points are separate. Existing saves receive their level-minus-one earned balance; spending, learned node IDs and Negotiated Terms' permanent choice are saved per character.
+
+Free starting Skills remain available. Loan: level 3 / 2 points. Extension: level 4 / 2. Consolidated Payment: level 6 / 2, after Settle Accounts. Long Reach: level 7 / 2, after Assign Liability. Redistribute Liability: level 10 / 3, after Assign Liability (Long Reach is optional). Negotiated Terms: level 12 / 3, after Extension. Outstanding Balance remains a non-purchasable placeholder (provisional level 16 / 4, after Loan).
+
+Loan and Extension share one Quick Skill use per normal turn, available before or after the main action. A battle replacement receives neither a fresh main action nor a fresh Quick use. Loan costs 1 AP and restores 4, respecting the 9 AP cap and outstanding AP collections. It creates a contract repaying 3 AP in two upcoming turns, defaulting for 4 AP. One originated Loan can remain outstanding; transferring it does not enable another Loan, but its settlement/default does.
+
+Extension costs 1 AP and adds one turn to one personal contract. A contract can be extended only once, including after transfer. Consolidated Payment waives only Settle Accounts' activation fee when settling two or more contracts; all repayment prices remain. Long Reach adds one tile to transfer Skills.
+
+Redistribute Liability costs 3 AP and a main action. Choose one to three personal contracts, assign recipients in selection order, review the assignments in the action details, then Confirm transfers. Repeated recipients are legal; invalid, incomplete and cancelled selections spend nothing. No contract is duplicated, and deadlines/extensions are preserved.
+
+Negotiated Terms requires choosing On Credit, Borrowed Momentum or Unfair Terms during unlocking, followed by explicit confirmation. This choice is permanent. It adds one initial deadline turn to future contracts created by that Skill only; existing contracts do not change. Cancelling the selection spends no points.

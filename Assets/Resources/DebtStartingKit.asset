@@ -15,6 +15,7 @@ MonoBehaviour:
   Actions:
   - Name: On Credit
     DebtSkill: 1
+    RequiredSkillNode: 
     Contract:
       Kind: 0
       RepayAP: 2
@@ -65,6 +66,7 @@ MonoBehaviour:
     QteBonusDamage: 8
   - Name: Borrowed Momentum
     DebtSkill: 1
+    RequiredSkillNode: 
     Contract:
       Kind: 1
       RepayAP: 0
@@ -115,6 +117,7 @@ MonoBehaviour:
     QteBonusDamage: 8
   - Name: Unfair Terms
     DebtSkill: 1
+    RequiredSkillNode: 
     Contract:
       Kind: 2
       RepayAP: 1
@@ -165,6 +168,7 @@ MonoBehaviour:
     QteBonusDamage: 8
   - Name: Assign Liability
     DebtSkill: 2
+    RequiredSkillNode: 
     Contract:
       Kind: 0
       RepayAP: 2
@@ -216,6 +220,7 @@ MonoBehaviour:
     QteBonusDamage: 15
   - Name: Settle Accounts
     DebtSkill: 3
+    RequiredSkillNode: 
     Contract:
       Kind: 0
       RepayAP: 2
@@ -237,6 +242,161 @@ MonoBehaviour:
     MagicRestored: 0
     Pattern: 0
     Reach: 1
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 0
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 1
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Loan
+    DebtSkill: 4
+    RequiredSkillNode: debt-loan
+    Contract:
+      Kind: 0
+      RepayAP: 3
+      RepayMovement: 0
+      DueInTurns: 2
+      DefaultAmount: 4
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: -1
+    Description: Borrow AP against a future payment.
+    Category: 1
+    ActionPointCost: 1
+    ActionPointRecovery: 4
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 0
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 1
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Extension
+    DebtSkill: 5
+    RequiredSkillNode: debt-extension
+    Contract:
+      Kind: 0
+      RepayAP: 2
+      RepayMovement: 0
+      DueInTurns: 1
+      DefaultAmount: 3
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: -1
+    Description: Delay one personal contract by one turn. Each contract can be extended
+      once.
+    Category: 1
+    ActionPointCost: 1
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 0
+    Reach: 1
+    Radius: 1
+    DisabledPatternCells: []
+    RotateAreaTowardTarget: 0
+    MaxTargets: 3
+    Damage: 0
+    ItemId: 
+    quantity: 0
+    Healing: 0
+    Effect: 1
+    DamageType: 0
+    Element: 0
+    Scaling: 0
+    StatScaling: 0
+    HitChance: 100
+    InflictedStatus: 0
+    StatusChance: 100
+    StatusStacks: 1
+    BarrierGranted: 0
+    SignatureQte: 0
+    QteType: 0
+    QteRequiredTaps: 12
+    QteHoldDuration: 2
+    QteProgressDrainPerSecond: 0.2
+    QteTapDrainDelay: 0.3
+    QteSequence: 
+    QteDuration: 1.5
+    QteBonusDamage: 15
+  - Name: Redistribute Liability
+    DebtSkill: 6
+    RequiredSkillNode: debt-redistribute
+    Contract:
+      Kind: 0
+      RepayAP: 2
+      RepayMovement: 0
+      DueInTurns: 1
+      DefaultAmount: 3
+    MovementGranted: 0
+    Image: {fileID: 0}
+    SpellId: 
+    SpellTier: 0
+    LearnSpellId: 
+    EquipmentActionId: 
+    FavoriteSlot: -1
+    Description: Transfer up to three personal contracts to selected enemies without
+      resetting their deadlines.
+    Category: 1
+    ActionPointCost: 3
+    ActionPointRecovery: 0
+    MagicPointCost: 4
+    MagicRestored: 0
+    Pattern: 3
+    Reach: 3
     Radius: 1
     DisabledPatternCells: []
     RotateAreaTowardTarget: 0

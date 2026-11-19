@@ -23,3 +23,5 @@ The default layout loads automatically; ProgressionMenu has an optional Growth L
 SCOPE
 This pass covers the tree workspace, node widgets and connections. The common menu shell and existing selected-node description panel are unchanged. Character kits and learning rules remain deferred.
 Tools > Game > UI > Create missing Growth templates creates missing assets only and preserves edits.
+
+Debt tree: enable Debt tree in the preview to render Prototype Debt's CharacterMenuData nodes instead of layout examples. Edit their Position, level, cost and prerequisites on the Debt prefab. Growth.asset's Action references Learn.prefab for learning and permanent-choice buttons. Other characters retain their prototype trees.

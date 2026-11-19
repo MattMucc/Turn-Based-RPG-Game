@@ -2,6 +2,7 @@ using UnityEngine;
 [CreateAssetMenu(menuName="Game/UI/Growth Page Layout")]
 public sealed class GrowthPageLayout:ScriptableObject {
     public GrowthWorkspaceView Workspace;
+    public InventoryButtonView Action;
     public GrowthNodeView Node;
     public UnityEngine.UI.Image Connection;
     public GrowthTreeArrangement Arrangement;

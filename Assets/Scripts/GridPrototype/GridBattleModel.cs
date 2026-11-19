@@ -40,6 +40,7 @@ namespace Game.GridPrototype
             incoming.deferredMovement = (int)Math.Min(MaximumMovement, (long)incoming.deferredMovement + incoming.Movement);
             incoming.Movement = Movement; Movement = 0;
             EndTurn();
+            incoming.SuppressQuickSkill();
             incoming.TurnOpen = true; incoming.ActionAvailable = false; incoming.Blocking = false;
             return true;
         }

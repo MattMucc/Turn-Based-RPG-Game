@@ -106,7 +106,7 @@ namespace Game.GridPrototype
         public int Movement => Active.Movement;
         public bool CanAfford(BattleActionOption option) => option != null && option.CanUse(Active);
         public int TargetCount => targets.Count;
-        public int TargetLimit => ChosenAction?.Pattern == BattleTargetPattern.Multiple ? ChosenAction.MaxTargets : 1;
+        public int TargetLimit => ChosenAction?.DebtSkill==DebtSkill.Redistribute?selectedContracts.Count:ChosenAction?.Pattern == BattleTargetPattern.Multiple ? ChosenAction.MaxTargets : 1;
         public string Message => message;
         public event Action ActionResolved;
         public event Action TurnStarted;
@@ -415,14 +415,14 @@ namespace Game.GridPrototype
 
         public bool ChooseAction(BattleActionOption option)
         {
-            if (!ActionReady || option == null || !CanAfford(option) || !Loadout.Options.Contains(option)) return false;
+            if (!CanChooseAction(option) || option == null || !CanAfford(option) || !Loadout.Options.Contains(option)) return false;
             if (option.Effect == ActionEffect.Dash) { Dash(option); return !Active.ActionAvailable; }
-            HoveredAction = null; ChosenAction = option; targets.Clear(); selectedContracts.Clear(); selected = Active.Position;
+            HoveredAction = null; ChosenAction = option; targets.Clear(); selectedContracts.Clear();debtAssignments=false; selected = Active.Position;
             message = "Choose any cell in reach, including empty cells or allies. Multi-target actions start when all hits are assigned."; Refresh(); return true;
         }
 
         public void CancelAction()
-        { if (busy && IsAlly(actorIndex) && !Active.ActionAvailable) return; HoveredAction = null; ChosenAction = null; targets.Clear(); selectedContracts.Clear(); if (Grid != null && !closing) Refresh(); }
+        { if (busy && IsAlly(actorIndex) && !Active.ActionAvailable) return; HoveredAction = null; ChosenAction = null; targets.Clear(); selectedContracts.Clear();debtAssignments=false; if (Grid != null && !closing) Refresh(); }
 
         public void HoverAction(BattleActionOption option)
         {
@@ -478,6 +478,7 @@ namespace Game.GridPrototype
 
         public bool CommitAction()
         {
+            if(ChosenAction?.DebtSkill==DebtSkill.Redistribute)return false;
             if (!TryPrepareAction(out var sequence)) return false;
             StartCoroutine(sequence); return true;
         }
@@ -487,7 +488,8 @@ namespace Game.GridPrototype
         {
             sequence = null;
             if (!ActionReady || !ReadyToResolve || !CanAfford(ChosenAction)) return false;
-            if(ChosenAction.DebtSkill==DebtSkill.Settle)return false;
+            if(ChosenAction.DebtSkill==DebtSkill.Settle||ChosenAction.IsQuick)return false;
+            if(ChosenAction.DebtSkill==DebtSkill.Redistribute&&(!debtAssignments||selectedContracts.Count==0||selectedContracts.Count!=targets.Count||selectedContracts.Any(id=>!Active.Contracts.Any(c=>c.Id==id))||targets.Any(c=>!ValidDebtTarget(ChosenAction,c))))return false;
             if(ChosenAction.DebtSkill==DebtSkill.Transfer&&(selectedContracts.Count!=1||!Active.Contracts.Any(c=>c.Id==selectedContracts[0])||targets.Count!=1||!ValidDebtTarget(ChosenAction,targets[0])))return false;
             if (!TryActionApproach(ChosenAction, targets, out var approach)) return false;
             var action = ChosenAction;
@@ -502,8 +504,8 @@ namespace Game.GridPrototype
                     if (target.Alive && target.HasHealth && footprint.Overlaps(TargetCells(target))) hit.Add(target);
                 batches.Add(hit);
             }
-            if(action.DebtSkill==DebtSkill.Transfer){
-                if(!Active.TransferDebt(selectedContracts[0],DebtRecipient(aimedCells[0]),action.EffectiveActionPointCost))return false;
+            if(action.DebtSkill==DebtSkill.Transfer||action.DebtSkill==DebtSkill.Redistribute){
+                if(!Active.TransferDebts(selectedContracts,aimedCells.Select(DebtRecipient).ToArray(),action.EffectiveActionPointCost))return false;
                 RecentHitFeedback=Active.LastDebtNotice;RecentHitFeedbackUntil=Time.unscaledTime+3;
             }else if (!Active.SpendActionWithActionPoints(action.EffectiveActionPointCost, action.EffectiveMagicPointCost)) return false;
             action.CommitDebt(Active);

@@ -6,7 +6,7 @@ public sealed partial class ProgressionMenu {
     readonly Dictionary<Game.GridPrototype.MenuSkillNode,Vector2> growthPositions=new();
     bool BuildModularGrowth(){
         var layout=GrowthLayout;if(!layout||!layout.Workspace)return false;
-        var view=InventoryModularUI.Fill(layout.Workspace,body);view.Title.text=DisplayName(Member)+" · SKILL TREE";
+        var view=InventoryModularUI.Fill(layout.Workspace,body);view.Title.text=DisplayName(Member)+" · SKILL TREE";view.Legend.text="Skill Points: "+Member.SkillPoints+"\n"+view.Legend.text;
         Canvas.ForceUpdateCanvases();
         foreach(var card in GrowthModularUI.Build(view,layout,treeNodes,SkillLearned,n=>!prototypeSkillTree&&SkillRequirementsMet(n))){
             var node=card.Node;var button=card.View.Select;buttons.Add(button);growthPositions[node]=card.Position;

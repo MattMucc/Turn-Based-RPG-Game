@@ -14,12 +14,13 @@ public sealed partial class ProgressionMenu
     bool SkillLearned(MenuSkillNode node)
     {
         if(prototypeSkillTree)return false;
+        if(Member.GetComponent<CharacterMenuData>()?.DebtTree==true)return node.Starting||Member.KnowsNode(node.Id);
         var loadout=Loadout();
         return !node.Passive && !string.IsNullOrWhiteSpace(node.ActionName) && loadout
             && loadout.Options.Any(o=>o!=null&&o.Category==BattleActionCategory.Skill&&o.Name==node.ActionName);
     }
     MenuSkillNode Prerequisite(string id) => string.IsNullOrWhiteSpace(id)||treeNodes.Count(n=>n.Id==id)!=1?null:treeNodes.Find(n=>n.Id==id);
-    bool SkillRequirementsMet(MenuSkillNode node) => Member.Level>=Mathf.Max(1,node.RequiredLevel)
+    bool SkillRequirementsMet(MenuSkillNode node) => !node.Placeholder && Member.Level>=Mathf.Max(1,node.RequiredLevel)
         && (node.Prerequisites??new List<string>()).All(id=>{var prerequisite=Prerequisite(id);return prerequisite!=null&&SkillLearned(prerequisite);});
     void SkillTree()
     {
@@ -108,12 +109,14 @@ public sealed partial class ProgressionMenu
     }
     void ShowSkillNode(MenuSkillNode node)
     {
+        ClearGrowthControls();
         selectedSkillNode=node;
         foreach(var card in skillCards){card.graphic.Selected=card.node==node;card.graphic.SetVerticesDirty();}
         if(prototypeSkillTree){
             Detail(node.Name,"Layout prototype\n\n"+node.Description+"\n\nSkill: Not designed\nRequired level: Not set\nSkill Point cost: Not set\n\nUnlocking is unavailable. These nodes do not grant abilities, spend points or change this character.");
             return;
         }
+        if(ShowDebtGrowth(node))return;
         bool learned=!prototypeSkillTree&&SkillLearned(node),met=!prototypeSkillTree&&SkillRequirementsMet(node);
         string state=learned?"Learned":met?"Level and prerequisites met":"Locked";
         string text=$"{(node.Passive?"Passive":"Active Skill")} · {state}\n\n{node.Description}\n\nREQUIREMENTS\nCharacter level: {Member.Level} / {Mathf.Max(1,node.RequiredLevel)}\nSkill Point cost: {Mathf.Max(0,node.SkillPointCost)}\n\nPREREQUISITES";

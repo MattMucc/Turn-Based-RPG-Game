@@ -28,7 +28,7 @@ namespace Game.GridPrototype
     {
         public string Id, Name;
         [TextArea] public string Description;
-        public bool Passive;
+        public bool Passive,Starting,Placeholder;
         public Texture Icon;
         [Tooltip("Tree layout: X runs left to right; increasing Y places a node higher above the starting node.")]
         public Vector2 Position;
@@ -43,5 +43,6 @@ namespace Game.GridPrototype
     {
         public List<MenuProgressionEntry> Progression = new();
         public List<MenuSkillNode> SkillTree = new();
+        public bool DebtTree;
     }
 }

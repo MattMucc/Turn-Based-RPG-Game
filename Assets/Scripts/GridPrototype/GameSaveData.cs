@@ -22,6 +22,9 @@ namespace Game.GridPrototype
     }
     [Serializable] public sealed class SavedCharacter
     {
+        public int SpentSkillPoints;
+        public List<string> LearnedSkillNodes=new();
+        public string NegotiatedSkill;
         public string Id;public int Level,Unspent,Rewarded,Health,Magic,HalfRemainder;public long Experience;
         public StatValues Allocated;
         public string[] EquipmentSlots;

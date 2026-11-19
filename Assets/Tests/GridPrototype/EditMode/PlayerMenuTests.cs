@@ -70,6 +70,18 @@ public class PlayerMenuTests
         }
     }
     TMP_Dropdown Dropdown(string name)=>menu.GetComponentsInChildren<TMP_Dropdown>().First(d=>d.name==name);
+    [Test] public void DebtNegotiatedUnlockRequiresPermanentChoiceConfirmation(){
+        var member=party[0];member.Level=12;var data=member.gameObject.AddComponent<CharacterMenuData>();data.DebtTree=true;data.SkillTree=DebtSkillTree.Create();
+        Assert.IsTrue(member.LearnNode(data.SkillTree.Single(n=>n.Id=="debt-extension")));
+        Open();Page("SkillTree");var node=data.SkillTree.Single(n=>n.Id=="debt-negotiated");
+        menuType.GetMethod("ShowSkillNode",Hidden).Invoke(menu,new object[]{node});
+        Find("On Credit").onClick.Invoke();Assert.IsFalse(member.KnowsNode(node.Id));Assert.AreEqual(9,member.SkillPoints);
+        Find("Cancel").onClick.Invoke();Assert.IsFalse(member.KnowsNode(node.Id));
+        Find("Borrowed Momentum").onClick.Invoke();Find("Confirm Borrowed Momentum").onClick.Invoke();
+        Assert.IsTrue(member.KnowsNode(node.Id));Assert.AreEqual("Borrowed Momentum",member.NegotiatedSkill);Assert.AreEqual(6,member.SkillPoints);
+        menuType.GetMethod("ShowSkillNode",Hidden).Invoke(menu,new object[]{node});
+        Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.gameObject.activeInHierarchy&&b.name=="On Credit"));
+    }
     [Test] public void SystemCombinesDestinationsAndCancelsPendingSettingsOnTabChange()
     {
         Open();Find("System").onClick.Invoke();

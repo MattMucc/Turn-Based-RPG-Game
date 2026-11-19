@@ -195,7 +195,7 @@ public partial class BattleMenuUI : MonoBehaviour
         BeginList();
         Row("Attacks", () => Open(BattleActionCategory.Attack), "Choose a basic attack.", () => battle.ActionReady, true);
         pool[0].SetIcons(rootKeyboardIcons[0], rootControllerIcons[0], true);
-        Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a unique or common skill, including Dash.", () => battle.ActionReady, true);
+        Row("Skills", () => Open(BattleActionCategory.Skill), "Choose a unique or common skill, including Dash.", () => battle.ActionReady||battle.HasQuickSkill, true);
         pool[1].SetIcons(rootKeyboardIcons[1], rootControllerIcons[1], true);
         Row("Spells", () => Open(BattleActionCategory.Magic), "Cast a learned spell.", () => battle.ActionReady);
         Row("Block", () => battle.Block(), "Reduce incoming damage until your next turn. Paralyzed prevents Block.", () => battle.ActionReady && battle.Combatants[battle.CurrentActorIndex].CanBlock, true);
@@ -211,7 +211,7 @@ public partial class BattleMenuUI : MonoBehaviour
     }
     private void Open(BattleActionCategory selectedCategory, string family=null)
     {
-        if (!battle.ActionReady) return;
+        if (!battle.PlayerReady||(!battle.ActionReady&&selectedCategory!=BattleActionCategory.Skill)) return;
         editingFavorites = false; assigningFavorite = null;
         battle.Loadout.InitializeFavorites();
         category = selectedCategory; spellFamily=family; browsing = true; moving = false; battle.GridInputEnabled = false; battle.KeyboardGridInputEnabled = false;
@@ -234,12 +234,15 @@ public partial class BattleMenuUI : MonoBehaviour
             }
             var captured = option;
             Row(option.Name + (category == BattleActionCategory.Item ? $" ×{option.Quantity}" : ""), () => Select(captured), ActionDetails(option),
-                () => battle.ActionReady && battle.CanAfford(captured) && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
+                () => battle.CanChooseAction(captured) && (battle.ChosenAction == null || battle.ChosenAction == captured), icon: option.FavoriteSlot >= 0, preview: captured);
             if (option.FavoriteSlot >= 0) FavoriteIcons(pool[rows - 1], option.FavoriteSlot);
         }
         if (category == BattleActionCategory.Magic && family==null)
             Row("Focus", () => battle.Focus(), $"Restore up to {battle.Combatants[battle.CurrentActorIndex].FocusRecovery} MP.", () => battle.CanFocus);
         if (rows == 0) Row("None available", () => { }, "This character has no available options in this category.", () => false);
+        if(battle.ChosenAction?.DebtSkill==DebtSkill.Redistribute){
+            Row("Confirm transfers",()=>battle.ConfirmRedistribution(),"Review the assigned contracts and recipients.",()=>battle.ActionReady&&battle.ReadyToResolve,preview:battle.ChosenAction);
+        }
         if (battle.ChosenAction?.Pattern == BattleTargetPattern.Multiple)
         {
             Row("Undo Hit", () => battle.UndoTarget(), "Remove the most recently assigned hit. Delete / controller X while targeting.",
@@ -295,7 +298,7 @@ public partial class BattleMenuUI : MonoBehaviour
         if (editingFavorites) { AssignSlot(slot); return; }
         if (battle.ChosenAction != null) return;
         var option = battle.Loadout.Favorite(category, slot);
-        if (option != null && battle.CanAfford(option) && battle.ActionReady) Select(option);
+        if (option != null && battle.CanChooseAction(option)) Select(option);
     }
     private static int PressedFavorite(Keyboard k, Gamepad pad)
     {
@@ -319,7 +322,8 @@ public partial class BattleMenuUI : MonoBehaviour
     {
         if (!battle.ChooseAction(option)) return;
         if (option.Effect == ActionEffect.Dash) { Root(); return; }
-        if(option.DebtSkill==DebtSkill.Settle||option.DebtSkill==DebtSkill.Transfer){ContractPage();return;}
+        if(option.DebtSkill==DebtSkill.Loan){battle.UseQuickSkill();return;}
+        if(option.DebtSkill==DebtSkill.Settle||option.DebtSkill==DebtSkill.Transfer||option.DebtSkill==DebtSkill.Extend||option.DebtSkill==DebtSkill.Redistribute){ContractPage();return;}
         Open(category, category==BattleActionCategory.Magic&&!string.IsNullOrEmpty(option.SpellId)&&battle.Loadout.Options.Count(a=>a.SpellId==option.SpellId)>1?option.SpellId:null);
         battle.GridInputEnabled = battle.KeyboardGridInputEnabled = true;
         highlighted = -1; tooltip.text = ControllerGlyphs.Adapt(ActionDetails(option)); tooltipPanel.SetActive(true);
@@ -341,6 +345,7 @@ public partial class BattleMenuUI : MonoBehaviour
     private string ActionDetails(BattleActionOption option) {
         var unit=battle.Combatants[battle.CurrentActorIndex];string text=option.TooltipFor(unit);
         if(option.DebtSkill==DebtSkill.Transfer&&battle.SelectedContracts.Count==1){var contract=unit.Contracts.FirstOrDefault(c=>c.Id==battle.SelectedContracts[0]);if(contract!=null)text+="\n\n"+contract.Details(unit);}
+        if(option.DebtSkill==DebtSkill.Redistribute)text+="\n\n"+battle.DebtAssignmentDetails;
         return text;
     }
     private void ShowTooltip(int index)
@@ -359,9 +364,9 @@ public partial class BattleMenuUI : MonoBehaviour
     private void UpdateAvailability()
     {
         for (int i = 0; i < rows; i++) pool[i].SetAvailable(availability[i]());
-        bool commandsVisible = battle.IsAlly(battle.CurrentActorIndex) && (battle.EntryActive || battle.Combatants[battle.CurrentActorIndex].ActionAvailable) && !battle.DefenseActive;
+        bool commandsVisible = battle.IsAlly(battle.CurrentActorIndex) && (battle.EntryActive || battle.Combatants[battle.CurrentActorIndex].ActionAvailable || battle.HasQuickSkill) && !battle.DefenseActive;
         viewport.gameObject.SetActive(commandsVisible);
-        remainingTurnButton.gameObject.SetActive(battle.PlayerReady && !battle.Combatants[battle.CurrentActorIndex].ActionAvailable);
+        remainingTurnButton.gameObject.SetActive(battle.PlayerReady && !battle.Combatants[battle.CurrentActorIndex].ActionAvailable&&!battle.HasQuickSkill);
         remainingTurnButton.SetAvailable(battle.PlayerReady);
         if (!commandsVisible)
         {
@@ -403,7 +408,7 @@ public partial class BattleMenuUI : MonoBehaviour
     public void ControllerCommands(int delta, bool activate)
     {
         if (!battle.PlayerReady) return;
-        if (!battle.Combatants[battle.CurrentActorIndex].ActionAvailable)
+        if (!battle.Combatants[battle.CurrentActorIndex].ActionAvailable&&!battle.HasQuickSkill)
         {
             remainingTurnButton.SetHighlighted(true);
             if (activate) ControllerEndTurn();
@@ -428,7 +433,7 @@ public partial class BattleMenuUI : MonoBehaviour
 
     public bool ShouldShowShortcutFocus(bool applicationFocused)
     {
-        return battle && battle.PlayerReady && battle.ActionReady && !battle.InteractionBlocked
+        return battle && battle.PlayerReady && (battle.ActionReady || battle.HasQuickSkill) && !battle.InteractionBlocked
             && battle.ChosenAction == null && !battle.ControllerInputLocked && viewport.gameObject.activeInHierarchy
             && controllerNavigation && controllerNavigation.ControllerActive && Gamepad.current != null
             && Gamepad.current.leftTrigger.isPressed && !Gamepad.current.rightTrigger.isPressed
@@ -454,7 +459,7 @@ public partial class BattleMenuUI : MonoBehaviour
         var k = Keyboard.current; var pad = Gamepad.current;
         // Match the visible main-menu End Turn control, never an ability submenu or target selection.
         if (CanUseEndTurnShortcut() && PressedEndTurn(k, pad)) { battle.EndTurn(); return; }
-        if (!battle.Combatants[battle.CurrentActorIndex].ActionAvailable)
+        if (!battle.Combatants[battle.CurrentActorIndex].ActionAvailable&&!battle.HasQuickSkill)
         {
             if ((k != null && k.tabKey.wasPressedThisFrame) || (pad != null && pad.leftShoulder.wasPressedThisFrame))
             { moving = !moving; battle.KeyboardGridInputEnabled = moving; }

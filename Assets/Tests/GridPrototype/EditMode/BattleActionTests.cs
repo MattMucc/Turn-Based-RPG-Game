@@ -41,6 +41,20 @@ public class BattleActionTests
         objects.Clear(); Physics.SyncTransforms();
         foreach(var pair in savedPreferences){if(pair.Value.HasValue)PlayerPrefs.SetInt(pair.Key,pair.Value.Value);else PlayerPrefs.DeleteKey(pair.Key);}savedPreferences.Clear();PlayerPrefs.Save();
     }
+    [Test] public void RedistributionRequiresExplicitCommitAndPreservesOrderedRecipients(){
+        var unit=battle.Combatants[0];unit.InitializeActionPoints(9);
+        var a=unit.Borrow(new DebtTerms{DueInTurns=2},"A");var b=unit.Borrow(new DebtTerms{DueInTurns=3},"B");
+        var action=DebtSkillTree.Actions()[2];battle.Loadout.Options.Add(action);
+        Assert.IsTrue(battle.ChooseAction(action));Assert.IsTrue(battle.ToggleContract(a.Id));Assert.IsTrue(battle.ToggleContract(b.Id));Assert.IsTrue(battle.StartDebtAssignments());
+        Assert.IsTrue(battle.ToggleTarget(cells[1]));Assert.IsFalse(battle.TryPrepareAction(out _));
+        Assert.IsTrue(battle.ToggleTarget(cells[2]));Assert.IsFalse(battle.CommitAction());Assert.AreEqual(9,unit.ActionPoints);Assert.AreEqual(2,unit.Contracts.Count);
+        Assert.IsTrue(battle.DebtAssignmentDetails.Contains("A"));Assert.IsTrue(battle.TryPrepareAction(out var sequence));while(sequence.MoveNext()){}
+        Assert.AreEqual(6,unit.ActionPoints);Assert.AreSame(a,battle.Combatants[1].Contracts.Single());Assert.AreSame(b,battle.Combatants[2].Contracts.Single());
+    }
+    [Test] public void LoanWorksAfterMainActionAndConsumesSharedQuickUse(){
+        var unit=battle.Combatants[0];var loan=DebtSkillTree.Actions()[0];battle.Loadout.Options.Add(loan);unit.SpendActionWithActionPoints(1);
+        Assert.IsTrue(battle.HasQuickSkill);Assert.IsTrue(battle.ChooseAction(loan));Assert.IsTrue(battle.UseQuickSkill());Assert.IsFalse(unit.ActionAvailable);Assert.IsFalse(battle.HasQuickSkill);Assert.IsFalse(battle.UseQuickSkill());
+    }
     [Test] public void DebtOffenseCommitsOnceEvenWhenTheHitMisses(){
         var unit=battle.Combatants[0];var action=DebtStartingKit.Create()[0];action.SignatureQte=false;action.HitChance=0;battle.Loadout.Options.Add(action);int hp=battle.Combatants[1].Health,ap=unit.ActionPoints;
         Assert.IsTrue(battle.ChooseAction(action));Assert.IsTrue(battle.ToggleTarget(cells[1]));Assert.IsTrue(battle.TryPrepareAction(out var sequence));

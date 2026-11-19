@@ -155,6 +155,7 @@ GameObject:
   - component: {fileID: 3003055958351131635}
   - component: {fileID: 791043194022376401}
   - component: {fileID: 7297571538031942536}
+  - component: {fileID: 1797514382834805422}
   m_Layer: 6
   m_Name: Prototype Debt
   m_TagString: Untagged
@@ -261,6 +262,9 @@ MonoBehaviour:
   Soul: 0
   Resistances: 
   Statuses: 
+  spentSkillPoints: 0
+  learnedSkillNodes: []
+  negotiatedSkill: 
 --- !u!114 &5341953824463325816
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -359,6 +363,7 @@ MonoBehaviour:
   personalOptions:
   - Name: Heavy Slash
     DebtSkill: 0
+    RequiredSkillNode: 
     Contract:
       Kind: 0
       RepayAP: 2
@@ -473,6 +478,176 @@ MonoBehaviour:
   armor: starter-armor-1
   accessoryOne: 
   accessoryTwo: 
+--- !u!114 &1797514382834805422
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2713249943951413015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dce4f7663f71e7149ab3b59ff074137b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Grid::Game.GridPrototype.CharacterMenuData
+  Progression: []
+  SkillTree:
+  - Id: debt-start-0
+    Name: On Credit
+    Description: Starting Skill.
+    Passive: 0
+    Starting: 1
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 0, y: 0}
+    Prerequisites: []
+    RequiredLevel: 1
+    SkillPointCost: 0
+    ActionName: On Credit
+  - Id: debt-start-1
+    Name: Borrowed Momentum
+    Description: Starting Skill.
+    Passive: 0
+    Starting: 1
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 145, y: 0}
+    Prerequisites: []
+    RequiredLevel: 1
+    SkillPointCost: 0
+    ActionName: Borrowed Momentum
+  - Id: debt-start-2
+    Name: Unfair Terms
+    Description: Starting Skill.
+    Passive: 0
+    Starting: 1
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 290, y: 0}
+    Prerequisites: []
+    RequiredLevel: 1
+    SkillPointCost: 0
+    ActionName: Unfair Terms
+  - Id: debt-start-3
+    Name: Settle Accounts
+    Description: Starting Skill.
+    Passive: 0
+    Starting: 1
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 435, y: 0}
+    Prerequisites: []
+    RequiredLevel: 1
+    SkillPointCost: 0
+    ActionName: Settle Accounts
+  - Id: debt-start-4
+    Name: Assign Liability
+    Description: Starting Skill.
+    Passive: 0
+    Starting: 1
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 580, y: 0}
+    Prerequisites: []
+    RequiredLevel: 1
+    SkillPointCost: 0
+    ActionName: Assign Liability
+  - Id: debt-loan
+    Name: Loan
+    Description: Quick Skill. Spend 1 AP to gain 4 AP, capped at 9. Borrow a 3 AP
+      repayment due in two upcoming turns; default collects 4 AP. Only one originated
+      Loan may remain outstanding.
+    Passive: 0
+    Starting: 0
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 0, y: 160}
+    Prerequisites: []
+    RequiredLevel: 3
+    SkillPointCost: 2
+    ActionName: Loan
+  - Id: debt-extension
+    Name: Extension
+    Description: Quick Skill. Spend 1 AP to delay one personal contract by one turn.
+      Each contract can be extended once, including after transfer.
+    Passive: 0
+    Starting: 0
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 260, y: 160}
+    Prerequisites: []
+    RequiredLevel: 4
+    SkillPointCost: 2
+    ActionName: Extension
+  - Id: debt-consolidated
+    Name: Consolidated Payment
+    Description: Waive Settle Accounts' activation fee when clearing at least two
+      contracts. Repayment prices remain unchanged.
+    Passive: 1
+    Starting: 0
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 400, y: 320}
+    Prerequisites:
+    - debt-start-3
+    RequiredLevel: 6
+    SkillPointCost: 2
+    ActionName: 
+  - Id: debt-reach
+    Name: Long Reach
+    Description: Increase the reach of liability-transfer Skills by one tile.
+    Passive: 1
+    Starting: 0
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 650, y: 160}
+    Prerequisites:
+    - debt-start-4
+    RequiredLevel: 7
+    SkillPointCost: 2
+    ActionName: 
+  - Id: debt-redistribute
+    Name: Redistribute Liability
+    Description: Spend 3 AP and one action to transfer up to three personal contracts.
+      Assign each to an enemy; multiple contracts may share a recipient.
+    Passive: 0
+    Starting: 0
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 650, y: 350}
+    Prerequisites:
+    - debt-start-4
+    RequiredLevel: 10
+    SkillPointCost: 3
+    ActionName: Redistribute Liability
+  - Id: debt-negotiated
+    Name: Negotiated Terms
+    Description: Permanently choose one starting offensive Skill when unlocking. Its new contracts receive one extra turn before collection.
+    Passive: 1
+    Starting: 0
+    Placeholder: 0
+    Icon: {fileID: 0}
+    Position: {x: 260, y: 510}
+    Prerequisites:
+    - debt-extension
+    RequiredLevel: 12
+    SkillPointCost: 3
+    ActionName: 
+  - Id: debt-outstanding
+    Name: Outstanding Balance
+    Description: Future Skill. Its effect and final requirements are not designed;
+      learning is unavailable.
+    Passive: 0
+    Starting: 0
+    Placeholder: 1
+    Icon: {fileID: 0}
+    Position: {x: 0, y: 670}
+    Prerequisites:
+    - debt-loan
+    RequiredLevel: 16
+    SkillPointCost: 4
+    ActionName: 
+  DebtTree: 1
 --- !u!1 &3479316304952442349
 GameObject:
   m_ObjectHideFlags: 0

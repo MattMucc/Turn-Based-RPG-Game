@@ -12,9 +12,11 @@ namespace Game.GridPrototype
     {
         public string Name;
         public DebtSkill DebtSkill;
+        public string RequiredSkillNode;
+        public bool IsQuick=>DebtSkill==DebtSkill.Loan||DebtSkill==DebtSkill.Extend;
         public DebtTerms Contract=new();
         [Min(0)] public int MovementGranted;
-        public void CommitDebt(GridUnit source){if(DebtSkill!=DebtSkill.Borrow)return;source.Borrow(Contract,Name);source.GainMovement(MovementGranted);}
+        public void CommitDebt(GridUnit source){if(DebtSkill!=DebtSkill.Borrow)return;var terms=Contract.Copy();if(source.NegotiatedSkill==Name)terms.DueInTurns++;source.Borrow(terms,Name);source.GainMovement(MovementGranted);}
 
         public Texture Image;
         [HideInInspector] public string SpellId;
@@ -34,7 +36,7 @@ namespace Game.GridPrototype
         [Min(0)] public int MagicRestored;
         public int EffectiveMagicPointCost => Category == BattleActionCategory.Magic ? Mathf.Max(0, MagicPointCost) : 0;
         public int EffectiveActionPointCost => Category == BattleActionCategory.Skill ? Mathf.Clamp(ActionPointCost, 1, 9) : 0;
-        public bool CanUse(GridUnit source) => Available && source != null && ((DebtSkill!=DebtSkill.Transfer && DebtSkill!=DebtSkill.Settle)||source.Contracts.Count>0) && (Effect != ActionEffect.Dash || source.Movement < GridUnit.MaximumMovement) && source.CanAffordActionPoints(EffectiveActionPointCost) && source.CanAffordMagicPoints(EffectiveMagicPointCost);
+        public bool CanUse(GridUnit source) => Available && source != null && (!IsQuick||source.QuickSkillAvailable) && (DebtSkill!=DebtSkill.Loan||!source.HasOutstandingLoan) && (DebtSkill!=DebtSkill.Extend||source.HasExtendableContract) && ((DebtSkill!=DebtSkill.Transfer && DebtSkill!=DebtSkill.Settle && DebtSkill!=DebtSkill.Redistribute)||source.Contracts.Count>0) && (Effect != ActionEffect.Dash || source.Movement < GridUnit.MaximumMovement) && (source.CanAffordActionPoints(EffectiveActionPointCost)||(DebtSkill==DebtSkill.Settle&&source.ConsolidatedPayment&&source.Contracts.Count>=2)) && source.CanAffordMagicPoints(EffectiveMagicPointCost);
         public void CompleteResourceRecovery(GridUnit source)
         {
             if (Category == BattleActionCategory.Attack && Effect == ActionEffect.Damage) source.RestoreActionPoints(source.AttackActionPointGain);
@@ -108,6 +110,9 @@ namespace Game.GridPrototype
                 if (source != null && !source.CanAffordActionPoints(EffectiveActionPointCost)) result += Row("Available", $"{source.ActionPoints} AP — insufficient");
                 if (ActionPointRecovery > 0) result += Row("Recovery", $"{Mathf.Clamp(ActionPointRecovery, 0, 9)} AP after use");
             }
+            if(IsQuick)result+=Row("Action","Quick · shared once per turn");
+            if(DebtSkill==DebtSkill.Loan)return result+Row("Recovery","Up to "+ActionPointRecovery+" AP")+Row("Repayment",Contract.Price)+Row("Due",Contract.DueInTurns+" upcoming turns")+"\n"+Contract.Penalty;
+            if(DebtSkill==DebtSkill.Extend)return result+Row("Extension","1 turn · once per contract");
             if(DebtSkill==DebtSkill.Settle)return result+" + selected repayments";
             if(DebtSkill==DebtSkill.Borrow){result+=Row("Contract",Contract.Kind.ToString())+Row("Repayment",Contract.Price)+Row("Due",Contract.DueInTurns+" upcoming turn(s), at turn end")+"\n\n"+Contract.Penalty;if(MovementGranted>0)result+=Row("Movement","Up to +"+MovementGranted);}
             if (Effect == ActionEffect.Dash) return result + Row("Movement", source == null ? "Up to +3 (maximum 10)" : $"+{Mathf.Min(3, GridUnit.MaximumMovement - source.Movement)} (maximum 10)");
@@ -187,6 +192,7 @@ namespace Game.GridPrototype
         }
         private List<BattleActionOption> combinedOptions;
         private SharedBattleActionLibrary cachedLibrary;
+        int cachedSkillRevision=-1;
         private int cachedRevision = -1, cachedInventoryRevision = -1, cachedItemCount = -1;
         private PartyInventory inventory;
         private readonly Dictionary<string, BattleActionOption> itemInstances = new();
@@ -200,18 +206,21 @@ namespace Game.GridPrototype
         {
             get
             {
+                var skillOwner=GetComponent<BattleCharacterInfo>();
                 var equipment=GetComponent<CharacterEquipment>();
                 if (!SharedLibrary && !CharacterLibrary && inventory == null && !equipment && LearnedSpells.Count == 0) return personalOptions;
-                if (combinedOptions != null && cachedCharacterLibrary==CharacterLibrary && cachedCharacterRevision==(CharacterLibrary?CharacterLibrary.Revision:-1) && cachedMasteryExperience == (equipment?.Weapon?.MasteryExperience ?? -1) && cachedEquipmentRevision == (equipment ? equipment.Revision : -1) && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
+                if (combinedOptions != null && cachedSkillRevision==(skillOwner?skillOwner.SkillRevision:0) && cachedCharacterLibrary==CharacterLibrary && cachedCharacterRevision==(CharacterLibrary?CharacterLibrary.Revision:-1) && cachedMasteryExperience == (equipment?.Weapon?.MasteryExperience ?? -1) && cachedEquipmentRevision == (equipment ? equipment.Revision : -1) && cachedLibrary == SharedLibrary && cachedRevision == (SharedLibrary ? SharedLibrary.Revision : -1) && cachedInventoryRevision == (inventory?.Revision ?? -1) && cachedItemCount == (inventory?.Items.Count ?? -1)) return combinedOptions;
                 if (cachedLibrary != SharedLibrary) sharedInstances.Clear();
                 combinedOptions = new List<BattleActionOption>();
                 var names = new HashSet<string>();
                 foreach (var definition in System.Linq.Enumerable.Concat(SharedLibrary ? SharedLibrary.Actions : new List<BattleActionOption>(),CharacterLibrary ? CharacterLibrary.Actions : new List<BattleActionOption>()))
                 {
                     if (equipment && definition != null && definition.Category == BattleActionCategory.Attack && definition.Effect == ActionEffect.Damage) continue;
+                    if(definition!=null&&!string.IsNullOrEmpty(definition.RequiredSkillNode)&&(!skillOwner||!skillOwner.KnowsNode(definition.RequiredSkillNode)))continue;
                     if (definition == null || definition.Category == BattleActionCategory.Item || string.IsNullOrWhiteSpace(definition.Name) || !names.Add(definition.Name)) continue;
                     var copy = JsonUtility.FromJson<BattleActionOption>(JsonUtility.ToJson(definition));
                     if (sharedInstances.TryGetValue(definition.Name, out var previous)) copy.FavoriteSlot = previous.FavoriteSlot;
+                    if(skillOwner&&skillOwner.KnowsNode("debt-reach")&&(copy.DebtSkill==DebtSkill.Transfer||copy.DebtSkill==DebtSkill.Redistribute))copy.Reach++;
                     sharedInstances[definition.Name] = copy; combinedOptions.Add(copy);
                 }
                 foreach (var option in personalOptions) if (!(equipment && option != null && option.Category == BattleActionCategory.Attack && option.Effect == ActionEffect.Damage) && option != null && !names.Contains(option.Name) && (inventory == null || option.Category != BattleActionCategory.Item)) combinedOptions.Add(option);
@@ -255,6 +264,7 @@ namespace Game.GridPrototype
                         copy.BindStock(source); itemInstances[id] = copy; combinedOptions.Add(copy);
                     }
                 }
+                cachedSkillRevision=skillOwner?skillOwner.SkillRevision:0;
                 cachedCharacterLibrary=CharacterLibrary;cachedCharacterRevision=CharacterLibrary?CharacterLibrary.Revision:-1;
                 cachedLibrary = SharedLibrary; cachedRevision = SharedLibrary ? SharedLibrary.Revision : -1;
                 cachedInventoryRevision = inventory?.Revision ?? -1; cachedItemCount = inventory?.Items.Count ?? -1; favoritesInitialized = false;

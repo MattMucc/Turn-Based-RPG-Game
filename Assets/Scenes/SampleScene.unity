@@ -351,6 +351,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -405,6 +406,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -459,6 +461,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -513,6 +516,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -567,6 +571,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -621,6 +626,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -675,6 +681,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -729,6 +736,7 @@ MonoBehaviour:
     Item:
       Name: 
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -783,6 +791,7 @@ MonoBehaviour:
     Item:
       Name: Health Potion
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -837,6 +846,7 @@ MonoBehaviour:
     Item:
       Name: Mana Potion
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -2230,6 +2240,7 @@ MonoBehaviour:
     Items:
     - Name: Health Potion
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -2280,6 +2291,7 @@ MonoBehaviour:
       QteBonusDamage: 15
     - Name: Mana Potion
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -2330,6 +2342,7 @@ MonoBehaviour:
       QteBonusDamage: 15
     - Name: Fireball Spellbook
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2
@@ -2380,6 +2393,7 @@ MonoBehaviour:
       QteBonusDamage: 15
     - Name: Mend Spellbook
       DebtSkill: 0
+      RequiredSkillNode: 
       Contract:
         Kind: 0
         RepayAP: 2

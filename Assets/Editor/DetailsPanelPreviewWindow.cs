@@ -54,6 +54,7 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
     [SerializeField] int shellPreview;
     [SerializeField] int merchantPreview;
     [SerializeField] int systemPreview;
+    [SerializeField] bool growthDebtPreview;
     [SerializeField] int abilitiesPreview;
     [SerializeField] int inventoryPreview;
 
@@ -202,7 +203,7 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
             return stamp;
         }
         if(growthLayout){
-            string stamp=EditorJsonUtility.ToJson(growthLayout);
+            string stamp=EditorJsonUtility.ToJson(growthLayout);if(growthDebtPreview)stamp+=AssetDatabase.GetAssetDependencyHash("Assets/Prefabs/Player/Prototype Debt.prefab");
             foreach(var reference in new Component[]{growthLayout.Workspace,growthLayout.Node,growthLayout.Connection,growthLayout.Arrangement})
                 if(reference)stamp+=AssetDatabase.GetAssetDependencyHash(AssetDatabase.GetAssetPath(reference));
             var stage=PrefabStageUtility.GetCurrentPrefabStage();if(stage!=null)foreach(var c in stage.prefabContentsRoot.GetComponentsInChildren<Component>(true))if(c)stamp+=EditorJsonUtility.ToJson(c);
@@ -274,6 +275,7 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
         if(battleLayout){battleShortcutFocus=EditorGUILayout.Toggle("LT shortcut focus",battleShortcutFocus);battleRight=EditorGUILayout.Toggle("Right turn order",battleRight);battleStatuses=EditorGUILayout.Toggle("Party statuses",battleStatuses);battleActionSpent=EditorGUILayout.Toggle("Action spent",battleActionSpent);}
         if(shellLayout)shellPreview=EditorGUILayout.Popup("Shell page",shellPreview,new[]{"Party","Inventory","Abilities","Growth","System","Shop","Blacksmith"});
         if(merchantLayout)merchantPreview=EditorGUILayout.Popup("Merchant view",merchantPreview,new[]{"Inventory workspace","Transaction buttons","Empty category"});
+        if(growthLayout)growthDebtPreview=EditorGUILayout.Toggle("Debt tree",growthDebtPreview);
         if(systemLayout)systemPreview=EditorGUILayout.Popup("System view",systemPreview,new[]{"Save / Load","Battle","Graphics","UI","Audio","Confirmation","Save slots"});
         if(abilitiesLayout)abilitiesPreview=EditorGUILayout.Popup("Ability category",abilitiesPreview,new[]{"Attacks","Skills","Spells","Items"});
         if(inventoryLayout)inventoryPreview=EditorGUILayout.Popup("Inventory view",inventoryPreview,new[]{"Grid and filters","Item details","Context menu"});
@@ -600,12 +602,18 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
             contentHeight=panelHeight+Mathf.Max(0,panel.Scroll.content.rect.height-panel.Scroll.viewport.rect.height);
         }else contentHeight=panelHeight;
     }
+    List<MenuSkillNode> DebtPreviewNodes(){
+        var stage=PrefabStageUtility.GetCurrentPrefabStage();
+        var data=stage!=null?stage.prefabContentsRoot.GetComponent<CharacterMenuData>():null;
+        if(!data||!data.DebtTree){var prefab=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Player/Prototype Debt.prefab");data=prefab?prefab.GetComponent<CharacterMenuData>():null;}
+        return data&&data.DebtTree?data.SkillTree:DebtSkillTree.Create();
+    }
     void BuildGrowthPreview(){
         var sample=Instantiate(growthLayout);
         try{
             sample.Workspace=InventoryTemplate(sample.Workspace);sample.Node=InventoryTemplate(sample.Node);sample.Connection=InventoryTemplate(sample.Connection);sample.Arrangement=InventoryTemplate(sample.Arrangement);
             var view=InventoryModularUI.Fill(sample.Workspace,content);view.Title.text="EXAMPLE CHARACTER · SKILL TREE";Canvas.ForceUpdateCanvases();
-            var nodes=sample.Arrangement.Examples();var cards=GrowthModularUI.Build(view,sample,nodes,n=>false,n=>false);
+            var nodes=growthDebtPreview?DebtPreviewNodes():sample.Arrangement.Examples();var cards=GrowthModularUI.Build(view,sample,nodes,n=>growthDebtPreview&&n.Starting,n=>false);
             if(cards.Count>0){cards[0].View.Frame.Selected=true;cards[0].View.Frame.SetVerticesDirty();}
             previewInventoryScroll=view.Tree;contentHeight=panelHeight+Mathf.Max(0,view.Tree.content.rect.height-view.Tree.viewport.rect.height);
         }finally{DestroyImmediate(sample);}
