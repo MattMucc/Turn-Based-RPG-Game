@@ -632,10 +632,13 @@ public class PlayerMenuTests
         var expand=menu.GetComponentsInChildren<Button>().First(b=>b.name.Contains("Merchant sword hit"));
         expand.onClick.Invoke();
         Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Merchant sword hit"));
+        Assert.AreEqual("Buy · 50 coins",Find("Review purchase").GetComponentInChildren<TMP_Text>().text);
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.name=="Currency"&&t.text=="100 coins"));
+        foreach(var scroll in menu.GetComponentsInChildren<ScrollRect>()){Assert.IsNotNull(scroll.verticalScrollbar);Assert.IsNotNull(scroll.horizontalScrollbar);}
         Find("Review purchase").onClick.Invoke();Assert.AreEqual(100,inventory.Coins);
         Find("Cancel trade").onClick.Invoke();Assert.AreEqual(0,inventory.Owned.Count);
         Find("Review purchase").onClick.Invoke();Find("Confirm purchase").onClick.Invoke();
-        Assert.AreEqual(50,inventory.Coins);Assert.AreEqual(1,inventory.Owned.Count);
+        Assert.AreEqual(50,inventory.Coins);Assert.AreEqual(1,inventory.Owned.Count);Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.name=="Currency"&&t.text=="50 coins"));
         Find("Sell").onClick.Invoke();Find("Review sale").onClick.Invoke();Find("Confirm sale").onClick.Invoke();
         Assert.AreEqual(60,inventory.Coins);Assert.AreEqual(0,inventory.Owned.Count);
         Find("Buy").onClick.Invoke();Find("Review purchase").onClick.Invoke();

@@ -30,7 +30,7 @@ public sealed partial class ProgressionMenu
         if(!blacksmith)MerchantButton(body,"Back",width-112,body.rect.height-112,112,()=>ShowPage(Page.Inventory));
         var copies=Manager.Equipment.Owned.Where(e=>e!=null&&e.Definition&&(forgeCategory==0||(int)e.Definition.Kind==forgeCategory-1)).ToList();
         if(!copies.Any(e=>e.InstanceId==upgradeSelection))upgradeSelection=copies.FirstOrDefault()?.InstanceId;
-        MerchantLabel(Rect("Upgrade heading",body,0,0,width,40),BlacksmithServiceAvailable?blacksmith.DisplayName+" · "+Manager.Equipment.Coins+" coins":"UPGRADE RECIPES · Visit a blacksmith",19);
+        MerchantLabel(Rect("Upgrade heading",body,0,0,width,40),BlacksmithServiceAvailable?blacksmith.DisplayName:"UPGRADE RECIPES · Visit a blacksmith",19);
         string[] filters={"All","Weapons","Armor","Accessories"};float tabWidth=(width-18)/4;
         for(int f=0;f<filters.Length;f++){
             int category=f;var tab=MerchantButton(body,filters[f],f*(tabWidth+6),44,tabWidth,()=>{forgeCategory=category;upgradePending=false;upgradeNotice=null;Rebuild();},null,32);
@@ -46,7 +46,7 @@ public sealed partial class ProgressionMenu
             MerchantIcon(button,proxy,size);
             button.interactable=!upgradePending;
             if(copy.InstanceId==upgradeSelection)button.image.color=(modularMerchant?activeMerchantLayout.SelectedColor:new Color(.16f,.36f,.44f));
-            var caption=MerchantLabel(Rect("Equipped owner",list,x,y+size+2,size,26),owner?DisplayName(owner):"Unequipped",11);if(!modularMerchant){caption.enableAutoSizing=true;caption.fontSizeMin=9;caption.fontSizeMax=11;caption.alignment=TextAlignmentOptions.Center;}
+            var caption=MerchantLabel(Rect("Equipped owner",list,x,y+size+2,size,26),copy.UpgradeLevel<copy.Definition.Upgrades.Count?copy.Definition.Upgrades[copy.UpgradeLevel].Fee+" coins":"MAX",11);if(!modularMerchant){caption.enableAutoSizing=true;caption.fontSizeMin=9;caption.fontSizeMax=11;caption.alignment=TextAlignmentOptions.Center;}
             var pointer=button.gameObject.AddComponent<PlayerInventoryPointer>();
             pointer.Hover=()=>{if(!upgradePending)ShowForgeTooltip(copy,button.transform);};pointer.Exit=HideItemTooltip;
             button.GetComponent<PlayerMenuFocus>().Preview=()=>{if(!upgradePending)ShowForgeTooltip(copy,button.transform);};
@@ -98,7 +98,7 @@ public sealed partial class ProgressionMenu
         Row(DetailSection.Upgrade,$"Upgrade {copy.UpgradeLevel} / {copy.Definition.Upgrades.Count}"+(next?$" → {copy.UpgradeLevel+1}":" · Maximum"));
         Row(DetailSection.Availability,owner?"Equipped by "+DisplayName(owner):"Unequipped",14);
         if(next){
-            Row(DetailSection.Price,$"FEE: {copy.Definition.Upgrades[copy.UpgradeLevel].Fee} coins / {Manager.Equipment.Coins} owned");
+            Row(DetailSection.Price,$"FEE: {copy.Definition.Upgrades[copy.UpgradeLevel].Fee} coins");
             Row(DetailSection.Materials,"MATERIALS · required / owned");
             foreach(var cost in costs){var material=Manager.Equipment.Materials.Find(m=>m!=null&&m.Id==cost.Key);Row(DetailSection.Materials,$"{material?.Name??cost.Key}: {cost.Value} / {material?.Quantity??0}",14);}
             Row(DetailSection.Stats,"EQUIPMENT STATS · current → upgraded");

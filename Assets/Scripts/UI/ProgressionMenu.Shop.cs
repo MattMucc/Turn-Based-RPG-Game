@@ -9,7 +9,7 @@ public sealed partial class ProgressionMenu
 {
     Merchant merchant;
     bool shopSelling,shopPending;
-    int shopFilter,shopPrice;
+    int shopFilter,shopPrice,shopDisplayedPrice;
     string shopKey,shopNotice;
     readonly HashSet<BattleActionOption> shopExpanded=new();
     sealed class ShopEntry { public Merchant.Offer Offer; public OwnedEquipment Copy; public string Key; }
@@ -22,7 +22,7 @@ public sealed partial class ProgressionMenu
     {
         HideItemTooltip();if(!merchant){Detail("Shop","Merchant unavailable.");return;}
         Manager.BindEquipment();BeginMerchantLayout(false);float w=body.rect.width;
-        MerchantLabel(Rect("Merchant",body,0,0,w,32),merchant.DisplayName+" · "+Manager.Equipment.Coins+" coins",20);
+        MerchantLabel(Rect("Merchant",body,0,0,w,32),merchant.DisplayName,20);
         foreach(bool sell in new[]{false,true}){
             var b=MerchantButton(body,sell?"Sell":"Buy",sell?w/2+4:0,40,w/2-4,()=>{shopSelling=sell;shopKey=null;shopPending=false;shopExpanded.Clear();Rebuild();});
             b.interactable=!shopPending;if(sell==shopSelling)b.image.color=(modularMerchant?activeMerchantLayout.SelectedColor:new Color(.16f,.36f,.44f));
@@ -62,7 +62,7 @@ public sealed partial class ProgressionMenu
     }
     void ShopDetails(ShopEntry entry)
     {
-        Clear(detailRoot);var offer=entry.Offer;var definition=offer.Equipment;int price=shopSelling?offer.SellPrice:offer.BuyPrice;
+        Clear(detailRoot);var offer=entry.Offer;var definition=offer.Equipment;int price=shopSelling?offer.SellPrice:offer.BuyPrice;shopDisplayedPrice=price;
         var content=List(detailRoot,"Shop item details",0,0,detailRoot.rect.width,detailRoot.rect.height-106,500);
         float w=content.rect.width-24,y=8;
         y=ProgressionText(content,"Item name",offer.Name,y,w,23,Accent);

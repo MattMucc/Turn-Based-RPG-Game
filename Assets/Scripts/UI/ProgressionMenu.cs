@@ -56,6 +56,7 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         TickDisplayPreview();
         if (!Manager) return;
         UpdateMenuInteractionState();
+        if(open&&modularShell&&modularShell.Currency)modularShell.Currency.text=Manager.Equipment.Coins.ToString("N0")+" coins";
         if(Manager.GetComponent<SaveGameService>()&&Manager.GetComponent<SaveGameService>().Busy)return;
         if (InBattle) { Close(); return; }
         if (!Application.isFocused) { draggedAbility=null;CancelInventoryDrag(); CancelPartyDrag(); return; }
@@ -172,6 +173,7 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         characterLabel.text = DisplayName(Member);
         UpdateMenuPresentation(); BuildDetails();
         switch (page) { case Page.Shop: ShopPage(); break; case Page.System: SystemPage(); break; case Page.Party: Party(); break; case Page.Attributes: Attributes(); break; case Page.Shortcuts: Shortcuts(); break; case Page.Progression: Progression(); break; case Page.SkillTree: SkillTree(); break; case Page.Inventory: Inventory(); break; case Page.Settings: Settings(); break; case Page.Saves: Saves(); break; case Page.Checkpoint: CheckpointPage(); break; case Page.Equipment: EquipmentPage(); break; case Page.Upgrades: UpgradesPage(); break; case Page.Abilities: AbilitiesPage(); break; }
+        VisibleScrollbars.EnsureAll(canvasObject);
         if(page==Page.Inventory)RestoreInventorySelection();
         else if(page!=Page.SkillTree || skillCards.Count==0) SelectFirst();
         if(page==Page.Party) RestorePartySelection();

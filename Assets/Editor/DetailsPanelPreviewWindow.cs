@@ -298,7 +298,7 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
         if(Event.current.type==EventType.Repaint&&preview!=null){
             PositionPreview();Canvas.ForceUpdateCanvases();
             preview.BeginPreview(new Rect(0,0,panelWidth,panelHeight),GUIStyle.none);
-            preview.Render(true);
+            RefreshPreviewScrollbars();preview.Render(true);
             var texture=preview.EndPreview();GUI.DrawTexture(frame,texture,ScaleMode.StretchToFill,false);
         }
     }
@@ -321,22 +321,22 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
         var root=(RectTransform)canvasRoot.transform;root.pivot=new Vector2(0,1);root.sizeDelta=new Vector2(panelWidth,panelHeight);root.localScale=Vector3.one*.01f;
         var viewport=Rect("Preview viewport",root,panelWidth,panelHeight);viewport.gameObject.AddComponent<RectMask2D>();
         content=Rect("Content",viewport,panelWidth,panelHeight);
-        if(worldLayout){BuildWorldPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(checkpointLayout){BuildCheckpointPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(hintsLayout){BuildHintsPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(interactionLayout){BuildInteractionPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(swapLayout){BuildSwapPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(overheadLayout){BuildOverheadPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(targetLayout){BuildTargetPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(reactionLayout){BuildReactionPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(battleLayout){BuildBattlePreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(shellLayout){BuildShellPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(merchantLayout){BuildMerchantPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(systemLayout){BuildSystemPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(growthLayout){BuildGrowthPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(abilitiesLayout){BuildAbilitiesPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(inventoryLayout){BuildInventoryPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
-        if(partyLayout){BuildPartyPreview();Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();foreach(var text in canvasRoot.GetComponentsInChildren<TMP_Text>())text.ForceMeshUpdate();return;}
+        if(worldLayout){BuildWorldPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(checkpointLayout){BuildCheckpointPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(hintsLayout){BuildHintsPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(interactionLayout){BuildInteractionPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(swapLayout){BuildSwapPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(overheadLayout){BuildOverheadPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(targetLayout){BuildTargetPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(reactionLayout){BuildReactionPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(battleLayout){BuildBattlePreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(shellLayout){BuildShellPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(merchantLayout){BuildMerchantPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(systemLayout){BuildSystemPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(growthLayout){BuildGrowthPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(abilitiesLayout){BuildAbilitiesPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(inventoryLayout){BuildInventoryPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();return;}
+        if(partyLayout){BuildPartyPreview();VisibleScrollbars.EnsureAll(canvasRoot);Canvas.ForceUpdateCanvases();foreach(var graphic in canvasRoot.GetComponentsInChildren<Graphic>())graphic.SetAllDirty();Canvas.ForceUpdateCanvases();foreach(var text in canvasRoot.GetComponentsInChildren<TMP_Text>())text.ForceMeshUpdate();return;}
         var rows=new List<DetailsPanelComposer.Row>();
         void Text(DetailSection binding,string value){
             if(string.IsNullOrWhiteSpace(value))return;
@@ -352,7 +352,7 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
         if(art){var picture=Rect("Artwork",content,112,112);var image=picture.gameObject.AddComponent<RawImage>();image.texture=art;rows.Add(new DetailsPanelComposer.Row(DetailSection.Artwork,picture));}
         Text(DetailSection.Description,equipment?equipment.Description:"A sample entry with enough text to preview wrapping and spacing.");
         Text(DetailSection.Availability,"Example character · Level 10");
-        Text(DetailSection.Price,"50 coins / 300 owned");
+        Text(DetailSection.Price,"50 coins");
         Text(DetailSection.Upgrade,"Upgrade 0 / 3 → 1");
         Text(DetailSection.Materials,"MATERIALS · required / owned\nIron: 2 / 6\nHide: 1 / 3");
         Text(DetailSection.Stats,"Strength: 10 → 12\nMagic: 8 → 8\nPhysical Defense: 6 → 7");
@@ -570,7 +570,7 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
         contentHeight=panelHeight;
         if(merchantPreview==1){
             if(!merchantLayout.Blacksmith&&merchantLayout.AttackDetails){var attack=Instantiate(InventoryTemplate(merchantLayout.AttackDetails),content,false);attack.Label.text="Attack details";((RectTransform)attack.transform).anchoredPosition=new Vector2(12,-12);}
-            var action=Instantiate(InventoryTemplate(merchantLayout.Action),content,false);action.Label.text=merchantLayout.Blacksmith?"Confirm upgrade":"Confirm purchase";
+            var action=Instantiate(InventoryTemplate(merchantLayout.Action),content,false);action.Label.text=merchantLayout.Blacksmith?"Upgrade · 50 coins":"Buy · 50 coins";
             var cancel=Instantiate(InventoryTemplate(merchantLayout.Cancel),content,false);cancel.Label.text=merchantLayout.Blacksmith?"Cancel upgrade":"Cancel trade";return;
         }
         var view=InventoryModularUI.Fill(InventoryTemplate(merchantLayout.Workspace),content);
@@ -580,7 +580,7 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
         }
         int count=merchantPreview==2?0:30;view.Empty.gameObject.SetActive(count==0);
         for(int i=0;i<count;i++){
-            var slot=Instantiate(InventoryTemplate(merchantLayout.Slot),view.Scroll.content,false);slot.Caption.text=merchantLayout.Blacksmith?(i==0?"Example captain":"Unequipped"):(20+i*5)+" coins";
+            var slot=Instantiate(InventoryTemplate(merchantLayout.Slot),view.Scroll.content,false);slot.Caption.text=(20+i*5)+" coins";
             var icon=slot.Artwork.gameObject.AddComponent<InventorySlotIcon>();icon.Kind=new[]{"Weapons","Armor","Accessories","Consumables"}[i%(merchantLayout.Blacksmith?3:4)];icon.raycastTarget=false;
             if(i==0)slot.Select.image.color=merchantLayout.SelectedColor;
         }
@@ -715,13 +715,25 @@ public sealed class DetailsPanelPreviewWindow : EditorWindow
         var source=old.GetComponent<LayoutElement>();if(source){var target=replacement.GetComponent<LayoutElement>();if(!target)target=replacement.gameObject.AddComponent<LayoutElement>();EditorUtility.CopySerialized(source,target);}
         return replacement;
     }
+    void RefreshPreviewScrollbars(){
+        if(!canvasRoot)return;
+        Canvas.ForceUpdateCanvases();
+        foreach(var scroll in canvasRoot.GetComponentsInChildren<ScrollRect>(true)){
+            if(!scroll.content||!scroll.viewport)continue;
+            var size=RectTransformUtility.CalculateRelativeRectTransformBounds(scroll.viewport,scroll.content).size;
+            var frame=scroll.viewport.rect.size;
+            if(scroll.verticalScrollbar){scroll.verticalScrollbar.gameObject.SetActive(scroll.vertical&&size.y>frame.y+.5f);scroll.verticalScrollbar.size=Mathf.Clamp01(frame.y/Mathf.Max(1,size.y));scroll.verticalScrollbar.SetValueWithoutNotify(scroll.verticalNormalizedPosition);}
+            if(scroll.horizontalScrollbar){scroll.horizontalScrollbar.gameObject.SetActive(scroll.horizontal&&size.x>frame.x+.5f);scroll.horizontalScrollbar.size=Mathf.Clamp01(frame.x/Mathf.Max(1,size.x));scroll.horizontalScrollbar.SetValueWithoutNotify(scroll.horizontalNormalizedPosition);}
+        }
+        Canvas.ForceUpdateCanvases();
+    }
     public Texture2D CapturePreview()
     {
         if(preview==null)BuildPreview();
         if(preview==null)return null;
         PositionPreview();
         preview.BeginStaticPreview(new Rect(0,0,panelWidth,panelHeight));
-        Canvas.ForceUpdateCanvases();preview.Render(true);
+        Canvas.ForceUpdateCanvases();RefreshPreviewScrollbars();preview.Render(true);
         return preview.EndStaticPreview();
     }
     static RectTransform Rect(string name,Transform parent,float w,float h)

@@ -38,6 +38,7 @@ public sealed partial class ProgressionMenu
         var content = Rect("Content",viewport,0,0,width-8,Mathf.Max(height,contentHeight));
         var scroll = viewport.gameObject.AddComponent<ScrollRect>(); scroll.viewport=viewport; scroll.content=content;
         scroll.horizontal=false; scroll.vertical=true; scroll.scrollSensitivity=45; scroll.movementType=ScrollRect.MovementType.Clamped;
+        VisibleScrollbars.Ensure(scroll);
         return content;
     }
     void Build()

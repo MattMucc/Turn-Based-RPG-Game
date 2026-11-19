@@ -113,6 +113,7 @@ public partial class BattleMenuUI : MonoBehaviour
         shortcutDimmer.raycastTarget = false; dimmer.SetActive(false);
         viewport.SetAsLastSibling(); tooltipPanel.transform.SetAsLastSibling(); targetCounter.transform.parent.SetAsLastSibling();
         BuildModularCommands();
+        VisibleScrollbars.EnsureAll(gameObject);
     }
 
     private TMP_Text MakeText(string name, Vector2 anchor, Vector2 position, Vector2 size, bool background)

@@ -28,3 +28,6 @@ Tools > Game > UI > Create missing Merchant templates creates missing assets and
 
 Transactions
 Filtering, hover information, equipped-item sale restrictions, current currency/material checks, per-copy upgrades, price/recipe revalidation and confirmation/cancel behaviour remain unchanged. Preview examples do not define merchant inventory or upgrade recipes.
+
+Prices and currency: Action.prefab controls the highlighted Buy/Upgrade button. Runtime supplies current price and confirmation wording. ItemSlot.prefab has a Price strip child under Select; its dark Image and gold Caption are editable. Prices refer to the next upgrade fee at the forge. PlayerMenuShell.prefab Currency owns the top-right balance across these menus.
+Scrollbars: each ScrollRect has vertical and horizontal scrollbar references. Edit the nested instances or UI/Common/Scrollbar.prefab for styling. Bars auto-hide when the relevant axis has no overflow. Runtime-generated lists use the same common template. Live previews show overflow and thumb proportions without running the game.

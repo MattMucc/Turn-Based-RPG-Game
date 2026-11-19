@@ -16,6 +16,7 @@ public sealed partial class ProgressionMenu {
   return true;
  }
  void UpdateModularShell(bool service,bool showMember){
+  if(modularShell.Currency)modularShell.Currency.text=Manager.Equipment.Coins.ToString("N0")+" coins";
   PlayerMenuShellPresentation.Apply(modularShell,ShellLayout.Prefab,service,showMember);
   var templates=ShellLayout.Prefab.GetComponentsInChildren<PlayerMenuCommandView>(true);
   foreach(var command in modularShell.GetComponentsInChildren<PlayerMenuCommandView>(true)){

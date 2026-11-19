@@ -29,7 +29,19 @@ public sealed partial class ProgressionMenu {
    else view=InventoryModularUI.Choice(activeMerchantLayout.Filter,modularMerchant.Filters,name);
    button=view.Select;label=view.Label;
   }
-  button.name=name;if(label)label.text=name;buttons.Add(button);button.onClick.AddListener(()=>click?.Invoke());
+  button.name=name;
+  if(label){
+   string display=name;
+   if(parent==detailRoot&&!name.StartsWith("Cancel")){
+    if(page==Page.Shop){int price=shopPending?shopPrice:shopDisplayedPrice;
+     display=(shopPending?"Confirm ":"")+(shopSelling?"Sell":"Buy")+" · "+price+" coins";
+    }else{
+     var copy=Manager.Equipment.Find(upgradeSelection);bool next=copy!=null&&copy.UpgradeLevel<copy.Definition.Upgrades.Count;
+     display=next?(upgradePending?"Confirm upgrade":"Upgrade")+" · "+copy.Definition.Upgrades[copy.UpgradeLevel].Fee+" coins":"Fully upgraded";
+    }
+   }
+   label.text=display;
+  }buttons.Add(button);button.onClick.AddListener(()=>click?.Invoke());
   var focus=button.GetComponent<PlayerMenuFocus>();if(!focus)focus=button.gameObject.AddComponent<PlayerMenuFocus>();focus.Preview=preview;return button;
  }
  RectTransform MerchantList(Transform parent,string name,float x,float y,float width,float height,float contentHeight){
