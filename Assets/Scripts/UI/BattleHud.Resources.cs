@@ -37,11 +37,11 @@ public sealed partial class BattleHud
             var card=new ResourceCard{Index=i,Rect=Rect("Party resources",root)};
             card.Rect.anchorMin=card.Rect.anchorMax=new Vector2(1,0);card.Rect.pivot=new Vector2(1,0);
             card.Rect.gameObject.AddComponent<Image>().color=Dark;
-            card.Name=Text(ResourceRect("Name and level",card.Rect,-12,12),10);card.Name.rectTransform.offsetMin=new Vector2(6,0);card.Name.rectTransform.offsetMax=new Vector2(-6,0);card.Name.alignment=TextAlignmentOptions.MidlineLeft;card.Name.overflowMode=TextOverflowModes.Ellipsis;card.Name.textWrappingMode=TextWrappingModes.NoWrap;
-            card.Health=ResourceBar("Health",card.Rect,6,new Color(.75f,.12f,.1f),out card.HealthText);
-            card.Mana=ResourceBar("Mana",card.Rect,18,new Color(.2f,.4f,.9f),out card.ManaText);
-            card.Resources=Text(ResourceRect("AP and movement",card.Rect,30,14),10);
-            var status=ResourceRect("Statuses",card.Rect,46,16);
+            card.Name=Text(ResourceRect("Name and level",card.Rect,6,12),10);card.Name.rectTransform.offsetMin=Vector2.zero;card.Name.rectTransform.offsetMax=Vector2.zero;card.Name.alignment=TextAlignmentOptions.MidlineLeft;card.Name.overflowMode=TextOverflowModes.Ellipsis;card.Name.textWrappingMode=TextWrappingModes.NoWrap;
+            card.Health=ResourceBar("Health",card.Rect,22,new Color(.75f,.12f,.1f),out card.HealthText);
+            card.Mana=ResourceBar("Mana",card.Rect,34,new Color(.2f,.4f,.9f),out card.ManaText);
+            card.Resources=Text(ResourceRect("AP and movement",card.Rect,46,14),10);
+            var status=ResourceRect("Statuses",card.Rect,62,16);
             card.Statuses=status.gameObject.AddComponent<BattleStatusRow>();card.Statuses.Initialize(root,font);card.Statuses.IconSize=16;
             resourceCards.Add(card);
         }
@@ -57,7 +57,7 @@ public sealed partial class BattleHud
             var card=resourceCards[n];var unit=battle.Combatants[card.Index];var info=battle.Info(card.Index);
             bool expanded=card.Index==emphasized;
             bool hasStatuses=StatusPresentation.For(unit,false).Count>0;
-            float height=hasStatuses?68:50;
+            float height=hasStatuses?84:66;
             card.Statuses.gameObject.SetActive(hasStatuses);
             card.Rect.anchoredPosition=new Vector2(-12,bottom);card.Rect.sizeDelta=new Vector2(expanded?220:190,height);bottom+=height+14;
             card.Rect.GetComponent<Image>().color=expanded?new Color(.07f,.19f,.25f,.97f):Dark;

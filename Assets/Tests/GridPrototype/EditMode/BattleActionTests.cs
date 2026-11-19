@@ -83,11 +83,14 @@ public class BattleActionTests
         type.GetMethod("Render").Invoke(hud,null);
         Assert.IsTrue(party.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("AP 2 / 9")&&t.text.Contains("Move 2 / 10")));
         Assert.IsTrue(root.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("AP 3 / 9")));
-        Assert.LessOrEqual(((RectTransform)party).rect.width,220);Assert.AreEqual(50,((RectTransform)party).rect.height);
+        Assert.LessOrEqual(((RectTransform)party).rect.width,220);Assert.AreEqual(66,((RectTransform)party).rect.height);
         Assert.IsFalse(party.Find("Statuses").gameObject.activeSelf);
-        Assert.AreEqual(-6,((RectTransform)party.Find("Health")).offsetMax.y);
+        Assert.AreEqual(-22,((RectTransform)party.Find("Health")).offsetMax.y);
+        var header=(RectTransform)party.Find("Name and level");
+        Assert.AreEqual(-6,header.offsetMax.y);
+        Assert.AreEqual(((RectTransform)party.Find("Health")).offsetMin.x,header.offsetMin.x);
         battle.Combatants[0].ApplyStatus(CombatStatus.Burning,1);type.GetMethod("Render").Invoke(hud,null);
-        Assert.AreEqual(68,((RectTransform)party).rect.height);Assert.IsTrue(party.Find("Statuses").gameObject.activeSelf);
+        Assert.AreEqual(84,((RectTransform)party).rect.height);Assert.IsTrue(party.Find("Statuses").gameObject.activeSelf);
         var mana=(RectTransform)root.transform.Find("Hovered or pinned target/Target mana");
         Assert.IsNotNull(mana);Assert.IsTrue(mana.gameObject.activeSelf);
         battle.Combatants[1].InitializeMagicPoints(24,12);type.GetMethod("Render").Invoke(hud,null);

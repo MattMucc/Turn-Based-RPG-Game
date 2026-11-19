@@ -129,7 +129,7 @@ public sealed partial class ProgressionMenu
         if(inventoryDropOutline)inventoryDropOutline.enabled=false;inventoryDropOutline=null;
         if(inventoryDragGhost){inventoryDragGhost.gameObject.SetActive(false);if(Application.isPlaying)Destroy(inventoryDragGhost.gameObject);else DestroyImmediate(inventoryDragGhost.gameObject);}inventoryDragGhost=null;
     }
-    void ShowItemTooltip(BattleActionOption item,Transform source)
+    void ShowItemTooltip(BattleActionOption item,Transform source,string description=null)
     {
         if(inventoryModal||inventoryDragSource) return;
         HideItemTooltip();
@@ -138,7 +138,7 @@ public sealed partial class ProgressionMenu
         float x=local.x-shell.rect.xMin+100, y=shell.rect.yMax-local.y+44;
         itemTooltip.anchoredPosition=new Vector2(Mathf.Clamp(x,8,shell.rect.width-308),-Mathf.Clamp(y,8,shell.rect.height-198));
         var image=itemTooltip.gameObject.AddComponent<Image>();image.color=Panel;image.raycastTarget=false;
-        var text=Label(Rect("Tooltip text",itemTooltip,12,10,276,170),$"<b>{item.Name}</b>\n{InventoryDescription(item)}",14);
+        var text=Label(Rect("Tooltip text",itemTooltip,12,10,276,170),$"<b>{item.Name}</b>\n{description??InventoryDescription(item)}",14);
         float height=Mathf.Min(shell.rect.height-36,Mathf.Max(80,text.GetPreferredValues(text.text,276,0).y+20));
         itemTooltip.sizeDelta=new Vector2(300,height);text.rectTransform.sizeDelta=new Vector2(276,height-20);
         itemTooltip.anchoredPosition=new Vector2(Mathf.Clamp(x,8,shell.rect.width-308),-Mathf.Clamp(y,8,shell.rect.height-height-8));

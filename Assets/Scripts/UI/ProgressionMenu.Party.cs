@@ -111,7 +111,6 @@ public sealed partial class ProgressionMenu
             }
             row++;
         }
-        Button(partyContent, "Character actions", 0, partyContent.rect.height - 48, 200, () => OpenPartyActions(Member));
         if (!string.IsNullOrEmpty(partyNotice)) Label(Rect("Party notice", partyContent, 212, partyContent.rect.height - 48, width - 212, 46), partyNotice, 13);
         ShowMember(Member);
     }

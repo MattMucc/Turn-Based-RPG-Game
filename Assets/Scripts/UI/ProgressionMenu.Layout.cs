@@ -68,6 +68,19 @@ public sealed partial class ProgressionMenu
         detailRoot.anchorMin=new Vector2(1,0);detailRoot.anchorMax=Vector2.one;detailRoot.offsetMin=new Vector2(-450,70);detailRoot.offsetMax=new Vector2(-24,-88);
         capture=canvasObject.AddComponent<BattlePortraitCapture>(); canvasObject.SetActive(false);
     }
+    void UpdateMenuPresentation()
+    {
+        bool service=page==Page.Shop||(page==Page.Upgrades&&blacksmith);
+        canvasObject.name=service?(page==Page.Shop?"Shop menu":"Blacksmith menu"):"Player menu";
+        foreach(string name in new[]{"Brand","Party","Inventory","Abilities","Growth","System","Return to world"})
+            shell.Find(name).gameObject.SetActive(!service);
+        title.rectTransform.anchoredPosition=new Vector2(service?24:220,-20);
+        if(service)title.text=page==Page.Shop?"SHOP":"BLACKSMITH";
+        body.offsetMin=new Vector2(service?24:220,70);
+        bool showMember=page!=Page.System&&!(service&&page==Page.Upgrades);
+        characterLabel.gameObject.SetActive(showMember);
+        shell.Find("<").gameObject.SetActive(showMember);shell.Find(">").gameObject.SetActive(showMember);
+    }
     void PlaceAtRight(RectTransform rect,float inset)
     { rect.anchorMin=rect.anchorMax=Vector2.one;rect.anchoredPosition=new Vector2(-inset,rect.anchoredPosition.y); }
     void BuildDetails()

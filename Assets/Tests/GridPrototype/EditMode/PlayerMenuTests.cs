@@ -235,6 +235,58 @@ public class PlayerMenuTests
         Assert.Greater(tile.anchoredPosition.x,frame.GetComponentsInChildren<Transform>().Single(t=>t.name=="User marker").parent.GetComponent<RectTransform>().anchoredPosition.x);
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("self-hit is possible")));
     }
+    [Test] public void ShopPreviewsMilestonesAndTradesOnlyAfterConfirmation()
+    {
+        var inventory=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);
+        var sword=EquipmentAsset("Merchant sword");
+        sword.Mastery.Add(new WeaponMasteryMilestone{RequiredExperience=10,Name="Training",FinisherActionPoints=1});
+        inventory.Coins=100;inventory.Catalog.Add(sword);
+        var merchantType=Type.GetType("Merchant, Assembly-CSharp",true);
+        var merchant=Make("Merchant").AddComponent(merchantType);
+        var offerType=merchantType.GetNestedType("Offer");
+        var offer=Activator.CreateInstance(offerType);
+        offerType.GetField("Equipment").SetValue(offer,sword);
+        offerType.GetField("BuyPrice").SetValue(offer,50);
+        offerType.GetField("SellPrice").SetValue(offer,10);
+        ((System.Collections.IList)merchantType.GetField("Offers").GetValue(merchant)).Add(offer);
+        var movementType=Type.GetType("PlayerMovement, Assembly-CSharp",true);
+        managerType.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,party[0].GetComponent(movementType));
+        merchant.transform.position=party[0].transform.position;
+        menuType.GetMethod("OpenShop").Invoke(menu,new object[]{merchant});
+        var frame=menu.GetComponentsInChildren<Transform>().Single(t=>t.name=="Menu frame");
+        Assert.IsFalse(frame.Find("Inventory").gameObject.activeSelf);
+        Assert.IsFalse(frame.Find("Brand").gameObject.activeSelf);
+        Assert.AreEqual(24,((RectTransform)frame.Find("Page content")).offsetMin.x);
+        Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text!=null&&t.text.Contains("Training")));
+        var expand=menu.GetComponentsInChildren<Button>().First(b=>b.name.Contains("Merchant sword hit"));
+        expand.onClick.Invoke();
+        Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Pattern Merchant sword hit"));
+        Find("Review purchase").onClick.Invoke();Assert.AreEqual(100,inventory.Coins);
+        Find("Cancel trade").onClick.Invoke();Assert.AreEqual(0,inventory.Owned.Count);
+        Find("Review purchase").onClick.Invoke();Find("Confirm purchase").onClick.Invoke();
+        Assert.AreEqual(50,inventory.Coins);Assert.AreEqual(1,inventory.Owned.Count);
+        Find("Sell").onClick.Invoke();Find("Review sale").onClick.Invoke();Find("Confirm sale").onClick.Invoke();
+        Assert.AreEqual(60,inventory.Coins);Assert.AreEqual(0,inventory.Owned.Count);
+        Find("Buy").onClick.Invoke();Find("Review purchase").onClick.Invoke();
+        merchant.transform.position+=Vector3.right*20;Find("Confirm purchase").onClick.Invoke();
+        Assert.AreEqual(60,inventory.Coins);Assert.AreEqual(0,inventory.Owned.Count);
+        merchant.transform.position=party[0].transform.position;
+        object[] trade={manager,offer,null,false,49,null};
+        Assert.IsFalse((bool)merchantType.GetMethod("Trade").Invoke(merchant,trade));Assert.AreEqual(60,inventory.Coins);
+        trade[4]=50;Assert.IsTrue((bool)merchantType.GetMethod("Trade").Invoke(merchant,trade));
+        var profile=party[0].gameObject.AddComponent<CharacterEquipment>();profile.AllowedWeaponTypes=new[]{WeaponType.Shortsword};
+        profile.RestoreSlots(new[]{inventory.Owned[0].InstanceId,null,null,null});managerType.GetMethod("BindEquipment").Invoke(manager,null);
+        trade=new object[]{manager,offer,inventory.Owned[0],true,10,null};
+        Assert.IsFalse((bool)merchantType.GetMethod("Trade").Invoke(merchant,trade));Assert.AreEqual(1,inventory.Owned.Count);
+        var potionOffer=Activator.CreateInstance(offerType);offerType.GetField("Item").SetValue(potionOffer,PartyInventory.ManaPotion(1));
+        offerType.GetField("BuyPrice").SetValue(potionOffer,5);offerType.GetField("SellPrice").SetValue(potionOffer,2);
+        ((System.Collections.IList)merchantType.GetField("Offers").GetValue(merchant)).Add(potionOffer);
+        var shared=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);int count=shared.Count("mana-potion");
+        trade=new object[]{manager,potionOffer,null,false,5,null};Assert.IsTrue((bool)merchantType.GetMethod("Trade").Invoke(merchant,trade));
+        Assert.AreEqual(count+1,shared.Count("mana-potion"));Assert.AreEqual(5,inventory.Coins);
+        trade=new object[]{manager,potionOffer,null,true,2,null};Assert.IsTrue((bool)merchantType.GetMethod("Trade").Invoke(merchant,trade));
+        Assert.AreEqual(count,shared.Count("mana-potion"));Assert.AreEqual(7,inventory.Coins);
+    }
     [Test] public void UpgradeMenuPreviewsCancelsAndConfirmsOneCopyWithoutHealing()
     {
         var inventory=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);var item=EquipmentAsset("Upgrade sword");
@@ -249,6 +301,10 @@ public class PlayerMenuTests
         var movementType=Type.GetType("PlayerMovement, Assembly-CSharp",true);managerType.GetField("<PossessedCharacter>k__BackingField",Hidden).SetValue(manager,party[0].GetComponent(movementType));
         var smith=Make("Test blacksmith").AddComponent(Type.GetType("Blacksmith, Assembly-CSharp",true));smith.transform.position=party[0].transform.position;
         menuType.GetMethod("OpenBlacksmith").Invoke(menu,new object[]{smith});
+        var frame=menu.GetComponentsInChildren<Transform>().Single(t=>t.name=="Menu frame");
+        Assert.IsFalse(frame.Find("Inventory").gameObject.activeSelf);
+        Assert.IsFalse(frame.Find("Brand").gameObject.activeSelf);
+        Assert.AreEqual(24,((RectTransform)frame.Find("Page content")).offsetMin.x);
         smith.transform.position+=Vector3.right*10;Assert.IsFalse((bool)managerType.GetMethod("TryUpgradeEquipment").Invoke(manager,outside));smith.transform.position=party[0].transform.position;
         Find("Armor").onClick.Invoke();
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="No equipment in this category."));
@@ -455,13 +511,13 @@ public class PlayerMenuTests
         Open();Page("Inventory");Find("Mana Potion").onClick.Invoke();
         Assert.IsNotNull(menu.GetComponentsInChildren<Transform>().FirstOrDefault(t=>t.name=="Selected item image"));
         Assert.AreEqual("Mana Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
-        Find("Item actions").onClick.Invoke();Assert.AreEqual("Mana Potion",((BattleActionOption)menuType.GetField("inventoryItem",Hidden).GetValue(menu)).Name);
+        RightClickItem("Mana Potion");Assert.AreEqual("Mana Potion",((BattleActionOption)menuType.GetField("inventoryItem",Hidden).GetValue(menu)).Name);
         Find("Examine").onClick.Invoke();
         var modal=(RectTransform)menuType.GetField("inventoryModal",Hidden).GetValue(menu);
         Assert.AreEqual(new Vector2(.5f,.5f),((RectTransform)modal.Find("Item context")).pivot);
         Find("Back").onClick.Invoke();Find("Back").onClick.Invoke();
         Assert.AreEqual("Mana Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
-        Assert.AreEqual(1,menu.GetComponentsInChildren<Button>().Count(b=>b.name=="Item actions"));
+        Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Item actions"));
     }
     [Test] public void InventoryLeftClickSelectsAndHoverDoesNotReplacePinnedDetails()
     {
@@ -629,7 +685,7 @@ public class PlayerMenuTests
     [Test] public void PartyFormationSwapRequiresConfirmationAndSupportsContextSelection()
     {
         Open(); var outgoing=party[1];var incoming=reserves[0];
-        Find("Member 3").onClick.Invoke(); Find("Character actions").onClick.Invoke();
+        Find("Member 3").onClick.Invoke(); Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Character actions")); RightClickItem("Member 3");
         Find("Swap with").onClick.Invoke();
         var modal=(RectTransform)menuType.GetField("partyModal",Hidden).GetValue(menu);
         modal.GetComponentsInChildren<Button>().First(b=>b.name=="Member 1").onClick.Invoke();

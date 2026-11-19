@@ -315,6 +315,537 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &147519803
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 147519806}
+  - component: {fileID: 147519805}
+  - component: {fileID: 147519804}
+  m_Layer: 0
+  m_Name: Prototype Merchant
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &147519804
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147519803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a20a83a9fd3121b4fb5aced8340b43c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Merchant
+  DisplayName: Merchant
+  Offers:
+  - Equipment: {fileID: 11400000, guid: 25cf65227d887924382ee72863221c9b, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 11400000, guid: bfff94ac6ea1a9c409d1be8834f93d63, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 11400000, guid: f93465c1c00c1fb42ade8ed2aec2a72c, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 11400000, guid: 77b2154037b5120498e6863eace0005a, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 11400000, guid: 7de50599e0cf9334cb2ce0dba97f7b77, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 11400000, guid: af2170474ac981240ba08302a9f18a69, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 11400000, guid: 40b42f009e2846c41ba3a10db85e30a5, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 11400000, guid: af1edc47581dbd74ead6295a883cf788, type: 2}
+    Item:
+      Name: 
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: 
+      Category: 0
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 1
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 25
+      ItemId: 
+      quantity: 0
+      Healing: 0
+      Effect: 0
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 50
+    SellPrice: 10
+  - Equipment: {fileID: 0}
+    Item:
+      Name: Health Potion
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: Restore health to a living target. Does not revive.
+      Category: 2
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 0
+      Pattern: 0
+      Reach: 3
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 0
+      ItemId: health-potion
+      quantity: 1
+      Healing: 50
+      Effect: 4
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 15
+    SellPrice: 5
+  - Equipment: {fileID: 0}
+    Item:
+      Name: Mana Potion
+      Image: {fileID: 0}
+      SpellId: 
+      SpellTier: 0
+      LearnSpellId: 
+      EquipmentActionId: 
+      FavoriteSlot: -1
+      Description: Restore Magic Points to a living target.
+      Category: 2
+      ActionPointCost: 1
+      ActionPointRecovery: 0
+      MagicPointCost: 4
+      MagicRestored: 8
+      Pattern: 0
+      Reach: 3
+      Radius: 1
+      DisabledPatternCells: []
+      RotateAreaTowardTarget: 0
+      MaxTargets: 3
+      Damage: 0
+      ItemId: mana-potion
+      quantity: 1
+      Healing: 0
+      Effect: 5
+      DamageType: 0
+      Element: 0
+      Scaling: 0
+      StatScaling: 0
+      HitChance: 100
+      InflictedStatus: 0
+      StatusChance: 100
+      StatusStacks: 1
+      BarrierGranted: 0
+      SignatureQte: 0
+      QteType: 0
+      QteRequiredTaps: 12
+      QteHoldDuration: 2
+      QteProgressDrainPerSecond: 0.2
+      QteTapDrainDelay: 0.3
+      QteSequence: 
+      QteDuration: 1.5
+      QteBonusDamage: 15
+    BuyPrice: 15
+    SellPrice: 5
+  InteractionRange: 3
+--- !u!65 &147519805
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147519803}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!4 &147519806
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147519803}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 14, y: 0.5, z: -14}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1500541672}
+  - {fileID: 866806001}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &164958853
 GameObject:
   m_ObjectHideFlags: 0
@@ -738,19 +1269,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Pivot.x
@@ -766,7 +1297,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.x
@@ -774,11 +1305,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.y
@@ -814,11 +1345,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 95
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -50
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -834,31 +1365,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4853183047645140001, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Sprite
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: f3565a7a017759148b71fa384df16242, type: 3}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 83
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5255163357809235928, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: keyboardIcon
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: a39b165706d3e694e80f13338cdd537f, type: 3}
     - target: {fileID: 5255163357809235928, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: controllerIcon
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: f3565a7a017759148b71fa384df16242, type: 3}
     - target: {fileID: 6656435721008080227, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Name
@@ -1083,7 +1614,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8452467027932109252, guid: 519bd2a4dc77bd34b9dd8ec1de3f20c3, type: 3}
       propertyPath: leader
-      value:
+      value: 
       objectReference: {fileID: 1049628956}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -1176,6 +1707,110 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &866806000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 866806001}
+  - component: {fileID: 866806003}
+  - component: {fileID: 866806002}
+  m_Layer: 0
+  m_Name: Merchant sign
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &866806001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866806000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 2.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 147519806}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!102 &866806002
+TextMesh:
+  serializedVersion: 3
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866806000}
+  m_Text: MERCHANT
+  m_OffsetZ: 0
+  m_CharacterSize: 0.12
+  m_LineSpacing: 1
+  m_Anchor: 4
+  m_Alignment: 0
+  m_TabSize: 4
+  m_FontSize: 36
+  m_FontStyle: 0
+  m_RichText: 1
+  m_Font: {fileID: 0}
+  m_Color:
+    serializedVersion: 2
+    rgba: 4294967295
+--- !u!23 &866806003
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 866806000}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 10100, guid: 0000000000000000e000000000000000, type: 0}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1001 &892792670
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1190,19 +1825,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Pivot.x
@@ -1218,7 +1853,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.x
@@ -1226,11 +1861,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.y
@@ -1266,11 +1901,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 95
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -85
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -1286,31 +1921,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4853183047645140001, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Sprite
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: 19b84d13b4e51a64b8aa6f9532611ef6, type: 3}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 83
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5255163357809235928, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: keyboardIcon
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: f30a27395fa5a8449af8c57acc037815, type: 3}
     - target: {fileID: 5255163357809235928, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: controllerIcon
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: 19b84d13b4e51a64b8aa6f9532611ef6, type: 3}
     - target: {fileID: 6656435721008080227, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Name
@@ -1514,10 +2149,10 @@ MonoBehaviour:
     Items:
     - Name: Health Potion
       Image: {fileID: 0}
-      SpellId:
+      SpellId: 
       SpellTier: 0
-      LearnSpellId:
-      EquipmentActionId:
+      LearnSpellId: 
+      EquipmentActionId: 
       FavoriteSlot: -1
       Description: Restore health to a living target. Does not revive.
       Category: 2
@@ -1556,10 +2191,10 @@ MonoBehaviour:
       QteBonusDamage: 15
     - Name: Mana Potion
       Image: {fileID: 0}
-      SpellId:
+      SpellId: 
       SpellTier: 0
-      LearnSpellId:
-      EquipmentActionId:
+      LearnSpellId: 
+      EquipmentActionId: 
       FavoriteSlot: -1
       Description: Restore Magic Points to a living target.
       Category: 2
@@ -1593,15 +2228,15 @@ MonoBehaviour:
       QteHoldDuration: 2
       QteProgressDrainPerSecond: 0.2
       QteTapDrainDelay: 0.3
-      QteSequence:
+      QteSequence: 
       QteDuration: 1.5
       QteBonusDamage: 15
     - Name: Fireball Spellbook
       Image: {fileID: 0}
-      SpellId:
+      SpellId: 
       SpellTier: 0
       LearnSpellId: fireball
-      EquipmentActionId:
+      EquipmentActionId: 
       FavoriteSlot: -1
       Description: Teach Fireball to one party member.
       Category: 2
@@ -1635,15 +2270,15 @@ MonoBehaviour:
       QteHoldDuration: 2
       QteProgressDrainPerSecond: 0.2
       QteTapDrainDelay: 0.3
-      QteSequence:
+      QteSequence: 
       QteDuration: 1.5
       QteBonusDamage: 15
     - Name: Mend Spellbook
       Image: {fileID: 0}
-      SpellId:
+      SpellId: 
       SpellTier: 0
       LearnSpellId: mend
-      EquipmentActionId:
+      EquipmentActionId: 
       FavoriteSlot: -1
       Description: Teach Mend to one party member.
       Category: 2
@@ -1680,6 +2315,7 @@ MonoBehaviour:
       QteSequence: 
       QteDuration: 1.5
       QteBonusDamage: 15
+    SlotOrder: []
   Progression:
     Members:
     - {fileID: 2407421259216672344}
@@ -1754,7 +2390,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 791043194022376401, guid: 56a4c950364872e478331d8c2f7d6e88, type: 3}
       propertyPath: leader
-      value:
+      value: 
       objectReference: {fileID: 185874779}
     - target: {fileID: 952925571111150995, guid: 56a4c950364872e478331d8c2f7d6e88, type: 3}
       propertyPath: m_LocalPosition.x
@@ -2007,19 +2643,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Pivot.x
@@ -2035,7 +2671,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.x
@@ -2043,11 +2679,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.y
@@ -2083,11 +2719,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 95
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -120
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -2103,31 +2739,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4853183047645140001, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Sprite
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: f4e83e5b560bef7408b322d1703b4d22, type: 3}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 83
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5255163357809235928, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: keyboardIcon
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: b0409c7d7f0dce44a80dbbf354691d67, type: 3}
     - target: {fileID: 5255163357809235928, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: controllerIcon
-      value:
+      value: 
       objectReference: {fileID: 21300000, guid: f4e83e5b560bef7408b322d1703b4d22, type: 3}
     - target: {fileID: 6656435721008080227, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Name
@@ -2171,7 +2807,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ae597ec728cdee449a3f29f200126dc5, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Blacksmith
   DisplayName: Blacksmith
   InteractionRange: 3
@@ -2234,6 +2870,120 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 92bd9ffc71a83564c82bc119920329d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleMenuButton
+--- !u!1 &1500541671
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1500541672}
+  - component: {fileID: 1500541675}
+  - component: {fileID: 1500541674}
+  - component: {fileID: 1500541673}
+  m_Layer: 0
+  m_Name: Merchant placeholder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1500541672
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1500541671}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 147519806}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!23 &1500541673
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1500541671}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 1
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!136 &1500541674
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1500541671}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!33 &1500541675
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1500541671}
+  m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &1663630666 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5255163357809235928, guid: 11362f3644437d841909a289a9fc0354, type: 3}
@@ -2924,19 +3674,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 175
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2091387202516797558, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Pivot.x
@@ -2952,7 +3702,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.x
@@ -2960,11 +3710,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 190
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_SizeDelta.y
@@ -3000,11 +3750,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 95
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3636196221943101128, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -3020,19 +3770,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 83
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5032800918246061617, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -15
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6656435721008080227, guid: 11362f3644437d841909a289a9fc0354, type: 3}
       propertyPath: m_Name
@@ -3053,11 +3803,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2859656913483122428, guid: 33fc2d0129d8dfe4c91a60c0f8d9d7bf, type: 3}
       propertyPath: input
-      value:
+      value: 
       objectReference: {fileID: 898598907}
     - target: {fileID: 2859656913483122428, guid: 33fc2d0129d8dfe4c91a60c0f8d9d7bf, type: 3}
       propertyPath: cameraYaw
-      value:
+      value: 
       objectReference: {fileID: 1018846185}
     - target: {fileID: 4995605689948366331, guid: 33fc2d0129d8dfe4c91a60c0f8d9d7bf, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3193,15 +3943,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: cameraTarget
-      value:
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: cameraBattlePosition
-      value:
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: playerBattlePosition
-      value:
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: RoamingPool.Array.size
@@ -3249,7 +3999,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: RoamingPool.Array.data[0].Enemies.Array.data[0].enemyPrefab
-      value:
+      value: 
       objectReference: {fileID: 7468749988293964581, guid: 68c0990687be41d42886285fb996a352, type: 3}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: RoamingPool.Array.data[0].Enemies.Array.data[0].spawnAmount
@@ -3257,7 +4007,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: RoamingPool.Array.data[1].Enemies.Array.data[0].enemyPrefab
-      value:
+      value: 
       objectReference: {fileID: 7468749988293964581, guid: 68c0990687be41d42886285fb996a352, type: 3}
     - target: {fileID: 7709032226268315988, guid: 05318e91d97f1d540a68296aecb18572, type: 3}
       propertyPath: RoamingPool.Array.data[1].Enemies.Array.data[0].spawnAmount
@@ -3287,11 +4037,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3598751332617210761, guid: 039b8ce9a3e94044a88acb13947ac823, type: 3}
       propertyPath: input
-      value:
+      value: 
       objectReference: {fileID: 898598907}
     - target: {fileID: 3598751332617210761, guid: 039b8ce9a3e94044a88acb13947ac823, type: 3}
       propertyPath: followTarget
-      value:
+      value: 
       objectReference: {fileID: 185874779}
     - target: {fileID: 5578539860882833671, guid: 039b8ce9a3e94044a88acb13947ac823, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3364,3 +4114,4 @@ SceneRoots:
   - {fileID: 2100000120}
   - {fileID: 3807553}
   - {fileID: 1303103548}
+  - {fileID: 147519806}

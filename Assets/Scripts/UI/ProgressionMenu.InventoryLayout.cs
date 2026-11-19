@@ -86,7 +86,7 @@ public sealed partial class ProgressionMenu
         Label(Rect("Item category", detailRoot, 126, 72, width - 140, 30), InventoryCategoryName(InventoryKind(item)), 14).color = Accent;
         Label(Rect("Item stock", detailRoot, 126, 108, width - 140, 52),
             inventoryEquipment.TryGetValue(item, out var copy) ? $"Upgrade +{copy.UpgradeLevel} / {copy.Definition.Upgrades.Count}" : $"Carried: {item.Quantity}", 16);
-        float top = 184, height = Mathf.Max(100, detailRoot.rect.height - top - 62);
+        float top = 184, height = Mathf.Max(100, detailRoot.rect.height - top - 12);
         detailContent = List(detailRoot, "Inventory details", 12, top, width - 24, height, height);
         string description = InventoryDescription(item);
         detailText = Label(Rect("Description", detailContent, 8, 8, width - 48, height - 16), description, 16);
@@ -95,6 +95,5 @@ public sealed partial class ProgressionMenu
         detailContent.sizeDelta = new Vector2(detailContent.sizeDelta.x, Mathf.Max(height, textHeight + 16));
         // Detail controls are rebuilt on every selection; keep the focus registry free of destroyed entries.
         buttons.RemoveAll(b => !b || !b.gameObject.activeInHierarchy);
-        Button(detailRoot, "Item actions", 12, detailRoot.rect.height - 46, width - 24, () => OpenItemContext(item));
     }
 }
