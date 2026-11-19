@@ -78,6 +78,7 @@ public sealed class SaveGameService : MonoBehaviour
         if(latest>=0)Load(latest);else Report("Party defeated. No usable checkpoint or manual save was found.");
     }
     void Report(string text){Notice=text;noticeUntil=Time.unscaledTime+5;Changed?.Invoke();Debug.Log("[Save] "+text);}
+    SaveIndicatorView modularIndicator;
     Canvas noticeCanvas;TMPro.TMP_Text noticeLabel;UnityEngine.UI.Image saveIcon;
     void LateUpdate()
     {
@@ -86,13 +87,18 @@ public sealed class SaveGameService : MonoBehaviour
             var go=new GameObject("Save indicator",typeof(Canvas),typeof(UnityEngine.UI.CanvasScaler));go.transform.SetParent(transform,false);
             noticeCanvas=go.GetComponent<Canvas>();noticeCanvas.renderMode=RenderMode.ScreenSpaceOverlay;noticeCanvas.sortingOrder=1000;
             var scaler=go.GetComponent<UnityEngine.UI.CanvasScaler>();scaler.uiScaleMode=UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1280,720);
+            var layout=WorldUILayout.Default;
+            if(layout&&layout.SaveIndicator){modularIndicator=Instantiate(layout.SaveIndicator,go.transform,false);noticeLabel=modularIndicator.Label;saveIcon=modularIndicator.Icon;foreach(var graphic in modularIndicator.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))graphic.raycastTarget=false;}
+            else {
             var icon=new GameObject("Save icon",typeof(RectTransform),typeof(UnityEngine.UI.Image));icon.transform.SetParent(go.transform,false);
             var rect=icon.GetComponent<RectTransform>();rect.anchorMin=rect.anchorMax=new Vector2(1,1);rect.pivot=Vector2.one;rect.anchoredPosition=new Vector2(-232,-22);rect.sizeDelta=new Vector2(20,20);saveIcon=icon.GetComponent<UnityEngine.UI.Image>();saveIcon.raycastTarget=false;
             var inset=new GameObject("Disk label",typeof(RectTransform),typeof(UnityEngine.UI.Image));inset.transform.SetParent(icon.transform,false);var small=inset.GetComponent<RectTransform>();small.sizeDelta=new Vector2(10,7);small.anchoredPosition=new Vector2(0,3);var image=inset.GetComponent<UnityEngine.UI.Image>();image.color=new Color(.05f,.1f,.15f);image.raycastTarget=false;
             var text=new GameObject("Save status",typeof(RectTransform));text.transform.SetParent(go.transform,false);var tr=text.GetComponent<RectTransform>();tr.anchorMin=tr.anchorMax=Vector2.one;tr.pivot=Vector2.one;tr.anchoredPosition=new Vector2(-20,-20);tr.sizeDelta=new Vector2(202,80);
             noticeLabel=text.AddComponent<TMPro.TextMeshProUGUI>();noticeLabel.font=TMPro.TMP_Settings.defaultFontAsset;noticeLabel.fontSize=15;noticeLabel.raycastTarget=false;noticeLabel.outlineWidth=.15f;noticeLabel.outlineColor=Color.black;
+            }
         }
         noticeCanvas.gameObject.SetActive(Busy||Time.unscaledTime<noticeUntil);noticeLabel.text=Notice;
+        if(modularIndicator){modularIndicator.Present(Notice,Busy,Time.unscaledTime);return;}
         saveIcon.color=Busy?new Color(.5f,.85f,1,.65f+.35f*Mathf.Sin(Time.unscaledTime*6)):Color.white;
     }
 }

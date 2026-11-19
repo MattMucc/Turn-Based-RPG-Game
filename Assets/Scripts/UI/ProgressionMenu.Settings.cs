@@ -35,56 +35,62 @@ public sealed partial class ProgressionMenu
     void Settings()
     {
         float width=Mathf.Max(300,body.rect.width);
-        var list=List(body,"Settings options",0,0,width,Mathf.Max(230,body.rect.height),410);
+        var list=SystemList(body,"Settings options",0,0,width,Mathf.Max(230,body.rect.height),410);
         width-=20;
         if(displayPreview.Active){
-            displayCountdown=Label(Rect("Display countdown",list,12,16,width-24,80),"",19);
+            displayCountdown=SystemLabel(Rect("Display countdown",list,12,16,width-24,80),"",19);
             UpdateDisplayCountdown();
-            Button(list,"Keep display settings",12,108,width-24,KeepDisplayChange);
-            Button(list,"Revert display settings",12,156,width-24,()=>{CancelDisplayChange();SettingsRebuild("Display mode");});
+            SystemButton(list,"Keep display settings",12,108,width-24,KeepDisplayChange);
+            SystemButton(list,"Revert display settings",12,156,width-24,()=>{CancelDisplayChange();SettingsRebuild("Display mode");});
             Detail("Keep this display mode?","Keep the new mode if it looks right. Revert, Back, leaving Settings, or the countdown expiring restores the previous mode.");return;
         }
         if(resetSettingsPending){
-            Label(Rect("Reset confirmation",list,12,16,width-24,100),$"Restore {settingsTab} defaults?\n"+SettingsDefaultsDescription(),18);
-            Button(list,"Confirm defaults",12,136,width-24,ResetSettingsCategory);
-            Button(list,"Cancel defaults",12,184,width-24,()=>{resetSettingsPending=false;SettingsRebuild("Restore defaults");});
+            SystemLabel(Rect("Reset confirmation",list,12,16,width-24,100),$"Restore {settingsTab} defaults?\n"+SettingsDefaultsDescription(),18);
+            SystemButton(list,"Confirm defaults",12,136,width-24,ResetSettingsCategory);
+            SystemButton(list,"Cancel defaults",12,184,width-24,()=>{resetSettingsPending=false;SettingsRebuild("Restore defaults");});
             Detail("Restore defaults",SettingsDefaultsDescription()+"\n\nOnly this settings category will change. Party progress and shortcuts are unaffected.");return;
         }
         if(settingsTab==SettingsTab.Audio){
-            var readout=Label(Rect("Volume readout",list,12,12,width-24,32),$"Master Volume: {Mathf.RoundToInt(AudioListener.volume*100)}%",19);
-            var go=DefaultControls.CreateSlider(new DefaultControls.Resources());go.name="Master Volume";go.transform.SetParent(list,false);
-            var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=new Vector2(12,-56);rect.sizeDelta=new Vector2(width-24,28);
+            var readout=SystemLabel(Rect("Volume readout",list,12,12,width-24,32),$"Master Volume: {Mathf.RoundToInt(AudioListener.volume*100)}%",19);
+            var authored=SystemControl("Master Volume");
+            var go=authored&&authored.Slider?authored.Slider.gameObject:DefaultControls.CreateSlider(new DefaultControls.Resources());go.name="Master Volume";if(!authored)go.transform.SetParent(list,false);
+            if(!authored){var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=new Vector2(12,-56);rect.sizeDelta=new Vector2(width-24,28);}
             var slider=go.GetComponent<Slider>();slider.minValue=0;slider.maxValue=100;slider.wholeNumbers=true;slider.SetValueWithoutNotify(Mathf.Round(AudioListener.volume*100));
             slider.onValueChanged.AddListener(value=>{AudioListener.volume=value/100;readout.text=$"Master Volume: {value:0}%";PlayerPrefs.SetFloat("PlayerMenu.Volume",AudioListener.volume);PlayerPrefs.Save();});
-            Button(list,"Restore defaults",12,110,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
+            SystemButton(list,"Restore defaults",12,110,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
             Detail("Audio","Master volume adjusts all game audio.");
         }else if(settingsTab==SettingsTab.Graphics){
             var modes=new[]{FullScreenMode.Windowed,FullScreenMode.FullScreenWindow,FullScreenMode.ExclusiveFullScreen};
             var chosen=pendingFullscreen??Screen.fullScreenMode;
-            Label(Rect("Mode label",list,12,12,width-24,24),"Display mode",17);
-            var apply=Button(list,"Apply display change",12,104,width-24,BeginDisplayChange);apply.interactable=chosen!=Screen.fullScreenMode;
+            SystemLabel(Rect("Mode label",list,12,12,width-24,24),"Display mode",17);
+            var apply=SystemButton(list,"Apply display change",12,104,width-24,BeginDisplayChange);apply.interactable=chosen!=Screen.fullScreenMode;
             SettingsDropdown(list,"Display mode",48,width-24,new[]{"Windowed","Borderless","Fullscreen"},Mathf.Max(0,Array.IndexOf(modes,chosen)),value=>{pendingFullscreen=modes[value];apply.interactable=pendingFullscreen!=Screen.fullScreenMode;});
             Detail("Graphics","Windowed, borderless window or fullscreen. Unconfirmed display changes revert after 15 seconds.");
         }else if(settingsTab==SettingsTab.UI){
-            Label(Rect("Icon label",list,12,12,width-24,24),"Input icons",17);
+            SystemLabel(Rect("Icon label",list,12,12,width-24,24),"Input icons",17);
             SettingsDropdown(list,"Controller icons",44,width-24,new[]{"Auto","Xbox","PlayStation","Keyboard"},Manager.Input?(int)Manager.Input.ControllerIcons:0,value=>{
                 if(Manager.Input)Manager.Input.ControllerIcons=(ControllerIconStyle)value;PlayerPrefs.SetInt("PlayerMenu.Icons",value);PlayerPrefs.Save();
             });
-            Label(Rect("Order label",list,12,96,width-24,24),"Turn order display",17);
+            SystemLabel(Rect("Order label",list,12,96,width-24,24),"Turn order display",17);
             SettingsDropdown(list,"Turn order",128,width-24,new[]{"Top","Right"},PlayerPrefs.GetInt(OrderTopKey,1)!=0?0:1,value=>RememberBool(OrderTopKey,value==0));
-            Button(list,"Restore defaults",12,188,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
+            SystemButton(list,"Restore defaults",12,188,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
             Detail("UI","Input icon appearance and turn order placement. Icon overrides do not change controls.");
         }else{
             var defense=Member.GetComponent<DefensePrototypeSettings>();bool assisted=PlayerPrefs.HasKey("PlayerMenu.Assisted")?PlayerPrefs.GetInt("PlayerMenu.Assisted")!=0:defense&&defense.Assisted;
             bool auto=PlayerPrefs.GetInt(AutoCameraKey,1)!=0;
-            Button(list,"Defense timing: "+(assisted?"Assisted":"Standard"),12,12,width-24,()=>{ApplyAssistance(!assisted);RememberBool("PlayerMenu.Assisted",!assisted);SettingsRebuild("Defense timing");});
-            Button(list,"Automatic battle camera: "+(auto?"On":"Off"),12,64,width-24,()=>{RememberBool(AutoCameraKey,!auto);SettingsRebuild("Automatic battle camera");});
-            Button(list,"Restore defaults",12,128,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
+            SystemButton(list,"Defense timing: "+(assisted?"Assisted":"Standard"),12,12,width-24,()=>{ApplyAssistance(!assisted);RememberBool("PlayerMenu.Assisted",!assisted);SettingsRebuild("Defense timing");});
+            SystemButton(list,"Automatic battle camera: "+(auto?"On":"Off"),12,64,width-24,()=>{RememberBool(AutoCameraKey,!auto);SettingsRebuild("Automatic battle camera");});
+            SystemButton(list,"Restore defaults",12,128,width-24,()=>{resetSettingsPending=true;SettingsRebuild("Cancel defaults");});
             Detail("Battle","Assisted timing widens dodge and parry windows. Automatic camera follows the acting combatant.");
         }
     }
     TMP_Dropdown SettingsDropdown(Transform parent,string name,float y,float width,string[] choices,int current,UnityEngine.Events.UnityAction<int> changed)
     {
+        var authored=SystemControl(name);
+        if(authored&&authored.Dropdown){
+            var d=authored.Dropdown;d.name=name;d.ClearOptions();d.AddOptions(new System.Collections.Generic.List<string>(choices));d.SetValueWithoutNotify(current);d.onValueChanged.AddListener(changed);
+            foreach(var markerArrow in d.GetComponentsInChildren<DropdownArrow>(true))markerArrow.Bind(d);return d;
+        }
         var go=TMP_DefaultControls.CreateDropdown(new TMP_DefaultControls.Resources());go.name=name;go.transform.SetParent(parent,false);
         var rect=(RectTransform)go.transform;rect.anchorMin=rect.anchorMax=rect.pivot=new Vector2(0,1);rect.anchoredPosition=new Vector2(12,-y);rect.sizeDelta=new Vector2(width,36);
         var dropdown=go.GetComponent<TMP_Dropdown>();dropdown.ClearOptions();dropdown.AddOptions(new System.Collections.Generic.List<string>(choices));dropdown.SetValueWithoutNotify(current);dropdown.onValueChanged.AddListener(changed);

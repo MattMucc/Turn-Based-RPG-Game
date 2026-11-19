@@ -20,6 +20,8 @@ public sealed class BattleControllerNavigation : MonoBehaviour
     private GridCameraController cameraControl;
     private RectTransform cursor;
     private TMP_Text badge;
+    private ControllerGuideView modularGuide;
+    void ShowGuide(bool visible){if(modularGuide)modularGuide.gameObject.SetActive(visible);else if(badge)badge.gameObject.SetActive(visible);}
     private Canvas canvas;
     private GameObject hoveredUI;
     private readonly List<RaycastResult> hits = new();
@@ -39,6 +41,11 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         Pointer = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
         if (!cursor)
         {
+            var hints=TooltipHintsLayout.Default;
+            if(hints&&hints.Cursor&&hints.Guide){cursor=Instantiate(hints.Cursor,transform,false);cursor.name="Controller cursor";modularGuide=Instantiate(hints.Guide,transform,false);modularGuide.name="Controller navigation mode";badge=modularGuide.Text;
+                foreach(var graphic in cursor.GetComponentsInChildren<Graphic>(true))graphic.raycastTarget=false;
+                foreach(var graphic in modularGuide.GetComponentsInChildren<Graphic>(true))graphic.raycastTarget=false;
+            }else{
             var obj = new GameObject("Controller cursor", typeof(RectTransform));
             obj.transform.SetParent(transform, false); cursor = (RectTransform)obj.transform;
             cursor.sizeDelta = new Vector2(22, 22);
@@ -51,6 +58,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
             rect.pivot = new Vector2(0, 1); rect.anchoredPosition = new Vector2(12, -12); rect.sizeDelta = new Vector2(280, 150);
             badge = hint.AddComponent<TextMeshProUGUI>(); badge.fontSize = 13; badge.raycastTarget = false;
             badge.alignment = TextAlignmentOptions.TopLeft; badge.outlineColor = Color.black; badge.outlineWidth = 0.2f;
+            }
         }
         cursor.SetAsLastSibling(); SetActiveController(false);
     }
@@ -59,7 +67,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         SetActiveController(false); ClearHover();
         battle = null; menu = null; hud = null; cameraControl = null;
         if (cursor) cursor.gameObject.SetActive(false);
-        if (badge) badge.gameObject.SetActive(false);
+        ShowGuide(false);
     }
     private void SetActiveController(bool active)
     {
@@ -87,7 +95,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         if (battle) battle.ExternalControllerActive = active;
         if (cameraControl) cameraControl.ControllerOwnsInput = active;
         if (cursor) cursor.gameObject.SetActive(active && State.Mode == BattleControllerMode.Cursor);
-        if (badge) badge.gameObject.SetActive(active);
+        ShowGuide(active);
     }
     private static bool MouseActivity()
     {
@@ -141,10 +149,10 @@ public sealed class BattleControllerNavigation : MonoBehaviour
         float dt = Mathf.Clamp(deltaTime, 0, 0.1f);
         if (battle.ControllerInputLocked)
         {
-            ClearHover(); cursor.gameObject.SetActive(false); badge.gameObject.SetActive(false);
+            ClearHover(); cursor.gameObject.SetActive(false); ShowGuide(false);
             lastDirection = Vector2Int.zero; return;
         }
-        badge.gameObject.SetActive(true);
+        ShowGuide(true);
         if (pad.selectButton.wasPressedThisFrame && !battle.InspectionOpen)
         {
             ClearHover(); menu.ClearControllerCommands(); hud.ClearControllerPortrait();
@@ -258,6 +266,7 @@ public sealed class BattleControllerNavigation : MonoBehaviour
             canvas && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null, out var position);
         cursor.localPosition = position;
         string area = battle.InspectionOpen ? "Examine" : State.Area == BattleControllerArea.TurnOrder ? "Turn order" : State.Area.ToString();
+        if(modularGuide){modularGuide.Present(State.Mode==BattleControllerMode.Cursor?0:State.Mode==BattleControllerMode.FreeFlight?1:2,area);return;}
         badge.text = State.Mode == BattleControllerMode.Cursor ? "Cursor  •  View: free flight\nLT + D-pad: panels  •  L3: focus"
             : State.Mode == BattleControllerMode.FreeFlight ? "Free flight  •  View: cursor\nRT + right stick: height  •  L3: focus"
             : area + "  •  LT + D-pad: panels\nLeft stick: cursor  •  View: free flight";

@@ -2375,6 +2375,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10170d6b18dd92a4a9a931a446d12d1a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ProgressionMenu
+  abilitiesLayout: {fileID: 0}
+  abilitiesDetailsLayout: {fileID: 0}
+  shopDetailsLayout: {fileID: 0}
+  blacksmithDetailsLayout: {fileID: 0}
+  growthLayout: {fileID: 0}
+  inventoryLayout: {fileID: 0}
+  formationLayout: {fileID: 0}
+  equipmentLayout: {fileID: 0}
+  attributesLayout: {fileID: 0}
+  systemLayout: {fileID: 0}
 --- !u!4 &1018846185 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8191903454379516405, guid: 039b8ce9a3e94044a88acb13947ac823, type: 3}

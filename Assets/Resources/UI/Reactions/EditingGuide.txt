@@ -1,0 +1,23 @@
+DEFENSE AND QTE UI — EDITING GUIDE
+
+Select Reactions.asset and click Open live preview. Choose Dodge / parry, Single press, Fixed sequence, Repeated tap, Hold, Staged prompts or Dual input. Progress scrubs the example timing/countdown/ring; Input held previews icon compression. Controller icons uses the current controller glyph style; turn it off for keyboard. Example input selects face buttons, D-pad or stick direction. Sequence length supports 1–8.
+Preview data is illustrative: no battle, input evaluation, damage or time-scale change occurs. The defense example uses 1.4 seconds, a .3-second dodge window, .12-second parry window and impact at 75%; actual battles use their own authored timing values.
+
+Defense.prefab
+Arrange attack caption, timing track, controls and feedback. Edit track/marker size, fonts, backgrounds and spacing. Keep Dodge/Parry windows and marker parented to the same timing track, with zero horizontal offsets on the windows. Runtime maps them from the same DefenseImpact calculation used for input acceptance. Changing the bar's visual width does not change the timing window.
+Reactions.asset provides active/resolved band and result colours. Timing and latency settings remain on DefensePrototypeSettings, outside this UI asset.
+
+Qte.prefab
+Arrange the bottom countdown/feedback group. Deadline track and Time remaining fill retain center-out anchors; runtime shrinks the fill from both sides.
+Left lane, Right lane and Bottom lane are inactive placement markers. Move them to set consistent positions for successive prompts. Prompt root placement is supplied by those markers; arrange the icon and fallback label within the prompt. PromptSize, RingPromptSize and StickPromptSize on Reactions.asset set the sizes used by each mode.
+QTE second input has its own icon styling; its position uses the same lane markers. Keyboard Space uses bottom; controller face buttons use right; directional-stick prompts use left.
+Tap progress ring: edit colour, Track Color, Thickness and Icon Gap on QteProgressRing. Segments are generated at runtime/preview; don't manually add or move them. The ring fits the displayed icon, preserving aspect ratio.
+QTE triangle cue: edit Tint, Size, Offset, Bob Height and Bob Speed. Tap uses a bobbing outline; hold uses a stationary filled triangle. The cue remains attached to the ring's outside.
+Pressed Scale on Reactions.asset controls how far held-input icons shrink.
+
+SequenceStep.prefab
+Edit each input icon, padding and Step progress indicator. Reactions.asset Sequence Spacing controls the row. Width fits the actual input count and screen space; sequence rows stay in the bottom lane. Names, glyphs and progress are filled from the current attack's QTE definition.
+
+Save prefab edits to use them in game. The live preview reflects unsaved Prefab Mode changes. Keep all binding references assigned. These templates are loaded automatically; BattleHud also supports an optional Reaction Layout override.
+Tools > Game > UI > Create missing Defense and QTE templates creates missing assets without overwriting edits.
+All input order, deadlines, press/hold/mash decay, dual-input rules and defense compensation remain unchanged. This pass changes presentation only.

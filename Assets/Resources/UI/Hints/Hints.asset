@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a3314e75215fb2741a269aefbca17ff6, type: 3}
+  m_Name: Hints
+  m_EditorClassIdentifier: Assembly-CSharp::TooltipHintsLayout
+  BattleAction: {fileID: 8340100587075256756, guid: a9f2439b97bbec745b0d74ddfd5b5293, type: 3}
+  InventoryHover: {fileID: 9021762300231826278, guid: 92241c37aca7cf444823d021c56b67fa, type: 3}
+  Cursor: {fileID: 1614324018898450595, guid: 16e3cabf6512c9d49a8a7645fc2c4335, type: 3}
+  Guide: {fileID: 1646913926689716537, guid: b63a2e67b7c763e45a1bec4509c52e6e, type: 3}

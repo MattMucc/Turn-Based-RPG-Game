@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ca64093f803a264396a0e7c7bc996e0, type: 3}
+  m_Name: Targets
+  m_EditorClassIdentifier: Assembly-CSharp::TargetUILayout
+  Target: {fileID: 7152792501647655638, guid: 6e2882c54f9634742aa9902413adc81c, type: 3}
+  Inspection: {fileID: 4574438663847432542, guid: 4b2da94d02d0eed448bdf5fc9b5b9052, type: 3}
+  StatusBadge: {fileID: 8463657803046099608, guid: 949f39cd009ed1c43859ff5be6c917e2, type: 3}
+  StatusTooltip: {fileID: 9185711908448391935, guid: 4bab3f6308d2b364b96e1fc70ddbfeb1, type: 3}
+  RightOrderOffset: {x: 0, y: 68}

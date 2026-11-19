@@ -29,7 +29,7 @@ public sealed partial class ProgressionMenu
         float width = Mathf.Max(300, body.rect.width), tabWidth = (width - 24) / 4;
         var categories = new[] { BattleActionCategory.Attack, BattleActionCategory.Skill, BattleActionCategory.Magic, BattleActionCategory.Item };
         var labels = new[] { "Attacks", "Skills", "Spells", "Items" };
-        for (int i = 0; i < categories.Length; i++)
+        if(!BuildModularAbilityShell())for (int i = 0; i < categories.Length; i++)
         {
             var selected = categories[i];
             var tab = Button(body, labels[i], i * (tabWidth + 8), 0, tabWidth,
@@ -85,7 +85,7 @@ public sealed partial class ProgressionMenu
         if (shownAbility == entry) return;
         shownAbility = entry;
         RefreshAbilityShortcuts();
-        foreach (var card in abilityCards) card.button.image.color = card.entry == entry ? new Color(.16f, .36f, .44f) : new Color(.08f, .17f, .25f);
+        foreach (var card in abilityCards) card.button.image.color = card.entry == entry ? (modularAbilities?AbilitiesLayout.SelectedColor:new Color(.16f,.36f,.44f)) : (modularAbilities?AbilitiesLayout.AbilityRow.Select.image.color:new Color(.08f,.17f,.25f));
         Clear(detailRoot);
         var content = List(detailRoot, "Ability details", 0, 0, detailRoot.rect.width, detailRoot.rect.height, 300);
         float width = content.rect.width - 24, y = 12;

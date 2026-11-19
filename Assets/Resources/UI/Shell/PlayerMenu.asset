@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7b150461dfa4e14b9fea2204c948942, type: 3}
+  m_Name: PlayerMenu
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerMenuShellLayout
+  Prefab: {fileID: 3767541254536285693, guid: cfb0e79958906fb4484a554f828bceed, type: 3}
+  ReferenceResolution: {x: 1280, y: 720}
+  SelectedPageColor: {r: 0.16, g: 0.36, b: 0.44, a: 1}

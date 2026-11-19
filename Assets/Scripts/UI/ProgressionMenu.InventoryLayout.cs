@@ -33,13 +33,19 @@ public sealed partial class ProgressionMenu
         // A transparent dismissal layer captures outside clicks without darkening the page.
         inventoryModal.GetComponent<Image>().color = Color.clear;
         float width = 244, y = 44;
-        var panel = Rect("Item context", inventoryModal, 0, 0, width, 100);
-        panel.gameObject.AddComponent<Image>().color = Panel;
-        var name = Label(Rect("Item name", panel, 12, 8, width - 24, 30), inventoryItem.Name, 16);
-        name.enableAutoSizing = true; name.fontSizeMin = 11; name.fontSizeMax = 16;
+        var modular=InventoryLayout;
+        InventoryContextView context=null;
+        RectTransform panel;
+        if(modular&&modular.Context){
+            context=Instantiate(modular.Context,inventoryModal,false);panel=(RectTransform)context.transform;panel.name="Item context";context.Name.text=inventoryItem.Name;width=panel.rect.width;
+        }else{
+            panel=Rect("Item context",inventoryModal,0,0,width,100);panel.gameObject.AddComponent<Image>().color=Panel;
+            var name=Label(Rect("Item name",panel,12,8,width-24,30),inventoryItem.Name,16);name.enableAutoSizing=true;name.fontSizeMin=11;name.fontSizeMax=16;
+        }
         int start = buttons.Count;
         Button Row(string label, UnityEngine.Events.UnityAction action)
         {
+            if(context){var row=InventoryModularUI.Choice(modular.ContextButton,context.Choices,label);buttons.Add(row.Select);row.Select.gameObject.AddComponent<PlayerMenuFocus>();row.Select.onClick.AddListener(()=>action());return row.Select;}
             var b = Button(panel, label, 8, y, width - 16, () => action(), null, 34); y += 38; return b;
         }
         Row("Examine", () => { inventoryStep = 1; DrawInventoryModal(); });
@@ -58,7 +64,7 @@ public sealed partial class ProgressionMenu
         if (PartyInventory.UsableOutsideCombat(inventoryItem))
             Row("Use", () => { inventoryStep = 2; DrawInventoryModal(); }).interactable = inventoryItem.Quantity > 0;
         Row("Back", InventoryBack);
-        panel.sizeDelta = new Vector2(width, y + 4);
+        if(context)InventoryModularUI.SizeContext(context);else panel.sizeDelta = new Vector2(width, y + 4);
         Canvas.ForceUpdateCanvases();
         var canvas = (RectTransform)inventoryModal;
         RectTransformUtility.ScreenPointToLocalPointInRectangle(canvas, inventoryContextScreen, inventoryContextCamera, out var local);
@@ -77,6 +83,15 @@ public sealed partial class ProgressionMenu
     void InventoryDetails(BattleActionOption item)
     {
         Clear(detailRoot);
+        var modular=InventoryLayout;
+        if(modular&&modular.Details){
+            var view=InventoryModularUI.Fill(modular.Details,detailRoot);
+            detailName=view.Name;detailName.text=item.Name;view.Category.text=InventoryCategoryName(InventoryKind(item));
+            view.Stock.text=inventoryEquipment.TryGetValue(item,out var owned)?$"Upgrade +{owned.UpgradeLevel} / {owned.Definition.Upgrades.Count}":$"Carried: {item.Quantity}";
+            DrawInventoryIcon(view.Artwork,item,0,0,Mathf.Min(view.Artwork.rect.width,view.Artwork.rect.height));
+            detailText=view.Description;detailText.text=InventoryDescription(item);detailContent=view.Scroll.content;InventoryModularUI.SizeDescription(view);
+            buttons.RemoveAll(b=>!b||!b.gameObject.activeInHierarchy);return;
+        }
         float width = detailRoot.rect.width;
         detailName = Label(Rect("Detail name", detailRoot, 12, 0, width - 24, 58), item.Name, 23);
         detailName.enableAutoSizing = true; detailName.fontSizeMin = 16; detailName.fontSizeMax = 23;

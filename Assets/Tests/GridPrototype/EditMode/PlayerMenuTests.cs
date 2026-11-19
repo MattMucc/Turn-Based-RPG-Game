@@ -75,7 +75,7 @@ public class PlayerMenuTests
         Open();Find("System").onClick.Invoke();
         var shell=(RectTransform)menuType.GetField("shell",Hidden).GetValue(menu);
         Assert.IsNull(shell.Find("Settings"));Assert.IsNull(shell.Find("Saves"));
-        Assert.IsFalse(shell.Find("Selected member").gameObject.activeSelf);
+        Assert.IsFalse(shell.GetComponentsInChildren<Transform>(true).Single(t=>t.name=="Selected member").gameObject.activeSelf);
         Assert.AreEqual("System",menuType.GetProperty("CurrentPage").GetValue(menu).ToString());
         bool screen=Screen.fullScreen;
         Find("Graphics").onClick.Invoke();Dropdown("Display mode").value=(Dropdown("Display mode").value+1)%3;
@@ -87,7 +87,7 @@ public class PlayerMenuTests
         Find("Save / Load").onClick.Invoke();Find("Audio").onClick.Invoke();
         Assert.IsFalse((bool)menuType.GetField("resetSettingsPending",Hidden).GetValue(menu));
         Assert.IsNotNull(menu.GetComponentInChildren<Slider>());
-        Page("Party");Assert.IsTrue(shell.Find("Selected member").gameObject.activeSelf);
+        Page("Party");Assert.IsTrue(shell.GetComponentsInChildren<Transform>(true).Single(t=>t.name=="Selected member").gameObject.activeSelf);
     }
     [Test] public void SettingsVolumeRetainsFocusAndDefaultsRequireConfirmation()
     {
@@ -235,6 +235,336 @@ public class PlayerMenuTests
         Assert.Greater(tile.anchoredPosition.x,frame.GetComponentsInChildren<Transform>().Single(t=>t.name=="User marker").parent.GetComponent<RectTransform>().anchoredPosition.x);
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("self-hit is possible")));
     }
+    [Test] public void GrowthPrefabPreviewRendersAndMovedMarkersReconnectWithoutChangingScene(){
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var layoutType=Type.GetType("GrowthPageLayout, Assembly-CSharp",true);
+        var source=Resources.Load("UI/Growth/Growth",layoutType);Assert.IsNotNull(source);
+        var layout=Object.Instantiate(source);var original=(Component)layoutType.GetField("Arrangement").GetValue(layout);
+        var arrangement=Object.Instantiate(original);layoutType.GetField("Arrangement").SetValue(layout,arrangement);
+        var window=ScriptableObject.CreateInstance(type);Texture2D image=null;GameObject root=null;
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        try{
+            type.GetField("growthLayout",Hidden).SetValue(window,layout);
+            type.GetMethod("BuildPreview").Invoke(window,null);root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            var before=(RectTransform)root.GetComponentsInChildren<Transform>().Single(t=>t.name=="Skill node preview-left");float x=before.anchoredPosition.x;
+            var marker=arrangement.transform.Find("preview-left");marker.localPosition+=new Vector3(40,30,0);
+            type.GetMethod("BuildPreview").Invoke(window,null);Assert.IsTrue(root==null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            var moved=(RectTransform)root.GetComponentsInChildren<Transform>().Single(t=>t.name=="Skill node preview-left");Assert.AreEqual(x+40,moved.anchoredPosition.x,.01f);
+            Assert.AreEqual(6,root.GetComponentsInChildren<Transform>().Count(t=>t.name=="Connection"));
+            var start=(RectTransform)root.GetComponentsInChildren<Transform>().Single(t=>t.name=="Skill node preview-start");
+            Assert.Greater(moved.anchoredPosition.y,start.anchoredPosition.y);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);Object.DestroyImmediate(arrangement.gameObject);Object.DestroyImmediate(layout);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase("Shop",0)] [TestCase("Shop",1)] [TestCase("Shop",2)]
+    [TestCase("Blacksmith",0)] [TestCase("Blacksmith",1)] [TestCase("Blacksmith",2)]
+    public void MerchantPrefabPreviewRendersWithoutChangingScene(string kind,int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Merchants/"+kind,Type.GetType("MerchantPageLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("merchantLayout",Hidden).SetValue(window,layout);type.GetField("merchantPreview",Hidden).SetValue(window,mode);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(false,false)] [TestCase(false,true)] [TestCase(true,false)] [TestCase(true,true)]
+    [TestCase(false,false,true)]
+    public void BattlePrefabPreviewRendersWithoutChangingScene(bool right,bool statuses,bool dimmed=false)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Battle/Battle",Type.GetType("BattleUILayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("battleLayout",Hidden).SetValue(window,layout);type.GetField("battleRight",Hidden).SetValue(window,right);type.GetField("battleStatuses",Hidden).SetValue(window,statuses);type.GetField("battleShortcutFocus",Hidden).SetValue(window,dimmed);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] 
+    public void OverheadPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Overheads/Overheads",Type.GetType("OverheadUILayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("overheadLayout",Hidden).SetValue(window,layout);type.GetField("overheadPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] 
+    public void SwapPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Swap/Swap",Type.GetType("BattleSwapLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("swapLayout",Hidden).SetValue(window,layout);type.GetField("swapConfirm",Hidden).SetValue(window,mode==1);type.GetField("swapKnockedOut",Hidden).SetValue(window,mode==2);type.GetField("swapCount",Hidden).SetValue(window,mode==3?0:3);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(8)] 
+    public void InventoryInteractionPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/InventoryInteractions/Interactions",Type.GetType("InventoryInteractionLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("interactionLayout",Hidden).SetValue(window,layout);type.GetField("interactionPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] 
+    public void TooltipHintsPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Hints/Hints",Type.GetType("TooltipHintsLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("hintsLayout",Hidden).SetValue(window,layout);type.GetField("hintsPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [Test] public void CheckpointTemplatesCancelRestAndRouteSaveWithoutRecovery(){
+        var checkpoint=Make("Checkpoint").AddComponent(Type.GetType("SaveCheckpoint, Assembly-CSharp",true));
+        Open();menuType.GetField("checkpointContext",Hidden).SetValue(menu,checkpoint);Page("Checkpoint");
+        party[0].MaterializeVitals();int health=party[0].StoredHealth;
+        Find("Rest").onClick.Invoke();Assert.IsNotNull(Find("Confirm rest"));
+        Find("Cancel rest").onClick.Invoke();Assert.AreEqual(health,party[0].StoredHealth);Assert.IsNotNull(Find("Leave"));
+        Find("Save").onClick.Invoke();Assert.IsNotNull(Find("Save slot 1"));Assert.AreEqual(health,party[0].StoredHealth);
+        Assert.AreEqual(20,menu.GetComponentsInChildren<Component>().Count(c=>c&&c.GetType().Name=="SystemSaveSlotView"));
+        Assert.IsNotNull(Find("Save slot 20"));
+        menuType.GetField("savePendingSlot",Hidden).SetValue(menu,0);menuType.GetField("pendingLoad",Hidden).SetValue(menu,false);menuType.GetMethod("Rebuild",Hidden).Invoke(menu,null);
+        var confirm=Find("Confirm overwrite");Assert.IsNotNull(confirm.GetComponent(Type.GetType("SystemControlView, Assembly-CSharp",true)));
+        Find("Cancel save/load").onClick.Invoke();Assert.IsNotNull(Find("Save slot 20"));Assert.AreEqual(health,party[0].StoredHealth);
+        Find("Back").onClick.Invoke();Assert.IsNotNull(Find("Rest"));
+        Page("Checkpoint");Find("Leave").onClick.Invoke();Assert.IsFalse((bool)menuType.GetProperty("IsOpen").GetValue(menu));
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)]
+    public void CheckpointPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Checkpoint/Checkpoint",Type.GetType("CheckpointUILayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("checkpointLayout",Hidden).SetValue(window,layout);type.GetField("checkpointPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase("Merchant")] [TestCase("Blacksmith")] [TestCase("SaveCheckpoint")]
+    public void WorldPromptBuildUsesTemplateWithoutCapturingInput(string name){
+        var type=Type.GetType(name+", Assembly-CSharp",true);var obj=Make("Prompt test");var service=obj.AddComponent(type);
+        type.GetMethod("BuildPrompt",Hidden).Invoke(service,null);
+        var view=obj.GetComponentInChildren(Type.GetType("WorldPromptView, Assembly-CSharp",true));Assert.IsNotNull(view);
+        Assert.IsNotNull(type.GetField("glyph",Hidden).GetValue(service));Assert.IsNotNull(type.GetField("caption",Hidden).GetValue(service));
+        foreach(var graphic in obj.GetComponentsInChildren<Graphic>(true))Assert.IsFalse(graphic.raycastTarget);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(8)] [TestCase(9)] 
+    public void WorldPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/World/World",Type.GetType("WorldUILayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("worldLayout",Hidden).SetValue(window,layout);type.GetField("worldPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] 
+    public void TargetPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Targets/Targets",Type.GetType("TargetUILayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("targetLayout",Hidden).SetValue(window,layout);type.GetField("targetPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)] [TestCase(6)]
+    public void ReactionPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Reactions/Reactions",Type.GetType("ReactionUILayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("reactionLayout",Hidden).SetValue(window,layout);type.GetField("reactionPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)] [TestCase(6)]
+    public void ShellPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Shell/PlayerMenu",Type.GetType("PlayerMenuShellLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("shellLayout",Hidden).SetValue(window,layout);type.GetField("shellPreview",Hidden).SetValue(window,mode);
+            type.GetField("panelWidth",Hidden).SetValue(window,1280);type.GetField("panelHeight",Hidden).SetValue(window,720);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)] [TestCase(6)]
+    public void SystemPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/System/System",Type.GetType("SystemPageLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("systemLayout",Hidden).SetValue(window,layout);type.GetField("systemPreview",Hidden).SetValue(window,mode);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)]
+    public void AbilitiesPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Abilities/Abilities",Type.GetType("AbilitiesPageLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("abilitiesLayout",Hidden).SetValue(window,layout);type.GetField("abilitiesPreview",Hidden).SetValue(window,mode);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [TestCase(0)] [TestCase(1)] [TestCase(2)]
+    public void InventoryPrefabPreviewRendersWithoutChangingScene(int mode)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Inventory/Inventory",Type.GetType("InventoryPageLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("inventoryLayout",Hidden).SetValue(window,layout);type.GetField("inventoryPreview",Hidden).SetValue(window,mode);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
+    [Test] public void InventoryLayoutReordersFiltersWithoutChangingTheirBinding()
+    {
+        var type=Type.GetType("InventoryPageLayout, Assembly-CSharp",true);
+        var layout=(ScriptableObject)Object.Instantiate(Resources.Load("UI/Inventory/Inventory",type));equipmentAssets.Add(layout);
+        var filters=(System.Collections.IList)type.GetField("Filters").GetValue(layout);
+        var value=filters[1];filters.RemoveAt(1);filters.Insert(0,value);
+        menuType.GetField("inventoryLayout",Hidden).SetValue(menu,layout);
+        Open();Page("Inventory");
+        var filterRoot=menu.GetComponentsInChildren<Transform>().Single(t=>t.name=="Filters");
+        Assert.AreEqual("Consumables",filterRoot.GetChild(0).name);
+        Find("Consumables").onClick.Invoke();Find("Mana Potion").onClick.Invoke();
+        Assert.AreEqual("Mana Potion",((TMP_Text)menuType.GetField("detailName",Hidden).GetValue(menu)).text);
+        RightClickItem("Mana Potion");Assert.IsNotNull(Find("Use"));
+    }
+    [TestCase("Formation", "PartyMemberCardView", 6)]
+    [TestCase("Equipment", "PartyEquipmentSlotView", 4)]
+    [TestCase("Attributes", "PartyAttributeRowView", 7)]
+    public void PartyPrefabPreviewRendersBoundWidgetsWithoutChangingScene(string kind,string widget,int count)
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        try{
+            var layout=Resources.Load("UI/Party/"+kind,Type.GetType("PartyPageLayout, Assembly-CSharp",true));Assert.IsNotNull(layout);
+            type.GetField("partyLayout",Hidden).SetValue(window,layout);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            Assert.AreEqual(count,root.GetComponentsInChildren(Type.GetType(widget+", Assembly-CSharp",true)).Length);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
     [Test] public void DetailsEditModePreviewRendersAndCleansUpWithoutChangingScene()
     {
         var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
@@ -295,7 +625,7 @@ public class PlayerMenuTests
         merchant.transform.position=party[0].transform.position;
         menuType.GetMethod("OpenShop").Invoke(menu,new object[]{merchant});
         var frame=menu.GetComponentsInChildren<Transform>().Single(t=>t.name=="Menu frame");
-        Assert.IsFalse(frame.Find("Inventory").gameObject.activeSelf);
+        Assert.IsFalse(frame.GetComponentsInChildren<Transform>(true).Single(t=>t.name=="Inventory").gameObject.activeInHierarchy);
         Assert.IsFalse(frame.Find("Brand").gameObject.activeSelf);
         Assert.AreEqual(24,((RectTransform)frame.Find("Page content")).offsetMin.x);
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text!=null&&t.text.Contains("Training")));
@@ -343,7 +673,7 @@ public class PlayerMenuTests
         var smith=Make("Test blacksmith").AddComponent(Type.GetType("Blacksmith, Assembly-CSharp",true));smith.transform.position=party[0].transform.position;
         menuType.GetMethod("OpenBlacksmith").Invoke(menu,new object[]{smith});
         var frame=menu.GetComponentsInChildren<Transform>().Single(t=>t.name=="Menu frame");
-        Assert.IsFalse(frame.Find("Inventory").gameObject.activeSelf);
+        Assert.IsFalse(frame.GetComponentsInChildren<Transform>(true).Single(t=>t.name=="Inventory").gameObject.activeInHierarchy);
         Assert.IsFalse(frame.Find("Brand").gameObject.activeSelf);
         Assert.AreEqual(24,((RectTransform)frame.Find("Page content")).offsetMin.x);
         smith.transform.position+=Vector3.right*10;Assert.IsFalse((bool)managerType.GetMethod("TryUpgradeEquipment").Invoke(manager,outside));smith.transform.position=party[0].transform.position;
@@ -580,9 +910,9 @@ public class PlayerMenuTests
         var inventory=(PartyInventory)managerType.GetField("Inventory").GetValue(manager);
         inventory.Items.Add(new BattleActionOption{Name="Fireball Book",ItemId="book",Category=BattleActionCategory.Item,LearnSpellId="fireball",Quantity=2});
         Open();Page("Inventory");
-        var potion=Find("Health Potion");Assert.IsFalse(potion.transform.Find("Label").gameObject.activeSelf);
+        var potion=Find("Health Potion");Assert.IsFalse(potion.GetComponentsInChildren<TMP_Text>().Any(t=>t.text=="Health Potion"));
         Assert.AreEqual(((RectTransform)potion.transform).rect.width,((RectTransform)potion.transform).rect.height,.01f);
-        Assert.IsNotNull(potion.transform.Find("Item artwork").GetComponent<Graphic>());
+        Assert.IsNotNull(potion.transform.Find("Icon/Item artwork").GetComponent<Graphic>());
         Assert.IsTrue(menu.GetComponentsInChildren<Transform>().Any(t=>t.name=="Empty inventory slot"));
         Find("Weapons").onClick.Invoke();Assert.AreEqual(2,menu.GetComponentsInChildren<Button>().Count(b=>b.name=="Grid sword"));
         Assert.IsFalse(menu.GetComponentsInChildren<Button>().Any(b=>b.name=="Health Potion"));
@@ -624,7 +954,7 @@ public class PlayerMenuTests
         managerType.GetMethod("BindEquipment").Invoke(manager,null);party[0].MaterializeVitals();int hp=party[0].StoredHealth,mp=party[0].StoredMagicPoints,before=party[0].Stat(CharacterStat.Strength);
         Open();Page("Inventory");RightClickItem("Context sword");Find("Equip").onClick.Invoke();
         Assert.IsFalse(Find("Member 1 · incompatible").interactable);Find("Member 0").onClick.Invoke();
-        Assert.IsNull(profile.At(EquipmentSlot.Weapon));Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.name=="Equipment stat changes"&&t.text.Contains("Strength")&&t.text.Contains((before+5).ToString())));
+        Assert.IsNull(profile.At(EquipmentSlot.Weapon));Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("Strength")&&t.text.Contains((before+5).ToString())));
         Find("Back").onClick.Invoke();Assert.IsNull(profile.At(EquipmentSlot.Weapon));Find("Member 0").onClick.Invoke();
         var confirm=Find("Confirm equip");confirm.onClick.Invoke();confirm.onClick.Invoke();
         Assert.AreEqual("context-sword",profile.InstanceAt(EquipmentSlot.Weapon));Assert.AreEqual(before+5,party[0].Stat(CharacterStat.Strength));Assert.AreEqual(hp,party[0].StoredHealth);Assert.AreEqual(mp,party[0].StoredMagicPoints);

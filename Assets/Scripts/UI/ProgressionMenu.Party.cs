@@ -65,6 +65,7 @@ public sealed partial class ProgressionMenu
 
     void PartyFormation()
     {
+        if(BuildModularParty(PartyPageKind.Formation))return;
         float width = partyContent.rect.width;
         var active = Manager.GetBattleParty();
         var reserve = Manager.Progression.Members.Where(m => m && !active.Contains(m)).ToList();
@@ -212,6 +213,7 @@ public sealed partial class ProgressionMenu
 
     void PartyEquipment()
     {
+        if(BuildModularParty(PartyPageKind.Equipment))return;
         Manager.BindEquipment(); var profile = Member.GetComponent<CharacterEquipment>();
         if (!profile) { ShowMember(Member); Label(Rect("No equipment", partyContent, 0, 0, partyContent.rect.width, 60), "No equipment slots available."); return; }
         InventoryEntries(); float width=partyContent.rect.width;
@@ -275,6 +277,7 @@ public sealed partial class ProgressionMenu
 
     void PartyAttributes()
     {
+        if(BuildModularParty(PartyPageKind.Attributes))return;
         float width = partyContent.rect.width;
         Label(Rect("Allocation balance", partyContent, 0, 0, width, 34), $"{Mathf.Max(0, Member.UnspentPoints - PartyAllocationCost)} ATTRIBUTE POINTS AVAILABLE", 18);
         var list = List(partyContent, "Attribute rows", 0, 42, width, Mathf.Max(210, partyContent.rect.height - 110), 7 * 46);

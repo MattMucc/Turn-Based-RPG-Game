@@ -77,7 +77,7 @@ public class BattleActionTests
         var type=Type.GetType("BattleHud, Assembly-CSharp",true);var hud=root.AddComponent(type);
         type.GetMethod("Bind").Invoke(hud,new object[]{battle,TMP_Settings.defaultFontAsset});
         Assert.IsNull(root.transform.Find("Defense timing"));Assert.IsNull(root.transform.Find("Order placement"));
-        var party=root.transform.Find("Party resources");Assert.IsNotNull(party);
+        var party=root.GetComponentsInChildren<Transform>(true).First(t=>t.name=="Party resources");Assert.IsNotNull(party);
         battle.Combatants[0].InitializeActionPoints(2);battle.Combatants[0].SpendMovement(1);
         battle.TargetFocus.Pin(battle.Targetables[1]);
         type.GetMethod("Render").Invoke(hud,null);
@@ -379,6 +379,7 @@ public class BattleActionTests
         menuType.GetField("endTurnKeyboardIcon", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu, endKey);
         menuType.GetField("endTurnControllerIcon", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(menu, endPad);
         menuType.GetMethod("Bind").Invoke(menu, new object[] { battle });
+        container=((RectTransform)menuType.GetField("content",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(menu)).gameObject;
         Assert.AreSame(endKey, buttonType.GetProperty("KeyboardIcon").GetValue(Find("End Turn").GetComponent(buttonType)));
         Assert.AreSame(endPad, buttonType.GetProperty("ControllerIcon").GetValue(Find("End Turn").GetComponent(buttonType)));
         Assert.AreSame(endPad, buttonType.GetProperty("ControllerIcon").GetValue(root.transform.Find("Remaining turn").GetComponent(buttonType)));
@@ -444,7 +445,7 @@ public class BattleActionTests
         Assert.IsTrue(battle.KeyboardGridInputEnabled);
         battle.ToggleTarget(cells[1]); battle.ToggleTarget(cells[1]);
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
-        var counter = root.transform.Find("Target selection count").GetComponentInChildren<TMP_Text>();
+        var counter = root.GetComponentsInChildren<Transform>(true).First(t=>t.name=="Target selection count").GetComponentInChildren<TMP_Text>();
         Assert.AreEqual("2 / 3 targets selected", counter.text);
         Assert.IsTrue(counter.gameObject.activeInHierarchy);
         menuType.GetMethod("CancelSelection", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
@@ -464,13 +465,14 @@ public class BattleActionTests
         Find("Back").onClick.Invoke();Assert.IsNull(battle.ChosenAction);Find("Fireball  ›");
         Find("Back").onClick.Invoke();Find("Spells");
         menuType.GetMethod("Unbind").Invoke(menu, null); Assert.IsFalse(root.activeSelf);
-        menuType.GetMethod("Bind").Invoke(menu, new object[] { battle }); Assert.IsTrue(root.activeSelf);
+        menuType.GetMethod("Bind").Invoke(menu, new object[] { battle });
+        container=((RectTransform)menuType.GetField("content",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(menu)).gameObject; Assert.IsTrue(root.activeSelf);
         Assert.AreEqual(8, container.GetComponentsInChildren<Button>().Length);
         CollectionAssert.AreEqual(new[] { "Attacks", "Skills", "Spells", "Block", "Items", "Swap", "Run", "End Turn" },
             Array.ConvertAll(container.GetComponentsInChildren<Button>(), b => b.GetComponentInChildren<TMP_Text>().text));
         battle.Block();
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
-        Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        Assert.IsFalse(root.GetComponentsInChildren<Transform>(true).First(t=>t.name=="Battle command viewport").gameObject.activeSelf);
         Assert.IsTrue(root.transform.Find("Remaining turn").gameObject.activeSelf);
         Assert.AreEqual(true, menuType.GetMethod("CanUseEndTurnShortcut", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null));
         Assert.IsTrue(((Component)hud).gameObject.activeInHierarchy);
@@ -478,11 +480,11 @@ public class BattleActionTests
         typeof(InSceneGridBattle).GetField("actorIndex", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(battle, 1);
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
         Assert.IsFalse(root.transform.Find("Remaining turn").gameObject.activeSelf);
-        Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        Assert.IsFalse(root.GetComponentsInChildren<Transform>(true).First(t=>t.name=="Battle command viewport").gameObject.activeSelf);
         typeof(InSceneGridBattle).GetField("actorIndex", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(battle, 0);
         battle.Combatants[0].EndTurn(); battle.Combatants[0].BeginTurn();
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
-        Assert.IsTrue(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        Assert.IsTrue(root.GetComponentsInChildren<Transform>(true).First(t=>t.name=="Battle command viewport").gameObject.activeSelf);
         Assert.IsFalse(root.transform.Find("Remaining turn").gameObject.activeSelf);
         battle.SetAutoCamera(false);
         battle.ChooseAction(battle.Loadout.Options.Find(o => o.SignatureQte)); battle.ToggleTarget(cells[1]);
@@ -491,7 +493,7 @@ public class BattleActionTests
         battle.AdvanceSignature(0.5f); battle.AdvanceSignature(0.75f);
         hudType.GetMethod("Render").Invoke(hud, null);
         menuType.GetMethod("UpdateAvailability", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(menu, null);
-        Assert.IsFalse(root.transform.Find("Battle command viewport").gameObject.activeSelf);
+        Assert.IsFalse(root.GetComponentsInChildren<Transform>(true).First(t=>t.name=="Battle command viewport").gameObject.activeSelf);
         var qteRoot = ((Component)hud).transform.Find("Signature QTE");
         Assert.IsTrue(qteRoot.gameObject.activeSelf);
         var qteFill = (RectTransform)qteRoot.Find("QTE countdown/Deadline track/Time remaining fill");
@@ -856,9 +858,16 @@ public class BattleActionTests
         var root=Create("Overhead test");var type=System.Type.GetType("BattleOverheadDisplay, Assembly-CSharp",true);var display=root.AddComponent(type);
         type.GetMethod("Bind").Invoke(display,new object[]{battle,TMP_Settings.defaultFontAsset});
         battle.Info(0).Level=7;battle.Combatants[0].Health=31;
+        battle.Combatants[0].ApplyStatus(CombatStatus.Burning,3);
         type.GetMethod("Render").Invoke(display,null);Assert.AreEqual(battle.Combatants.Count,root.transform.childCount);
-        StringAssert.Contains("Lv 7",root.transform.GetChild(0).Find("Name and level").GetComponent<TMP_Text>().text);
+        StringAssert.Contains("Lv 7",root.transform.GetChild(0).Find("Level").GetComponent<TMP_Text>().text);
         Assert.AreEqual("31 / 100",root.transform.GetChild(0).Find("Health").GetComponentInChildren<TMP_Text>().text);
+        var statusRow=root.transform.GetChild(0).Find("Status effects");
+        Assert.AreEqual("3",statusRow.Find("Burning").GetComponentInChildren<TMP_Text>().text);
+        foreach(var graphic in root.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))Assert.IsFalse(graphic.raycastTarget,"Overheads must not intercept targeting input.");
+        Assert.IsNull(root.transform.Find("Status tooltip"));
+        battle.Combatants[0].RemoveStatus(CombatStatus.Burning);type.GetMethod("Render").Invoke(display,null);
+        Assert.IsFalse(statusRow.GetChild(0).gameObject.activeSelf);
         battle.BattleCamera.transform.rotation=Quaternion.Euler(25,80,0);type.GetMethod("Render").Invoke(display,null);
         Assert.Less(Quaternion.Angle(battle.BattleCamera.transform.rotation,root.transform.GetChild(0).rotation),.01f);
         var sequence=BeginEnemySequence(false);Assert.IsTrue(battle.DefensePresentationActive);

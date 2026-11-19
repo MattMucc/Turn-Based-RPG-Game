@@ -17,6 +17,7 @@ public sealed partial class ProgressionMenu
 
     void SystemPage()
     {
+        if(ModularSystemPage())return;
         float width=Mathf.Max(300,body.rect.width),tabWidth=(width-24)/5;
         string[] labels={"Save / Load","Battle","Graphics","UI","Audio"};
         for(int i=0;i<labels.Length;i++){

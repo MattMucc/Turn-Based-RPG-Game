@@ -18,6 +18,14 @@ public sealed partial class ProgressionMenu
     void BuildAbilityWorkspace(List<AbilityEntry> entries, float width)
     {
         abilityEntries = entries;
+        if(modularAbilities){
+            abilitySearchField=modularAbilities.Search;
+            abilitySearchField.SetTextWithoutNotify(abilitySearch);
+            ((TMP_Text)abilitySearchField.placeholder).text=abilityCategory==BattleActionCategory.Magic?"Search spell families or tiers…":"Search abilities…";
+            abilitySearchField.onValueChanged.AddListener(value=>{abilitySearch=value;DrawAbilityEntries();});
+            abilityListRoot=modularAbilities.Browser;abilityShortcutRoot=modularAbilities.Favorites;
+            DrawAbilityEntries();RefreshAbilityShortcuts();return;
+        }
         var search = Rect("Ability search", body, 0, 52, width, 36);
         search.gameObject.AddComponent<Image>().color = new Color(.04f, .08f, .12f);
         abilitySearchField = search.gameObject.AddComponent<TMP_InputField>();
@@ -39,9 +47,10 @@ public sealed partial class ProgressionMenu
     string AbilityFamily(AbilityEntry entry) => entry.Spell ? entry.Spell.Id : entry.Key;
     void DrawAbilityEntries()
     {
-        Clear(abilityListRoot); abilityCards.Clear(); buttons.RemoveAll(b => !b || !b.gameObject.activeInHierarchy);
+        if(!modularAbilities)Clear(abilityListRoot); abilityCards.Clear(); buttons.RemoveAll(b => !b || !b.gameObject.activeInHierarchy);
         var entries = abilityEntries.Where(e => string.IsNullOrWhiteSpace(abilitySearch) ||
             (e.Action.Name + " " + e.Source).IndexOf(abilitySearch.Trim(), StringComparison.OrdinalIgnoreCase) >= 0).ToList();
+        if(modularAbilities){DrawModularAbilityEntries(entries);return;}
         float width = abilityListRoot.rect.width, height = abilityListRoot.rect.height, left = 0;
         if (abilityCategory == BattleActionCategory.Magic && entries.Count > 0)
         {
@@ -104,6 +113,7 @@ public sealed partial class ProgressionMenu
         if (!abilityShortcutRoot || page != Page.Abilities) return;
         Clear(abilityShortcutRoot); buttons.RemoveAll(b => !b || !b.gameObject.activeInHierarchy);
         var loadout = Loadout(); if (!loadout) return;
+        if(modularAbilities){DrawModularFavorites(loadout);return;}
         float width = abilityShortcutRoot.rect.width, half = (width - 8) / 2;
         Label(Rect("Shortcut heading", abilityShortcutRoot, 0, 0, width, 24), "FAVORITE SHORTCUTS", 14).color = Accent;
         for (int i = 0; i < 4; i++)

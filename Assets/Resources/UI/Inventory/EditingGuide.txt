@@ -1,0 +1,48 @@
+MODULAR INVENTORY
+
+Open Assets/Resources/UI/Inventory/Inventory.asset.
+Click Open live preview and choose Grid and filters, Item details, or Context menu.
+The preview uses example data and the same prefabs/rendering helpers as the game.
+It updates for Inspector edits and unsaved Prefab Mode edits without Play Mode.
+
+Inventory.asset
+- Reorder Filters by dragging entries; remove entries to hide those filter choices.
+- Each filter keeps its category binding regardless of order.
+- Selected Color controls the selected filter/item tint.
+- Assign duplicate prefabs here for alternate designs.
+- ProgressionMenu has an optional Inventory Layout override; empty uses this asset.
+
+Workspace.prefab
+- Move/resize heading, count, Filters and Items viewport with RectTransform anchors.
+- Filters/GridLayoutGroup controls columns, cell height and spacing.
+- Fit Filter Columns automatically fills the available filter width. Disable it to use authored cell widths.
+- Items/Content/GridLayoutGroup controls cell size, spacing, padding and column policy.
+- Grid height and scrolling adjust to inventory contents.
+- Keep enough space for the selected number of filter rows when changing filter columns.
+
+ItemSlot.prefab
+- Edit button appearance, icon placement, quantity/upgrade badge, equipped marker and drop outline.
+- Slot dimensions come from the workspace grid. Anchor its children for resizing.
+- Empty slots reuse this template with quantity/equipped markers hidden.
+- Left click selects; right click opens context; drag/drop still moves inventory positions.
+
+FilterButton.prefab / ContextButton.prefab
+- Edit text style, background and button states.
+- ContextButton's LayoutElement preferred height controls each action row.
+- Labels and callbacks are populated automatically. Do not wire new gameplay commands in the prefab.
+
+Details.prefab
+- Arrange title, artwork, category, carried/upgrade information and scrollable description.
+- Text comes from the selected inventory entry.
+- Description content height adjusts to its text; its viewport stays where you place it.
+
+ContextMenu.prefab
+- Edit popup width, title and Choices placement.
+- Choices/VerticalLayoutGroup controls spacing/padding.
+- Height follows the applicable actions. Use/Equip/Unequip availability still follows game rules.
+- In game, popup remains above/right of mouse or controller cursor/slot and is clamped to the screen.
+- The live preview shows an example equipment context, not an interactive transaction.
+
+Keep the Inventory view components and their assigned references intact.
+Main menu navigation, hover tooltip layout and follow-up Examine/Use/Equip confirmation dialogs are outside this pass.
+Tools > Game > UI > Create missing Inventory templates restores missing defaults without overwriting edits.

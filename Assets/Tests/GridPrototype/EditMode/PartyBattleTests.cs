@@ -105,7 +105,9 @@ public class PartyBattleTests
         type.GetMethod("Open").Invoke(panel, new object[] { battle, TMPro.TMP_Settings.defaultFontAsset });
         Assert.IsTrue(battle.PartyInputBlocked); Assert.IsFalse(battle.GridInputEnabled);
         var choose = type.GetMethod("Choose", BindingFlags.Instance | BindingFlags.NonPublic);
-        choose.Invoke(panel, new object[] { 0 });
+        var buttons=(System.Collections.Generic.List<UnityEngine.UI.Button>)type.GetField("choices",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(panel);
+        Assert.AreEqual(1,buttons.Count);Assert.IsTrue(buttons[0].targetGraphic.raycastTarget);
+        buttons[0].onClick.Invoke();
         Assert.AreSame(original, battle.Combatants[0]); Assert.IsTrue(original.ActionAvailable);
         type.GetMethod("Close").Invoke(panel, null); Assert.IsTrue(original.ActionAvailable);
         type.GetMethod("Open").Invoke(panel, new object[] { battle, TMPro.TMP_Settings.defaultFontAsset });

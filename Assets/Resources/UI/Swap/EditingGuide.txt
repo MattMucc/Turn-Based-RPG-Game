@@ -1,0 +1,22 @@
+Battle swap window editing
+
+Select Assets/Resources/UI/Swap/Swap.asset and choose Open live preview.
+The preview supports reserve selection, confirmation, a knocked-out last reserve, 0-3 reserves and an optional sample portrait texture. Example values never change the roster or spend an action.
+
+Window.prefab
+- The fullscreen background blocks input to the battle underneath.
+- Current is the outgoing character slot; Reserves contains the three incoming-character slots in their navigation order.
+- Move/resize these slot RectTransforms to arrange the portraits. Runtime portrait cards stretch to fill their slots.
+- Prompt, Confirm and Cancel are separate bound pieces; move, rename and style them freely while preserving the view references.
+- Confirm appears only after a reserve is selected. Cancel and the existing keyboard/controller Back controls close without spending anything.
+
+Portrait.prefab
+- Reused for the current character and each reserve.
+- Portrait image, Name, Health track/fill, health text and Highlight are editable children/references.
+- The health label displays current / maximum for both outgoing and incoming characters.
+- Selection colors are on Swap.asset. A knocked-out reserve is disabled. The current portrait is informational rather than selectable.
+- Keep the Button's target graphic raycast-enabled; text and decorative children should not block clicks.
+
+Live preview includes unsaved Prefab Mode edits. Save the prefab to apply changes in-game. Portrait images at runtime use the character's authored portrait or the existing portrait capture fallback; preview uses the optional sample texture and never captures gameplay actors.
+
+This changes presentation only. Reserve eligibility, confirmation, action cost, movement handling, input blocking and camera restoration retain their existing rules. Templates are generated only when absent using Tools > Game > UI > Create missing Battle Swap templates.

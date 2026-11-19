@@ -26,38 +26,39 @@ public sealed partial class ProgressionMenu
     }
     void UpgradesPage()
     {
-        HideItemTooltip();upgradeCards.Clear();Manager.BindEquipment();InventoryEntries();float width=body.rect.width;
-        if(!blacksmith)Button(body,"Back",width-112,body.rect.height-112,112,()=>ShowPage(Page.Inventory));
+        HideItemTooltip();upgradeCards.Clear();Manager.BindEquipment();InventoryEntries();BeginMerchantLayout(true);float width=body.rect.width;
+        if(!blacksmith)MerchantButton(body,"Back",width-112,body.rect.height-112,112,()=>ShowPage(Page.Inventory));
         var copies=Manager.Equipment.Owned.Where(e=>e!=null&&e.Definition&&(forgeCategory==0||(int)e.Definition.Kind==forgeCategory-1)).ToList();
         if(!copies.Any(e=>e.InstanceId==upgradeSelection))upgradeSelection=copies.FirstOrDefault()?.InstanceId;
-        Label(Rect("Upgrade heading",body,0,0,width,40),BlacksmithServiceAvailable?blacksmith.DisplayName+" · "+Manager.Equipment.Coins+" coins":"UPGRADE RECIPES · Visit a blacksmith",19);
+        MerchantLabel(Rect("Upgrade heading",body,0,0,width,40),BlacksmithServiceAvailable?blacksmith.DisplayName+" · "+Manager.Equipment.Coins+" coins":"UPGRADE RECIPES · Visit a blacksmith",19);
         string[] filters={"All","Weapons","Armor","Accessories"};float tabWidth=(width-18)/4;
         for(int f=0;f<filters.Length;f++){
-            int category=f;var tab=Button(body,filters[f],f*(tabWidth+6),44,tabWidth,()=>{forgeCategory=category;upgradePending=false;upgradeNotice=null;Rebuild();},null,32);
-            tab.interactable=!upgradePending;var text=tab.GetComponentInChildren<TMP_Text>();text.enableAutoSizing=true;text.fontSizeMin=11;text.fontSizeMax=15;
-            if(f==forgeCategory)tab.image.color=new Color(.16f,.36f,.44f);
+            int category=f;var tab=MerchantButton(body,filters[f],f*(tabWidth+6),44,tabWidth,()=>{forgeCategory=category;upgradePending=false;upgradeNotice=null;Rebuild();},null,32);
+            tab.interactable=!upgradePending;var text=tab.GetComponentInChildren<TMP_Text>();if(!modularMerchant){text.enableAutoSizing=true;text.fontSizeMin=11;text.fontSizeMax=15;}
+            if(f==forgeCategory)tab.image.color=(modularMerchant?activeMerchantLayout.SelectedColor:new Color(.16f,.36f,.44f));
         }
         int columns=Mathf.Max(2,Mathf.FloorToInt((width+8)/96));float size=Mathf.Min(88,(width-8*(columns-1)-12)/columns),rowHeight=size+32;
-        var list=List(body,"Forge equipment grid",0,88,width,Mathf.Max(100,body.rect.height-166),Mathf.Ceil(copies.Count/(float)columns)*rowHeight+8);
+        var list=MerchantList(body,"Forge equipment grid",0,88,width,Mathf.Max(100,body.rect.height-166),Mathf.Ceil(copies.Count/(float)columns)*rowHeight+8);
         for(int i=0;i<copies.Count;i++){
             var copy=copies[i];var owner=Manager.EquipmentOwner(copy.InstanceId);var proxy=inventoryEquipment.First(e=>e.Value==copy).Key;
             float x=(i%columns)*(size+8)+4,y=(i/columns)*rowHeight+4;
-            var button=Button(list,copy.Definition.DisplayName,x,y,size,()=>{HideItemTooltip();upgradeSelection=copy.InstanceId;upgradePending=false;upgradeNotice=null;Rebuild();},null,size);
-            button.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);DrawInventoryIcon(button.transform,proxy,8,8,size-16);
+            var button=MerchantButton(list,copy.Definition.DisplayName,x,y,size,()=>{HideItemTooltip();upgradeSelection=copy.InstanceId;upgradePending=false;upgradeNotice=null;Rebuild();},null,size);
+            MerchantIcon(button,proxy,size);
             button.interactable=!upgradePending;
-            if(copy.InstanceId==upgradeSelection)button.image.color=new Color(.16f,.36f,.44f);
-            var caption=Label(Rect("Equipped owner",list,x,y+size+2,size,26),owner?DisplayName(owner):"Unequipped",11);caption.enableAutoSizing=true;caption.fontSizeMin=9;caption.fontSizeMax=11;caption.alignment=TextAlignmentOptions.Center;
+            if(copy.InstanceId==upgradeSelection)button.image.color=(modularMerchant?activeMerchantLayout.SelectedColor:new Color(.16f,.36f,.44f));
+            var caption=MerchantLabel(Rect("Equipped owner",list,x,y+size+2,size,26),owner?DisplayName(owner):"Unequipped",11);if(!modularMerchant){caption.enableAutoSizing=true;caption.fontSizeMin=9;caption.fontSizeMax=11;caption.alignment=TextAlignmentOptions.Center;}
             var pointer=button.gameObject.AddComponent<PlayerInventoryPointer>();
             pointer.Hover=()=>{if(!upgradePending)ShowForgeTooltip(copy,button.transform);};pointer.Exit=HideItemTooltip;
             button.GetComponent<PlayerMenuFocus>().Preview=()=>{if(!upgradePending)ShowForgeTooltip(copy,button.transform);};
             upgradeCards[copy.InstanceId]=button;
         }
-        if(copies.Count==0)Label(Rect("Empty forge category",list,12,12,width-24,44),"No equipment in this category.",16);
-        if(blacksmith&&!upgradePending)Button(body,"Leave",0,body.rect.height-52,112,Close);
+        if(copies.Count==0)MerchantLabel(Rect("Empty forge category",list,12,12,width-24,44),"No equipment in this category.",16);
+        if(blacksmith&&!upgradePending)MerchantButton(body,"Leave",0,body.rect.height-52,112,Close);
+        FinishMerchantLayout(copies.Count,upgradePending);
         var selected=Manager.Equipment.Find(upgradeSelection);
         if(selected!=null){
             bool available=EquipmentUpgrades.Requirements(Manager.Equipment,selected,selected.UpgradeLevel,out _,out var reason);
-            Button(detailRoot,upgradePending?"Confirm upgrade":"Review upgrade",12,detailRoot.rect.height-92,detailRoot.rect.width-24,()=>{
+            MerchantButton(detailRoot,upgradePending?"Confirm upgrade":"Review upgrade",12,detailRoot.rect.height-92,detailRoot.rect.width-24,()=>{
                 HideItemTooltip();
                 if(!open||InBattle)return;
                 if(!BlacksmithServiceAvailable){upgradeNotice="The blacksmith is no longer available.";upgradePending=false;Rebuild();return;}
@@ -67,8 +68,8 @@ public sealed partial class ProgressionMenu
                 else if(Manager.TryUpgradeEquipment(selected.InstanceId,upgradeExpectedLevel,out upgradeNotice))upgradeNotice=$"Upgraded {selected.Definition.DisplayName} to +{selected.UpgradeLevel}.";
                 upgradePending=false;Rebuild();
             }).interactable=available&&BlacksmithServiceAvailable;
-            if(upgradePending)Button(detailRoot,"Cancel upgrade",12,detailRoot.rect.height-46,detailRoot.rect.width-24,()=>{upgradePending=false;Rebuild();});
-            Label(Rect("Upgrade notice",body,124,body.rect.height-56,width-124,52),upgradeNotice??(!BlacksmithServiceAvailable?"Interact with a nearby blacksmith to purchase upgrades.":available?"":reason),14);
+            if(upgradePending)MerchantButton(detailRoot,"Cancel upgrade",12,detailRoot.rect.height-46,detailRoot.rect.width-24,()=>{upgradePending=false;Rebuild();});
+            MerchantLabel(Rect("Upgrade notice",body,124,body.rect.height-56,width-124,52),upgradeNotice??(!BlacksmithServiceAvailable?"Interact with a nearby blacksmith to purchase upgrades.":available?"":reason),14);
             PreviewUpgrade(selected);
         }else Detail("Upgrades","No equipment in this category.");
     }

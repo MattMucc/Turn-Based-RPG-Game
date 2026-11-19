@@ -1,0 +1,30 @@
+SHOP AND BLACKSMITH — EDITING GUIDE
+
+Select Shop.asset or Blacksmith.asset, then click Open live preview.
+Inventory workspace shows example items; Transaction buttons shows review/confirm/cancel styling and the Shop's Attack details button; Empty category previews the empty grid state.
+The preview uses an isolated Edit Mode scene. It does not buy, sell, upgrade, change coins or write saves.
+
+ShopWorkspace.prefab / BlacksmithWorkspace.prefab
+Arrange the heading, filters, Buy/Sell strip (Shop), grid viewport, Leave button and notice area with RectTransforms.
+GridLayoutGroup controls item cell size, spacing, padding and optional fixed column count. Grid height follows its actual contents. HorizontalLayoutGroups distribute mode/filter controls.
+
+ItemSlot.prefab
+Edit the selection background, Artwork area and price/equipped-owner caption. Slots resize with grid cells. Keep binding references assigned; runtime fills images and captions. Item names/descriptions remain available through tooltips and the details panel.
+
+Filter.prefab / Mode.prefab
+Style the category filters and Buy/Sell tabs. They share these templates by default; assign variants to either layout for distinct styling.
+
+Action.prefab / Cancel.prefab
+Style and position the transaction buttons at the bottom of the right-side panel. Labels switch between Review and Confirm automatically. Preserve bottom anchors to follow panel resizing. Keep them within the existing lower 106–110 pixel footer area so they don't overlap scrollable details.
+
+AttackDetails.prefab
+Styles the Shop's expandable weapon-Attack buttons. Their position and width follow the existing right-side details flow; text, background and internal padding are editable. The expanded descriptions and patterns still come from the actual Attack data.
+
+Editing workflow
+Keep the preview open while editing templates in Prefab Mode. Unsaved changes appear in the preview; save prefab edits to use them in game. Preview scrolling exposes longer item lists.
+Shop.asset and Blacksmith.asset select templates and selection colour. ProgressionMenu has optional Shop Layout and Blacksmith Layout overrides.
+The right-side content remains configured in Resources/UI/Details/Shop.asset and Blacksmith.asset, with its separate live preview. The command/menu shell is unchanged.
+Tools > Game > UI > Create missing Merchant templates creates missing assets and fills a missing AttackDetails reference without replacing existing templates.
+
+Transactions
+Filtering, hover information, equipped-item sale restrictions, current currency/material checks, per-copy upgrades, price/recipe revalidation and confirmation/cancel behaviour remain unchanged. Preview examples do not define merchant inventory or upgrade recipes.

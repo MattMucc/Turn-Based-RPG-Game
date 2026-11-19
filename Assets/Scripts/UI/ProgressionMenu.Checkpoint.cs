@@ -9,6 +9,7 @@ public sealed partial class ProgressionMenu
     }
     void CheckpointPage()
     {
+        if(ModularCheckpoint())return;
         if(!checkpointContext){Detail("Checkpoint","This checkpoint is no longer available.");Button(body,"Leave",0,60,400,Close);return;}
         if(!menuSaveService){menuSaveService=Manager.Saves;menuSaveService.Changed+=SaveMenuChanged;}
         float width=Mathf.Max(300,body.rect.width);

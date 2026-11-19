@@ -45,6 +45,7 @@ public sealed partial class ProgressionMenu
         canvasObject=new GameObject("Player menu",typeof(Canvas),typeof(CanvasScaler),typeof(GraphicRaycaster)); canvasObject.transform.SetParent(transform,false);
         var canvas=canvasObject.GetComponent<Canvas>(); canvas.renderMode=RenderMode.ScreenSpaceOverlay; canvas.sortingOrder=200;
         var scaler=canvasObject.GetComponent<CanvasScaler>(); scaler.uiScaleMode=CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution=new Vector2(1280,720); scaler.screenMatchMode=CanvasScaler.ScreenMatchMode.Expand;
+        if(BuildModularShell()){capture=canvasObject.AddComponent<BattlePortraitCapture>();canvasObject.SetActive(false);return;}
         var backdrop=Rect("Backdrop",canvasObject.transform,0,0,0,0); backdrop.anchorMin=Vector2.zero; backdrop.anchorMax=Vector2.one; backdrop.offsetMin=backdrop.offsetMax=Vector2.zero;
         backdrop.gameObject.AddComponent<Image>().color=new Color(.01f,.025f,.045f,1);
         shell=Rect("Menu frame",canvasObject.transform,0,0,1200,660); shell.anchorMin=Vector2.zero; shell.anchorMax=Vector2.one; shell.offsetMin=shell.offsetMax=Vector2.zero;
@@ -72,6 +73,10 @@ public sealed partial class ProgressionMenu
     {
         bool service=page==Page.Shop||(page==Page.Upgrades&&blacksmith);
         canvasObject.name=service?(page==Page.Shop?"Shop menu":"Blacksmith menu"):"Player menu";
+        if(modularShell){
+            if(service)title.text=page==Page.Shop?"SHOP":"BLACKSMITH";
+            UpdateModularShell(service,page!=Page.System&&!(service&&page==Page.Upgrades));return;
+        }
         foreach(string name in new[]{"Brand","Party","Inventory","Abilities","Growth","System","Return to world"})
             shell.Find(name).gameObject.SetActive(!service);
         title.rectTransform.anchoredPosition=new Vector2(service?24:220,-20);

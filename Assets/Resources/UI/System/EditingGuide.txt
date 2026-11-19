@@ -1,0 +1,21 @@
+SYSTEM PAGE — EDITING GUIDE
+
+Select System.asset and click Open live preview. Choose Save / Load, Battle, Graphics, UI, Audio, Confirmation or Save slots in the preview window. No Play Mode is required. Preview values are examples and do not change settings, write saves or load games.
+
+Workspace.prefab: arrange the tab strip and content region. Tab.prefab styles all five tabs; their HorizontalLayoutGroup controls spacing and widths.
+SaveLoad.prefab: arrange Save Game, Load Game and Load Last Checkpoint.
+Battle.prefab: arrange timing, automatic camera and restore-defaults buttons.
+Graphics.prefab: arrange the display-mode label, dropdown and Apply button.
+UI.prefab: arrange input-icon and turn-order dropdowns and restore-defaults button.
+Audio.prefab: arrange the master-volume readout, slider and restore-defaults button.
+Confirmation.prefab: shared message plus confirm/cancel controls, used for save/load, settings defaults and display-mode confirmation.
+SaveSlots.prefab: arrange title, scrolling list and Back button. The content VerticalLayoutGroup controls row spacing and padding.
+SaveSlot.prefab: style the slot name and save details. LayoutElement preferred height controls each row's height.
+
+Edit these prefabs in Prefab Mode while the preview remains open. Unsaved changes update the preview. Save prefab changes to use them in game. The preview's Scroll control exposes longer save lists.
+Keep SystemControlView keys and assigned references intact when moving or renaming objects. Pipe-separated keys on confirmation controls bind several equivalent actions to one template. Runtime supplies live values, state-dependent captions and listeners; placeholder labels are only for authoring. New settings need gameplay code; adding a decorative label or moving an existing control does not.
+Dropdown child objects include the collapsed label, popup template and rotating arrow. Edit the popup Template to style expanded choices; it stays inactive outside an opened dropdown. The preview shows the collapsed dropdown.
+Controls can be repositioned with RectTransforms. The five tab identities/order remain Save / Load, Battle, Graphics, UI, Audio.
+
+The default layout loads automatically. ProgressionMenu has an optional System Layout override. Tools > Game > UI > Create missing System templates creates missing assets without replacing edits.
+The shared command rail and right-side explanatory panel are unchanged. Saving still uses twenty manual slots, filters empty slots from loading, and confirms overwrites; all existing display rollback and default-reset rules remain.

@@ -1,0 +1,25 @@
+GROWTH PAGE — EDITING GUIDE
+
+Select Growth.asset and click Open live preview. The window renders the actual UI templates in an isolated Edit Mode preview. It never enters Play Mode or spends points.
+
+ARRANGE THE TREE
+Open TreeArrangement.prefab in Prefab Mode. Select the parent markers (preview-start, preview-left, etc.) and drag them with the Rect tool. Increasing Y moves upward; the starting node stays at the bottom. The nested SkillNode images are visual guides; move their parent marker to change the layout position.
+Each marker has a GrowthNodePlacement component. Its Example record contains an ID, name, passive shape, image and prerequisite IDs. Duplicate a marker to add a prototype node and give it a unique ID. Add another node's ID to Prerequisites to draw a connection. Missing, ambiguous, duplicate and self connections are skipped.
+Connections update in the live preview, including unsaved Prefab Mode changes. The arrangement prefab itself contains visual markers; generated connections are shown in the preview/menu.
+The current records are presentation-only placeholders. They do not teach abilities, spend points or create character kits.
+
+STYLE THE PIECES
+Workspace.prefab: move/resize the title, legend and scrolling tree viewport.
+SkillNode.prefab: edit the circular/diamond frame, icon, fallback letter and name label. Preserve assigned component references. Keep the frame centered horizontally at the top of the node; its center is the connection anchor.
+Connection.prefab: change Image colour/material and RectTransform height for line thickness. Length and angle follow the connected nodes automatically.
+Growth.asset: assign template variants, set state colours, outer padding and Connection Inset (distance from each node center to the line endpoint).
+Node width and label size are editable. Increase Horizontal Padding/Top Padding/Bottom Padding if enlarged nodes need more space at the tree edges.
+The live preview has vertical and horizontal scroll controls for larger trees. Follow layout selection keeps this preview active while editing prefab contents. Save prefab edits to use them in game.
+
+REAL CHARACTER RECORDS
+CharacterMenuData.SkillTree remains the source for real node names, requirements, prerequisites and learned state. Arrangement markers with matching IDs override only their visual positions; unmatched records retain their authored Position values. Changing the visual layout never changes a real node's requirements or connections. Growth retains controller navigation and automatically scrolls selected nodes into view.
+The default layout loads automatically; ProgressionMenu has an optional Growth Layout override for custom templates.
+
+SCOPE
+This pass covers the tree workspace, node widgets and connections. The common menu shell and existing selected-node description panel are unchanged. Character kits and learning rules remain deferred.
+Tools > Game > UI > Create missing Growth templates creates missing assets only and preserves edits.

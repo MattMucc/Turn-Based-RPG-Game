@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9fee57d6c2f5d048a2dffe4fdbf4268, type: 3}
+  m_Name: System
+  m_EditorClassIdentifier: Assembly-CSharp::SystemPageLayout
+  Workspace: {fileID: 6579411267371266900, guid: 62dd63a5ffa472b419f76ed60cb1f5e6, type: 3}
+  Tab: {fileID: 2055796404403577479, guid: fc0d65b7dd4b4794dbe9a477b43a7daf, type: 3}
+  SaveLoad: {fileID: 7291197339650174098, guid: 1ac4bb3256e4b42439be458855e87d83, type: 3}
+  Battle: {fileID: 3035736651134365085, guid: ad504327aa40a20478025e454a959a9d, type: 3}
+  Graphics: {fileID: 7680463929218587491, guid: 582a05acfbd590d4f9103143726620d6, type: 3}
+  UI: {fileID: 5326446709741140959, guid: 032faa98ca7416c46a7b8f951afc94a6, type: 3}
+  Audio: {fileID: 9028003617367724734, guid: 0c16807aaa30791439851dcd2c27b6f7, type: 3}
+  Confirmation: {fileID: 1274484642759669856, guid: d399bc859633d4642be96438479e4424, type: 3}
+  SaveSlots: {fileID: 2865338033139959272, guid: 424e45b18caf07d4a8580e409e57d930, type: 3}
+  SaveSlot: {fileID: 6274679300405854466, guid: b89dfb8214fb9ff47b32ae5b7dcfd93e, type: 3}
+  SelectedColor: {r: 0.16, g: 0.36, b: 0.44, a: 1}

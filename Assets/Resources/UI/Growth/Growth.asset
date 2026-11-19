@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b19f009dd0779641bd45fe72b944b40, type: 3}
+  m_Name: Growth
+  m_EditorClassIdentifier: Assembly-CSharp::GrowthPageLayout
+  Workspace: {fileID: 8705961725668820329, guid: b4528c5f31fc607418573fe9900cb445, type: 3}
+  Node: {fileID: 4262477151977640816, guid: 8aba9699e96a3d445bbe458bf51caf0d, type: 3}
+  Connection: {fileID: 5549264633037730292, guid: dce9b7cbca8ab824b8d11352b76bd1f1, type: 3}
+  Arrangement: {fileID: 7010907196611005525, guid: eec346ec37068554c8cc08ca181b627a, type: 3}
+  LearnedFill: {r: 0.25, g: 0.2, b: 0.08, a: 1}
+  LockedFill: {r: 0.07, g: 0.12, b: 0.18, a: 1}
+  LearnedBorder: {r: 0.95, g: 0.74, b: 0.3, a: 1}
+  AvailableBorder: {r: 0.5, g: 0.65, b: 0.7, a: 1}
+  LockedBorder: {r: 0.3, g: 0.36, b: 0.42, a: 1}
+  LearnedConnection: {r: 0.65, g: 0.51, b: 0.25, a: 1}
+  HorizontalPadding: 80
+  TopPadding: 54
+  BottomPadding: 96
+  ConnectionInset: 28

@@ -1,0 +1,31 @@
+Target details and Examine UI editing
+
+1. Select Assets/Resources/UI/Targets/Targets.asset and choose Open live preview.
+2. Choose Hover / pinned target, Examine, Context menu or Status tooltip. Adjust the sample health, object and status options. These are preview data only.
+3. Open a referenced prefab in Prefab Mode. Move and resize its RectTransforms, change text styling and bar colors, or add decoration. Live preview includes unsaved prefab-stage changes. Save the prefab to use the changes in-game.
+
+Target.prefab
+- Name, health, barrier, mana, AP/movement, statuses and damage feedback are separate pieces.
+- The root placement is the default for Top turn order. Targets.asset Right Order Offset adjusts it for Right turn order.
+- Fill anchors and displayed text update from gameplay. Edit the surrounding tracks for bar placement and size; keep fills stretched vertically and anchored from the left.
+- Object targets hide mana; absent barriers and statuses hide themselves.
+
+Inspection.prefab
+- Fullscreen dismiss layer, context options, Examine panel, Close button, status row and scrollable details are editable.
+- The details text still comes from the existing character information formatter; its content height is calculated to fit the text. Change its styling and viewport dimensions, not sample text, to change the in-game presentation.
+- Runtime callbacks are connected automatically; no Inspector click-event setup is needed.
+- Keep the Examine and Use context button names intact. Existing context navigation uses those names.
+
+StatusBadge.prefab
+- Reusable spherical status graphic and remaining-count label.
+- Each BattleStatusRow controls Icon Size and Spacing; entries stay centered. Badge children scale with the authored prefab to preserve their arrangement in compact party cards too.
+- Remaining numbers represent the existing effect: ticks/turns for timed effects, shield points for Barrier.
+
+StatusTooltip.prefab
+- Edit background, text style, width, text insets and Vertical Padding. Height expands for the actual status description; position follows the badge and is clamped to the screen.
+- Tooltip ignores clicks so the existing battle and inspection interactions remain unchanged.
+- Badge and tooltip templates are also used by existing party status rows.
+
+Retain the view component references when rearranging pieces. They connect live values to the editable layout. Existing hover/pin/Examine controls and combat rules have not changed.
+
+The preview uses an isolated Edit Mode scene; it does not start Play Mode or run an encounter. Use its Scroll control to inspect the full Examine content.

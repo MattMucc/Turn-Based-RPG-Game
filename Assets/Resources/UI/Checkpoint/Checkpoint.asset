@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdb05da4404e2eb49917edd663ecb936, type: 3}
+  m_Name: Checkpoint
+  m_EditorClassIdentifier: Assembly-CSharp::CheckpointUILayout
+  Menu: {fileID: 4721942187499637285, guid: 6e66cb14b7ba1a54c92ffbd503016261, type: 3}
+  Details: {fileID: 3871513510749103871, guid: f8080784d515b3147a4f4c113c82df96, type: 3}

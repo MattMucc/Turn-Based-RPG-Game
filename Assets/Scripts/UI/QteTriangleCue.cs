@@ -3,6 +3,10 @@ using UnityEngine.UI;
 
 public sealed class QteTriangleCue : MonoBehaviour
 {
+    public Color Tint=Color.white;
+    public Vector2 Size=new Vector2(16,12),Offset;
+    [Min(0)] public float BobHeight=5;
+    [Min(0)] public float BobSpeed=3;
     private GameObject outline, fill;
     private void Ensure()
     {
@@ -21,7 +25,7 @@ public sealed class QteTriangleCue : MonoBehaviour
     private RectTransform Piece(Transform parent)
     {
         var obj = new GameObject("Triangle stroke", typeof(RectTransform), typeof(Image)); obj.transform.SetParent(parent, false);
-        var image = obj.GetComponent<Image>(); image.color = Color.white; image.raycastTarget = false;
+        var image = obj.GetComponent<Image>(); image.color = Tint; image.raycastTarget = false;
         return (RectTransform)obj.transform;
     }
     private void Line(Transform parent, Vector2 a, Vector2 b)
@@ -32,8 +36,8 @@ public sealed class QteTriangleCue : MonoBehaviour
     }
     public void Present(bool holding, float outerRadius, float seconds, bool animate)
     {
-        Ensure(); outline.SetActive(!holding); fill.SetActive(holding);
-        float bob = holding || !animate ? 0 : (1 - Mathf.Cos(seconds * Mathf.PI * 3)) * 2.5f;
-        ((RectTransform)transform).anchoredPosition = new Vector2(0, outerRadius + (holding ? 0 : 0.75f) + bob);
+        Ensure();outline.transform.localScale=fill.transform.localScale=new Vector3(Size.x/16,Size.y/12,1); outline.SetActive(!holding); fill.SetActive(holding);
+        float bob = holding || !animate ? 0 : (1 - Mathf.Cos(seconds * Mathf.PI * BobSpeed)) * BobHeight*.5f;
+        ((RectTransform)transform).anchoredPosition = Offset+new Vector2(0, outerRadius + (holding ? 0 : 0.75f) + bob);
     }
 }

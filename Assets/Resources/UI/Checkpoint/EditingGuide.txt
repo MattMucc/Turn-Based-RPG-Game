@@ -1,0 +1,24 @@
+Checkpoint UI editing
+
+Select Assets/Resources/UI/Checkpoint/Checkpoint.asset and choose Open live preview.
+The preview has Rest / Save / Leave, Rest confirmation, and Unavailable checkpoint states. It uses sample information and does not recover the party, reset enemies, or write a save.
+
+Menu.prefab
+- Checkpoint title, Options and Rest confirmation groups are independently editable.
+- Options contains the Rest, Save and Leave buttons.
+- Rest confirmation contains the warning text, Confirm rest and Cancel rest buttons.
+- Adjust their RectTransforms, typography, colors and backgrounds in Prefab Mode. Keep the CheckpointMenuView references assigned.
+- Warning text is authored on the prefab. The checkpoint title and button labels are supplied by the current menu state.
+
+Details.prefab
+- Separate title, description and save-service notice fields.
+- Edit placement and styling here. Runtime supplies checkpoint information and current save/rest feedback; Rest/Save focus updates the description.
+
+The two prefabs fill the existing player-menu content and details areas. Their containing areas are controlled by the Player Menu shell layout. Live preview displays those pieces side by side, without the shell, and includes unsaved prefab-stage edits. Save prefab edits for use in-game.
+
+Buttons retain the existing recovery, roaming-reset, one-off encounter preservation and checkpoint autosave flow. Save opens the existing save/load interface. Cancel does not rest, and Leave closes the menu. Do not add extra gameplay click events to the prefab; callbacks are connected automatically.
+
+Tools > Game > UI > Create missing Checkpoint templates creates only missing assets and preserves existing edits. No Play Mode is required.
+
+CHECKPOINT SAVING
+Save slots and Overwrite confirmation are also available in the checkpoint live preview. These use the shared Resources/UI/System/SaveSlots.prefab, SaveSlot.prefab and Confirmation.prefab referenced by System.asset. Edit those templates to update checkpoint saving and System saving together. The checkpoint route opens slots directly, and Back returns to Rest / Save / Leave. Cancel overwrite returns to slots without writing a save or restoring HP/MP. Preview uses sample slots only and never writes saves.

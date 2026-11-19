@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f7d82c48777fdac4084e046cc954413e, type: 3}
+  m_Name: World
+  m_EditorClassIdentifier: Assembly-CSharp::WorldUILayout
+  Merchant: {fileID: 6317800347056572585, guid: fa1a629ae9e54b44789a6fc7c0277644, type: 3}
+  Blacksmith: {fileID: 1773894157685220260, guid: 136989c1c64b33c42bd82a34ed7e9124, type: 3}
+  Checkpoint: {fileID: 6973382823740857922, guid: 2172148e9d401cb4692268417336ba07, type: 3}
+  SaveIndicator: {fileID: 7439728537317547711, guid: 94ae1d2787ed53f43969b38fd74802f8, type: 3}
+  EncounterNotice: {fileID: 1350675486245075090, guid: 63cda616df8da244db22708e8d7a311e, type: 3}

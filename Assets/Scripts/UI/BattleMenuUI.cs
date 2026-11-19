@@ -9,7 +9,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 // Keeps the authored button artwork; the list contents come from the active character.
-public class BattleMenuUI : MonoBehaviour
+public partial class BattleMenuUI : MonoBehaviour
 {
     [SerializeField] private BattleMenuButton attackButton;
     [SerializeField] private BattleMenuButton skillsButton;
@@ -40,6 +40,7 @@ public class BattleMenuUI : MonoBehaviour
     private PlayerInputReader input;
     private RectTransform content, viewport;
     private ScrollRect scroll;
+    private ModularTooltipView modularTooltip;
     private TMP_Text tooltip, targetCounter;
     private ScrollRect tooltipScroll;
     private GameObject tooltipPanel;
@@ -75,6 +76,9 @@ public class BattleMenuUI : MonoBehaviour
         var fitter = content.gameObject.AddComponent<ContentSizeFitter>(); fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scroll = holder.GetComponent<ScrollRect>(); scroll.content = content; scroll.viewport = viewport;
         scroll.horizontal = false; scroll.vertical = true; scroll.scrollSensitivity = 25; scroll.movementType = ScrollRect.MovementType.Clamped;
+        var hints=TooltipHintsLayout.Default;
+        if(hints&&hints.BattleAction){modularTooltip=Instantiate(hints.BattleAction,transform,false);tooltip=modularTooltip.Text;tooltipPanel=modularTooltip.gameObject;tooltipScroll=modularTooltip.Scroll;tooltipPanel.SetActive(false);}
+        else {
         tooltip = MakeText("Action details", new Vector2(0, 0), new Vector2(202, 12), new Vector2(280, 260), true);
         tooltipPanel = tooltip.transform.parent.gameObject; tooltipPanel.SetActive(false);
         var tooltipRect = (RectTransform)tooltipPanel.transform;
@@ -84,6 +88,7 @@ public class BattleMenuUI : MonoBehaviour
         tooltipScroll.horizontal = false; tooltipScroll.movementType = ScrollRect.MovementType.Clamped; tooltipScroll.scrollSensitivity = 25;
         tooltip.rectTransform.anchorMin = new Vector2(0, 1); tooltip.rectTransform.anchorMax = Vector2.one;
         tooltip.rectTransform.pivot = new Vector2(0.5f, 1); tooltip.rectTransform.anchoredPosition = new Vector2(0, -10);
+        }
         targetCounter = MakeText("Target selection count", Vector2.zero, new Vector2(12, 210), new Vector2(180, 30), true);
 
         targetCounter.fontSize = 13; targetCounter.alignment = TextAlignmentOptions.Center;
@@ -107,6 +112,7 @@ public class BattleMenuUI : MonoBehaviour
         shortcutDimmer = dimmer.GetComponent<Image>(); shortcutDimmer.color = new Color(0, 0, 0, 0.45f);
         shortcutDimmer.raycastTarget = false; dimmer.SetActive(false);
         viewport.SetAsLastSibling(); tooltipPanel.transform.SetAsLastSibling(); targetCounter.transform.parent.SetAsLastSibling();
+        BuildModularCommands();
     }
 
     private TMP_Text MakeText(string name, Vector2 anchor, Vector2 position, Vector2 size, bool background)
@@ -168,14 +174,15 @@ public class BattleMenuUI : MonoBehaviour
         if (index == pool.Count) pool.Add(Instantiate(attackButton, content));
         var button = pool[index]; button.gameObject.SetActive(true); button.transform.SetSiblingIndex(index);
         var layout = button.GetComponent<LayoutElement>(); if (!layout) layout = button.gameObject.AddComponent<LayoutElement>();
-        layout.minHeight = layout.preferredHeight = 28;
+        if(!modularCommands)layout.minHeight = layout.preferredHeight = 28;
         button.Configure(label, () => action(), icon);
         button.HoverChanged = entered => { if (entered) ShowTooltip(index); else { tooltipPanel.SetActive(false); if (battle) battle.HoverAction(null); } };
         availability.Add(available); descriptions.Add(description); previewOptions.Add(preview);
     }
     private void FinishList()
     {
-        viewport.sizeDelta = new Vector2(180, Mathf.Min(260, rows * 30 + 6));
+        if(modularCommands){LayoutRebuilder.ForceRebuildLayoutImmediate(content);viewport.sizeDelta=new Vector2(((RectTransform)BattleLayout.Commands.Scroll.transform).sizeDelta.x,Mathf.Min(((RectTransform)BattleLayout.Commands.Scroll.transform).sizeDelta.y,LayoutUtility.GetPreferredHeight(content)));}
+        else viewport.sizeDelta = new Vector2(180, Mathf.Min(260, rows * 30 + 6));
         scroll.verticalNormalizedPosition = 1;
         UpdateAvailability();
     }
@@ -335,6 +342,7 @@ public class BattleMenuUI : MonoBehaviour
     private void FitTooltip()
     {
         var bounds = ((RectTransform)transform).rect;
+        if(modularTooltip){modularTooltip.Fit(new Vector2(Mathf.Max(160,bounds.width-230),Mathf.Max(80,bounds.height-155)));return;}
         var rect = (RectTransform)tooltipPanel.transform;
         float width = Mathf.Clamp(bounds.width - 230, 160, 280);
         float contentHeight = tooltip.GetPreferredValues(tooltip.text, width - 24, 0).y + 20;
@@ -363,7 +371,7 @@ public class BattleMenuUI : MonoBehaviour
         {
             ((RectTransform)targetCounter.transform.parent).SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, multi && approachCost > 0 ? 42 : 30);
             targetCounter.text = (multi ? $"{battle.TargetCount} / {battle.TargetLimit} targets selected" : "") + (approachCost > 0 ? (multi ? "\n" : "") + $"Move {approachCost} points, then act" : "");
-            ((RectTransform)targetCounter.transform.parent).anchoredPosition = new Vector2(12, 16 + viewport.sizeDelta.y);
+            ((RectTransform)targetCounter.transform.parent).anchoredPosition = modularCommands?new Vector2(0,4+viewport.sizeDelta.y):new Vector2(12, 16 + viewport.sizeDelta.y);
         }
     }
     public void ControllerRootShortcut(int index)

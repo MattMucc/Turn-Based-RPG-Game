@@ -138,9 +138,14 @@ public class ControllerNavigationTests : InputTestFixture
 
     [Test] public void TriggerFocusLayerIsBehindCommandsAndCannotBlockWorldInput()
     {
-        var dimmer = root.transform.Find("Shortcut focus dimmer").GetComponent<Image>();
+        var dimmer = (Image)menuType.GetField("shortcutDimmer",Private).GetValue(menu);
+        var layout=Resources.Load("UI/Battle/Battle",Type.GetType("BattleUILayout, Assembly-CSharp",true));
+        var template=(Image)layout.GetType().GetField("ShortcutDimmer").GetValue(layout);
+        Assert.IsNotNull(dimmer);Assert.AreEqual(template.color,dimmer.color);
         Assert.IsFalse(dimmer.raycastTarget);
-        Assert.Less(dimmer.transform.GetSiblingIndex(), root.transform.Find("Battle command viewport").GetSiblingIndex());
+        var commands=((RectTransform)menuType.GetField("viewport",Private).GetValue(menu)).transform;
+        while(commands.parent!=root.transform)commands=commands.parent;
+        Assert.Less(dimmer.transform.GetSiblingIndex(), commands.GetSiblingIndex());
         Assert.Greater(dimmer.transform.GetSiblingIndex(), hud.transform.GetSiblingIndex());
         Press(pad.leftTrigger); Tick();
         Assert.AreEqual(true, menuType.GetMethod("ShouldShowShortcutFocus").Invoke(menu, new object[] { true }));

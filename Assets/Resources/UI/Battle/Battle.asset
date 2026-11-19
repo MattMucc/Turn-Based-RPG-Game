@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1a638cfed574617429e5d0c57ab25501, type: 3}
+  m_Name: Battle
+  m_EditorClassIdentifier: Assembly-CSharp::BattleUILayout
+  Commands: {fileID: 8236388962687908935, guid: 87de949d749da4b42b466c9905e66fae, type: 3}
+  ShortcutDimmer: {fileID: 7471022327199602305, guid: 5d3946f7fe92e6a4ab22f9ea312bae98, type: 3}
+  CommandButton: {fileID: 7825343751609601697, guid: 73ef44626c6c7ae46a753c80b1da2b72, type: 3}
+  RemainingTurn: {fileID: 1082544712023410300, guid: 5a32085910dac7a409769ef381ea32ea, type: 3}
+  TopOrder: {fileID: 991334671861000638, guid: 46c82118567b6be4c800fe8f6fc9d565, type: 3}
+  RightOrder: {fileID: 7237489023839642771, guid: 0df29760ef9d3d44d99d9c30fd6257e4, type: 3}
+  Portrait: {fileID: 459715432200206020, guid: 7051b8870a57f83409327487f5d514c3, type: 3}
+  PartyStack: {fileID: 4012033200605058623, guid: d9b11712c568c254a96ee41091ed024b, type: 3}
+  ResourceCard: {fileID: 285574978812383732, guid: 19fc2dc631246064db7d9a56958683cc, type: 3}
+  OrderSpacing: {x: 4, y: 4}
+  OrderPadding: 4
+  PartySpacing: 14
+  ExpandedWidth: 220
+  StatusExtraHeight: 18
+  ActiveCard: {r: 0.07, g: 0.19, b: 0.25, a: 0.97}

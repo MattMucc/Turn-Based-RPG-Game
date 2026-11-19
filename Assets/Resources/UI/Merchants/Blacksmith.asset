@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c6bf4c45aaa63b4e950aa749ab28d5a, type: 3}
+  m_Name: Blacksmith
+  m_EditorClassIdentifier: Assembly-CSharp::MerchantPageLayout
+  Blacksmith: 1
+  Workspace: {fileID: 2291357726578497735, guid: 01c237411e7062d46a2505a22825f794, type: 3}
+  Filter: {fileID: 4545915199861223841, guid: d26a07d96daf5a7448da1d39d6b896dd, type: 3}
+  Mode: {fileID: 6275257519638642115, guid: c51e0f706fa5f154e94f3d1ff0901044, type: 3}
+  Action: {fileID: 6069068378171615974, guid: c5ff2744060f4d041803398577086aca, type: 3}
+  Cancel: {fileID: 6917706189455850085, guid: 2580a5c7a8d456747bcdd07c85b98d17, type: 3}
+  AttackDetails: {fileID: 7038570622218637747, guid: 7fdae8df714688449ad88e09356cd9b9, type: 3}
+  Slot: {fileID: 1774827573136080886, guid: 8cada4b7eae8f7f439ac37f1f6f039b2, type: 3}
+  SelectedColor: {r: 0.16, g: 0.36, b: 0.44, a: 1}

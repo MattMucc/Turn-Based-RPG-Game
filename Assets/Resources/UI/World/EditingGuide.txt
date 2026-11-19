@@ -1,0 +1,24 @@
+World prompts and notifications editing
+
+Select Assets/Resources/UI/World/World.asset and choose Open live preview.
+Examples cover merchant, blacksmith and checkpoint prompts; saving/autosaving, success and error messages; victory, encounter reset and unavailable-encounter notices. Prompt icon choices preview Keyboard, Xbox or PlayStation without changing player settings. Pulse Time previews the save icon animation without running time or a save.
+
+Merchant.prefab, Blacksmith.prefab and Checkpoint.prefab
+- Independently editable background, icon, caption, dimensions and child arrangement.
+- WorldPromptView World Offset positions the tracked point relative to the service object; Screen Offset adjusts the projected prompt in screen pixels.
+- Runtime still uses each service's existing range, nearest-service and interaction rules, hides prompts behind the camera, and chooses live control-scheme icons.
+- Preview shows the screen layout at a sample center point, not a camera projection of an actual scene object.
+- Captions come from the service DisplayName, with the existing text fallback if an icon is missing. The icon's face-button styling comes from the shared controller catalog.
+
+SaveIndicator.prefab
+- Edit save icon artwork, status text, placement and sizing.
+- SaveIndicatorView Busy Color, Idle Color, Pulse Speed and Minimum Alpha tune the save indicator pulse. Pulse Time in preview samples this same presentation method.
+- Actual busy state, notification duration, messages and save operations remain owned by SaveGameService.
+
+EncounterNotice.prefab
+- Normal UI panel replacing the old debug-style notice box when the template is available.
+- Edit background, message field, anchors and typography. Runtime supplies encounter outcomes/failures and keeps the existing seven-second notice lifetime and hide-during-battle rule.
+
+Save and encounter overlays use 1280x720 reference scaling; interaction prompts retain their existing screen-pixel placement. All graphics ignore raycasts so they do not block gameplay. Keep view references assigned when rearranging pieces.
+
+Live preview includes unsaved Prefab Mode edits. Save the prefab for use in-game. Tools > Game > UI > Create missing World Prompt and Notice templates creates only missing assets. No Play Mode, actual save, rest, encounter or interaction is triggered by these previews.

@@ -23,14 +23,15 @@ public sealed partial class ProgressionMenu
         && (node.Prerequisites??new List<string>()).All(id=>{var prerequisite=Prerequisite(id);return prerequisite!=null&&SkillLearned(prerequisite);});
     void SkillTree()
     {
-        skillCards.Clear();float width=Mathf.Max(300,body.rect.width);
-        Label(Rect("Tree title",body,0,0,width,34),DisplayName(Member)+" · SKILL TREE",20);
-        Label(Rect("Tree legend",body,0,36,width,46),"Circle: Skill    Diamond: Passive\nGold: learned    Gray: locked / placeholder    Blue: selected",13);
+        skillCards.Clear();growthPositions.Clear();float width=Mathf.Max(300,body.rect.width);
         var data=Member.GetComponent<CharacterMenuData>();
         treeNodes=data&&data.SkillTree!=null?data.SkillTree.Where(n=>n!=null).ToList():new List<MenuSkillNode>();
         prototypeSkillTree=treeNodes.Count==0;
-        if(prototypeSkillTree)treeNodes=PrototypeGrowthNodes();
+        if(prototypeSkillTree){treeNodes=GrowthLayout&&GrowthLayout.Arrangement?GrowthLayout.Arrangement.Examples():PrototypeGrowthNodes();if(treeNodes.Count==0)treeNodes=PrototypeGrowthNodes();}
         if(!treeNodes.Contains(selectedSkillNode))selectedSkillNode=treeNodes.FirstOrDefault(n=>n.Id==selectedSkillNode?.Id)??treeNodes.FirstOrDefault(n=>n.Prerequisites==null||n.Prerequisites.Count==0)??treeNodes[0];
+        if(!BuildModularGrowth()){
+        Label(Rect("Tree title",body,0,0,width,34),DisplayName(Member)+" · SKILL TREE",20);
+        Label(Rect("Tree legend",body,0,36,width,46),"Circle: Skill    Diamond: Passive\nGold: learned    Gray: locked / placeholder    Blue: selected",13);
         Vector2 minimum=new Vector2(treeNodes.Min(n=>n.Position.x),treeNodes.Min(n=>n.Position.y));
         float treeWidth=Mathf.Max(width-8,treeNodes.Max(n=>n.Position.x)-minimum.x+160);
         float treeHeight=Mathf.Max(body.rect.height-92,treeNodes.Max(n=>n.Position.y)-minimum.y+150);
@@ -64,6 +65,7 @@ public sealed partial class ProgressionMenu
             text.text=node.Name; text.fontSize=13;text.alignment=TextAlignmentOptions.Top;text.enableAutoSizing=true;text.fontSizeMin=10;text.fontSizeMax=13;
             skillCards.Add((node,button,shape));
         }
+        }
         // Explicit directional neighbors include off-screen nodes; selecting one scrolls it into view.
         foreach(var card in skillCards){
             var nav=card.button.navigation;nav.mode=Navigation.Mode.Explicit;
@@ -87,14 +89,14 @@ public sealed partial class ProgressionMenu
     Button SkillNeighbor(MenuSkillNode origin,Vector2 direction)
     {
         Button result=null;float best=float.PositiveInfinity;
-        var candidates=skillCards.Where(c=>Vector2.Dot(c.node.Position-origin.Position,direction)>.01f).ToList();
+        var candidates=skillCards.Where(c=>Vector2.Dot(GrowthPosition(c.node)-GrowthPosition(origin),direction)>.01f).ToList();
         if(Mathf.Abs(direction.y)>.5f){
             var connected=candidates.Where(c=>direction.y>0
                 ? (c.node.Prerequisites?.Contains(origin.Id)??false)
                 : (origin.Prerequisites?.Contains(c.node.Id)??false)).ToList();
             if(connected.Count>0)candidates=connected;
         }
-        foreach(var card in candidates){var delta=card.node.Position-origin.Position;float along=Vector2.Dot(delta,direction);if(along<=.01f)continue;
+        foreach(var card in candidates){var delta=GrowthPosition(card.node)-GrowthPosition(origin);float along=Vector2.Dot(delta,direction);if(along<=.01f)continue;
             float perpendicular=Mathf.Abs(delta.x*direction.y-delta.y*direction.x);float score=along+perpendicular*3;
             if(score<best){best=score;result=card.button;}}
         return result;

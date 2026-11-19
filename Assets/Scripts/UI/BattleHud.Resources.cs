@@ -12,6 +12,7 @@ public sealed partial class BattleHud
         public TMP_Text Name, HealthText, ManaText, Resources;
         public BattleStatusRow Statuses;
         public int Index;
+        public BattleResourceView View;
     }
     readonly List<ResourceCard> resourceCards=new();
     TMP_Text targetResources;
@@ -32,8 +33,13 @@ public sealed partial class BattleHud
     void BuildResourceCards()
     {
         resourceCards.Clear();lastControlled=-1;
+        if(UI)partyStack=Instantiate(UI.PartyStack,root,false);
         for(int i=0;i<battle.Combatants.Count;i++)if(battle.IsAlly(i))
         {
+            if(UI){
+                var v=Instantiate(UI.ResourceCard,partyStack,false);v.name="Party resources";var statusRow=v.Statuses.gameObject.AddComponent<BattleStatusRow>();statusRow.Initialize(root,font);statusRow.IconSize=v.StatusIconSize;
+                resourceCards.Add(new ResourceCard{Index=i,Rect=(RectTransform)v.transform,Name=v.Name,Health=v.Health,Mana=v.Mana,HealthText=v.HealthText,ManaText=v.ManaText,Resources=v.Resources,Statuses=statusRow,View=v});continue;
+            }
             var card=new ResourceCard{Index=i,Rect=Rect("Party resources",root)};
             card.Rect.anchorMin=card.Rect.anchorMax=new Vector2(1,0);card.Rect.pivot=new Vector2(1,0);
             card.Rect.gameObject.AddComponent<Image>().color=Dark;
@@ -51,7 +57,7 @@ public sealed partial class BattleHud
         if(battle.IsAlly(battle.CurrentActorIndex))lastControlled=battle.CurrentActorIndex;
         if(lastControlled<0&&resourceCards.Count>0)lastControlled=resourceCards[0].Index;
         int emphasized=battle.DefensePresentationActive?battle.DefenseDefenderIndex:lastControlled;
-        float bottom=12;
+        float bottom=UI?0:12;
         for(int n=resourceCards.Count-1;n>=0;n--)
         {
             var card=resourceCards[n];var unit=battle.Combatants[card.Index];var info=battle.Info(card.Index);
@@ -59,8 +65,9 @@ public sealed partial class BattleHud
             bool hasStatuses=StatusPresentation.For(unit,false).Count>0;
             float height=hasStatuses?84:66;
             card.Statuses.gameObject.SetActive(hasStatuses);
-            card.Rect.anchoredPosition=new Vector2(-12,bottom);card.Rect.sizeDelta=new Vector2(expanded?220:190,height);bottom+=height+14;
-            card.Rect.GetComponent<Image>().color=expanded?new Color(.07f,.19f,.25f,.97f):Dark;
+            if(UI){BattleUIArrangement.Resource(UI,card.View,expanded,hasStatuses,bottom);bottom+=card.Rect.sizeDelta.y+UI.PartySpacing;}
+            else {card.Rect.anchoredPosition=new Vector2(-12,bottom);card.Rect.sizeDelta=new Vector2(expanded?220:190,height);bottom+=height+14;
+            card.Rect.GetComponent<Image>().color=expanded?new Color(.07f,.19f,.25f,.97f):Dark;}
             card.Name.text=$"{battle.DisplayName(card.Index)}  ·  Lv {(info?info.Level:1)}";
             card.Health.anchorMax=new Vector2(unit.MaxHealth>0?(float)unit.Health/unit.MaxHealth:0,1);
             card.Mana.anchorMax=new Vector2(unit.MaxMagicPoints>0?(float)unit.MagicPoints/unit.MaxMagicPoints:0,1);

@@ -1,0 +1,25 @@
+Inventory interaction window editing
+
+Select Assets/Resources/UI/InventoryInteractions/Interactions.asset and choose Open live preview.
+Nine examples cover item examination, potion recipients, recovery confirmation, spell learners, learning confirmation, equipment recipients, accessory slots, equip confirmation and unequip confirmation. Unavailable/full-resource and long-description options exercise disabled controls and scrolling. These are sample values only.
+
+Editable templates:
+- Overlay.prefab: fullscreen dismissal/backdrop layer.
+- Examination.prefab: item description window.
+- Recipients.prefab: shared party-member selection window for consumables, books and equipment.
+- Recovery.prefab and Learning.prefab: separate confirmation layouts.
+- AccessorySlots.prefab: accessory-slot choices.
+- Equipment.prefab: equip/unequip comparison and confirmation.
+- Recipient.prefab: repeated choice row (also used for accessory slots).
+
+Each window exposes Title, Lead, Description, Notice, Scroll, Choices, Confirm and Back. Move/resize these objects and change typography/backgrounds in Prefab Mode. Keep their InventoryInteractionView references connected. Save prefab changes to use them in-game; the live preview includes unsaved prefab-stage edits.
+
+Description and Choices are alternative scroll content. Runtime sets their height from the text or rows. Adjust viewport size for visible content; edit the Choices VerticalLayoutGroup spacing and Recipient LayoutElement preferred height for row spacing. Use the preview's Scroll control for longer content.
+
+Confirm and Back use InventoryButtonView references. Their text and actions come from the current interaction; callbacks are connected automatically. Do not add gameplay click events manually. The panel's background Button consumes clicks inside the window; the Overlay button handles outside-click Back behavior. Keep those input blockers enabled.
+
+The existing item/spell/equipment logic supplies all values, disabled states and confirmation callbacks. Recovery and stat comparisons are still rechecked at confirmation; canceling spends nothing. Right-click context menus retain their separate Inventory layout. Inventory hover tooltips are not part of this pass.
+
+Templates control arrangement and presentation, not description wording, item quantities, stats or learning rules. Change item/spell/equipment definitions to edit their actual data. Runtime and preview share the window sizing and choice-row components.
+
+The builder under Tools > Game > UI > Create missing Inventory Interaction templates creates missing assets only. No Play Mode is required to edit or preview these windows.

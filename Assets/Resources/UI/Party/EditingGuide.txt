@@ -1,0 +1,45 @@
+PARTY PAGE MODULAR EDITING
+
+Open Assets/Resources/UI/Party.
+
+Formation.asset, Equipment.asset, Attributes.asset
+- Select a layout and click Open live preview.
+- Double-click its assigned page prefab to open Prefab Mode.
+- Move/resize bound widgets and groups with Unity's RectTransform tools.
+- Changes, including unsaved Prefab Mode changes, appear in the same preview window used for details panels.
+- Selecting another Party layout switches the preview if Follow layout selection is enabled.
+- Preview values and portrait blocks are examples, not your live party. The preview does not execute swaps, equip gear, or spend points.
+
+Reusable pieces
+MemberCard.prefab:
+- Portrait, name, role, level, HP/MP and XP bar.
+- Formation page uses six nested instances: Roster Index 0-2 are active and 3-5 reserve.
+- Active team and Reserve team use Horizontal Layout Groups. Adjust group spacing and size; sibling order controls visual placement.
+- Roster Index controls which real member is bound, independently of visual order.
+
+EquipmentSlot.prefab:
+- A square Select button, artwork, Empty text and caption.
+- Equipment page uses four instances, each with its Equipment Slot binding.
+- Move instances around the central character image. Keep all four distinct bindings.
+- Change shared appearance in EquipmentSlot; change one placement on Equipment page.
+- Character image and weapon access text are assigned on PartyPageView.
+
+AttributeRow.prefab:
+- Stat name, projected value, increase/decrease buttons.
+- Attributes page uses a Vertical Layout Group. Reorder rows in the hierarchy, change spacing, or resize the group.
+- Each row's Stat binding determines its data and button behaviour.
+- Apply allocation and Reset preview remain bound through PartyPageView.
+- Allocation is still staged and confirmed; the template cannot bypass spending checks.
+
+Editing rules
+- Edit shared prefabs to affect all instances, or duplicate a page/widget prefab for a variant.
+- Preserve binding components and their assigned references. Rename decorative children freely.
+- Do not duplicate or remove functional bindings unless you deliberately want duplicate/missing controls.
+- Sample strings are replaced by real values in game. Font, color, alignment and component placement remain editable.
+- Positions managed by a Layout Group are edited through group spacing/padding and sibling order, not by manually dragging driven child RectTransforms.
+- Page roots stretch to available workspace size. Anchor controls when changing sizes.
+- ProgressionMenu exposes optional Formation/Equipment/Attributes layout overrides; empty fields use these defaults.
+- Changes apply in game when reopening/rebuilding the page.
+- Player Menu navigation, character header, confirmation dialogs and right-side comparison panels remain their existing presentation in this pass.
+
+Tools > Game > UI > Create missing Party templates restores missing defaults without overwriting edits.

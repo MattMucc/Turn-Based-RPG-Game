@@ -12,7 +12,7 @@ namespace Game.GridPrototype
             var result=new List<StatusPresentation>();if(unit==null)return result;
             string start=objectClock?"at the start of each new battle round":"at the start of this character's turn";
             int n=unit.Stacks(CombatStatus.Burning);
-            if(n>0)result.Add(new StatusPresentation("Burning",n.ToString(),$"{n} damage ticks remaining.\nDeals {unit.BurnTickDamage} damage {start}, then removes one stack. Barrier absorbs damage first.\nMore applications add remaining ticks (maximum 10).",0));
+            if(n>0)result.Add(new StatusPresentation("Burning",n.ToString(),$"{n} damage ticks remaining.\nDeals {unit.BurnTickDamage} damage {start}, then removes one stack. Barrier absorbs damage first.\nMore applications add remaining ticks (maximum {GridUnit.MaximumStatusStacks}).",0));
             n=unit.Stacks(CombatStatus.Regeneration);
             if(n>0)result.Add(new StatusPresentation("Regeneration",n.ToString(),$"{n} healing ticks remaining.\nRestores up to {unit.RegenerationTickHealing} health {start}, then removes one stack. Does not revive a knocked target.",1));
             n=unit.Stacks(CombatStatus.Paralyzed);

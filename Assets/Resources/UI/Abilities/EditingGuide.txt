@@ -1,0 +1,29 @@
+ABILITIES PAGE — EDITING GUIDE
+
+Start: select Abilities.asset in this folder and click Open live preview.
+Choose Attacks, Skills, Spells or Items in the preview window. No Play Mode is required.
+The preview uses example data, not live character unlocks or inventory. Scroll with the preview slider or mouse wheel.
+
+Workspace.prefab
+Arrange the category tabs, search field, browser and favorite area using RectTransforms.
+Category tabs use a HorizontalLayoutGroup. Spell families and ability entries use separate scrolling lists.
+The family column is shown for Spells; other categories expand the entry list into the browser area.
+The favorite area uses a GridLayoutGroup. Change its column count, spacing, padding and cell height; width fits automatically. There are always four shortcut slots per category.
+
+Reusable pieces
+CategoryButton.prefab: tab label, background, sizing and style.
+SpellFamily.prefab: family row, label and preferred height.
+AbilityRow.prefab: ability name and separate source/mastery line; preferred height controls row size.
+FavoriteSlot.prefab: name, keyboard/controller glyphs, LT separator and padding.
+Edit these in Prefab Mode while the preview stays open. Unsaved prefab edits update the preview; save them to use them in game.
+List LayoutGroups control row positioning and spacing; LayoutElements control row heights.
+Keep the component binding references assigned. Runtime supplies names, tiers, availability and shortcut bindings; placeholder text is only an editing aid.
+
+Abilities.asset
+Reorder Categories, assign custom template variants and change selection colour here.
+The default asset is loaded automatically by ProgressionMenu. A custom Abilities Layout override can be assigned on that component.
+The right-side details panel remains configured separately in Assets/Resources/UI/Details/Abilities.asset.
+
+Search, locked weapon unlocks, Spell tiers, controller navigation, drag-to-favorite and assignment confirmation retain their existing behaviour.
+The menu shell and shortcut confirmation dialogs are outside this workspace template.
+Tools > Game > UI > Create missing Abilities templates only creates missing assets; it does not reset edits.

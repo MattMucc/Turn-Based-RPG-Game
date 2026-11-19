@@ -1,0 +1,18 @@
+Overhead character display editing
+
+Select Assets/Resources/UI/Overheads/Overheads.asset and choose Open live preview.
+Choose Single character, Party or Defense pair. Sample name, level, health, barrier and status controls change preview data only. The preview does not start Play Mode or an encounter.
+
+Open Character.prefab in Prefab Mode to arrange its pieces:
+- Name and Level are separate text elements with editable positions, sizes and typography.
+- Health contains the background track, Health fill and Current and maximum text.
+- Barrier contains the shield track and fill; it hides when there is no barrier. BarrierText is an optional binding if you add a shield number label.
+- Status effects uses BattleStatusRow. Icon Size and Spacing control the centered row. Its Layout references the shared target/status style; edit StatusBadge.prefab for badge/count styling, or assign a duplicate TargetUILayout if these badges need a different style.
+
+Keep the OverheadCharacterView bindings connected when rearranging the prefab. Live names, levels, health, barrier and status counts replace sample values at runtime. Keep health/shield fills left-anchored and vertically stretched; resize their tracks for overall bar geometry.
+
+The runtime fits the prefab root rectangle within the existing 1.7m by 0.68m overhead framing area and keeps it centered above the actor's renderer bounds. Keep children inside that root rectangle. Changing its dimensions changes the internal proportions, not the reserved camera space. The screen preview shows authored UI dimensions, not a simulation of distance or camera perspective.
+
+Billboard rotation, behind-camera hiding, encounter-entry/cinematic hiding and attacker/defender-only visibility during defense retain the current rules. Status rows are display-only and do not intercept targeting or defensive inputs; status tooltips remain available on target details and party resource cards. Status badges and barriers disappear when absent.
+
+The preview follows unsaved prefab-stage edits. Save the prefab to apply the changes in-game. The builder under Tools > Game > UI > Create missing Overhead Character templates only creates missing assets and preserves existing edits.

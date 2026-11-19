@@ -5,20 +5,23 @@ using UnityEngine.UI;
 public sealed class QteProgressRing : MonoBehaviour
 {
     private const int Segments = 96;
+    [Min(1)] public float Thickness=7;
+    [Min(0)] public float IconGap;
+    public Color TrackColor=new Color(.18f,.20f,.24f,1);
     private Image[] track, fill;
     private float progress;
     private float innerRadius = -1;
-    public float OuterRadius => innerRadius + 7;
+    public float OuterRadius => innerRadius + Thickness;
     public void FitToIcon(float radius)
     {
-        Ensure();
+        Ensure();radius+=IconGap;
         if (Mathf.Abs(innerRadius - radius) < 0.01f) return;
         innerRadius = radius;
         for (int i = 0; i < Segments; i++)
         {
             float angle = i * 360f / Segments;
-            var position = new Vector2(Mathf.Sin(angle * Mathf.Deg2Rad), Mathf.Cos(angle * Mathf.Deg2Rad)) * (radius + 3.5f);
-            var size = new Vector2(2 * Mathf.PI * (radius + 3.5f) / Segments + 0.4f, 7);
+            var position = new Vector2(Mathf.Sin(angle * Mathf.Deg2Rad), Mathf.Cos(angle * Mathf.Deg2Rad)) * (radius + Thickness*.5f);
+            var size = new Vector2(2 * Mathf.PI * (radius + Thickness*.5f) / Segments + 0.4f, Thickness);
             track[i].rectTransform.anchoredPosition = fill[i].rectTransform.anchoredPosition = position;
             track[i].rectTransform.sizeDelta = fill[i].rectTransform.sizeDelta = size;
         }
@@ -36,7 +39,7 @@ public sealed class QteProgressRing : MonoBehaviour
         for (int i = 0; i < Segments; i++)
         {
             track[i] = Segment("Track " + i, i, radius);
-            track[i].color = new Color(0.18f, 0.20f, 0.24f, 1);
+            track[i].color = TrackColor;
             fill[i] = Segment("Fill " + i, i, radius);
         }
     }
@@ -48,7 +51,7 @@ public sealed class QteProgressRing : MonoBehaviour
         float angle = index * 360f / Segments;
         rect.anchoredPosition = new Vector2(Mathf.Sin(angle * Mathf.Deg2Rad), Mathf.Cos(angle * Mathf.Deg2Rad)) * radius;
         rect.localRotation = Quaternion.Euler(0, 0, -angle);
-        rect.sizeDelta = new Vector2(2 * Mathf.PI * radius / Segments + 0.4f, 7);
+        rect.sizeDelta = new Vector2(2 * Mathf.PI * radius / Segments + 0.4f, Thickness);
         var image = obj.GetComponent<Image>(); image.raycastTarget = false; return image;
     }
     private void Draw()

@@ -1,0 +1,23 @@
+PLAYER MENU SHELL — EDITING GUIDE
+
+Select PlayerMenu.asset and click Open live preview. Choose Party, Inventory, Abilities, Growth, System, Shop or Blacksmith to inspect visibility and layout. Preview width/height controls let you check different screen proportions without Play Mode.
+
+PlayerMenuShell.prefab
+Edit this in Prefab Mode to arrange the command rail, brand heading, page title, character selector, Return to world button, footer and the Page content / Details regions. Those two regions host the separately authored page templates; the shell preview colours and labels them as guides, rather than loading live party data.
+The shell fills the screen. Preserve RectTransform anchors when resizing so the layout remains responsive.
+
+COMMAND RAIL
+The VerticalLayoutGroup controls button spacing and height. Reorder its children to reorder navigation. Each child has a PlayerMenuCommandView with a Page binding; keep that binding while editing its label and appearance. Command.prefab provides the shared button style. The default five destinations remain Party, Inventory, Abilities, Growth and System.
+
+CHARACTER SELECTOR
+CharacterSelector.prefab contains the name and previous/next buttons. Move its whole instance in the shell to relocate it, or edit its internal spacing and fonts. Runtime fills the selected character name. It hides on System and Blacksmith pages, while Shop retains it for character-specific Attack previews.
+
+TITLES AND REGIONS
+Runtime supplies the current page title; edit its font, colour, alignment and size in the shell. Brand text is authored directly. Footer styling is editable, while control-hint text still follows the current input scheme.
+Page content and Details define the work areas for existing modular pages. Some legacy right-side content still assumes roughly 426 pixels of detail width; avoid shrinking that region drastically without checking its page preview.
+Service content placement and Service title placement are inactive RectTransform guides. They define expanded content/title positions when the Shop or Blacksmith hides the command rail. Edit them as well if changing the normal page regions. Keep service guides in the same coordinate space as their corresponding targets.
+
+LIVE PREVIEW
+Unsaved shell, Command and CharacterSelector Prefab Mode edits appear in the preview. Save prefab edits to use them in game. Preview navigation is chosen from the Shell page dropdown; it does not switch real characters, enter Play Mode or execute menu actions.
+PlayerMenu.asset controls the template, selected-page colour and Canvas reference resolution. ProgressionMenu has an optional Shell Layout override.
+Tools > Game > UI > Create missing Player Menu shell templates creates missing assets without overwriting edits.

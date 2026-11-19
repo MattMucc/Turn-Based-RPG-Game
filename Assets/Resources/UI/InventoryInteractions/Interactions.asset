@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d8021278cfbdb54db101476d24d8aaa, type: 3}
+  m_Name: Interactions
+  m_EditorClassIdentifier: Assembly-CSharp::InventoryInteractionLayout
+  Overlay: {fileID: 3792138361842280367, guid: 7405aa71518f7e54aa3cb9592cd0fc2c, type: 3}
+  Examination: {fileID: 3347290331822754534, guid: f88a47112ec359c4c91fb37ec74b26d3, type: 3}
+  Recipients: {fileID: 8846364808694948822, guid: 5e99169af776e57408be123ef60f78b6, type: 3}
+  Recovery: {fileID: 2354049717453983521, guid: 7908baa4dc41b0f4fa62093fdf69152c, type: 3}
+  Learning: {fileID: 5816116194280921842, guid: f3b115b0665cda3469cd2d1c1944d5d8, type: 3}
+  AccessorySlots: {fileID: 1707895928727119243, guid: 1afb4e6b470c2364091a814b55117d49, type: 3}
+  Equipment: {fileID: 6456094603687075218, guid: 75082215610f58242853542b82437cb1, type: 3}
+  Recipient: {fileID: 55142876875729916, guid: ca36db55644469d478a3fac4fcb6ac22, type: 3}

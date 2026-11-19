@@ -1,0 +1,24 @@
+Tooltips and controller hints editing
+
+Select Assets/Resources/UI/Hints/Hints.asset and choose Open live preview.
+Choose Battle action, Inventory hover, Cursor mode, Free flight or Directional navigation. Long description and Scroll let you check text wrapping and capped-height content without Play Mode.
+
+BattleAction.prefab and InventoryHover.prefab
+- Edit backgrounds, text styling, text insets and the scroll container in Prefab Mode.
+- ModularTooltipView Maximum Size controls the width/height limits; Minimum Height and Vertical Padding control fitting around the generated text. Runtime also limits size to available screen space.
+- Keep text top-anchored, horizontally stretched, and assigned as Scroll.content. The height changes with the actual description.
+- Battle action tooltip placement is authored on its root RectTransform. Inventory hover placement follows the item and clamps within the menu.
+- Runtime descriptions continue to come from the action/item data. Editing sample text in a prefab does not change item names, damage or descriptions.
+- Battle action descriptions retain scrolling. Inventory hover tooltips remain non-interactive and dismiss when leaving the item, matching their existing behavior; detailed examination remains available for lengthy information.
+
+Cursor.prefab
+- Change its dimensions and graphics, or replace the text crosshair with your own child Image. Keep the root pivot at the point that should coincide with the cursor position.
+- Runtime positions the root from the virtual controller cursor and makes its graphics ignore raycasts. This is not the operating system cursor.
+
+CameraGuide.prefab
+- Edit position, dimensions, font and decoration.
+- ControllerGuideView exposes separate text for cursor, flight and navigation modes. The {area} token becomes the active navigation area (such as Turn order or Examine).
+- Each control appears on its own line by default. Controller naming adaptation is preserved. Changing guide text does not change the bindings.
+- Runtime shows/hides the whole guide together; its graphics never intercept input.
+
+The shared live preview follows unsaved Prefab Mode edits. Save changes to use them in-game. Existing status tooltips remain in the Targets layout. Create missing templates through Tools > Game > UI > Create missing Tooltip and Controller Hint templates; existing assets are preserved.

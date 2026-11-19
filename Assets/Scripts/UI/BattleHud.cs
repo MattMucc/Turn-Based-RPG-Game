@@ -60,11 +60,13 @@ public sealed partial class BattleHud : MonoBehaviour
         overhead=overheadObject.AddComponent<BattleOverheadDisplay>();overhead.Bind(battle,font);
         for (int i = transform.childCount - 1; i >= 0; i--) Remove(transform.GetChild(i).gameObject);
         cards.Clear(); portraits.Clear();
+        if(!BuildModularOrder()){
         orderPanel = Rect("Turn order", root); orderPanel.gameObject.AddComponent<Image>().color = Dark;
         orderPanel.gameObject.AddComponent<RectMask2D>();
         orderScroll = orderPanel.gameObject.AddComponent<ScrollRect>(); orderScroll.viewport = orderPanel;
         orderScroll.movementType = ScrollRect.MovementType.Clamped; orderScroll.scrollSensitivity = 30;
         orderContent = Rect("Upcoming turns", orderPanel); orderScroll.content = orderContent;
+        }
         var capture = orderContent.gameObject.AddComponent<BattlePortraitCapture>();
         for (int i = 0; i < battle.Combatants.Count; i++)
         {
@@ -99,6 +101,7 @@ public sealed partial class BattleHud : MonoBehaviour
     }
     private Card MakeCard()
     {
+        if(UI&&UI.Portrait)return ModularPortrait();
         var card = new Card { Rect = Rect("Combatant portrait", orderContent) };
         card.Border = card.Rect.gameObject.AddComponent<Image>();
         var picture = Rect("Portrait", card.Rect); Stretch(picture); picture.offsetMin = Vector2.one * 3; picture.offsetMax = Vector2.one * -3;
@@ -133,6 +136,7 @@ public sealed partial class BattleHud : MonoBehaviour
     {
         if (!orderPanel) return;
         int count = battle.UpcomingTurns().Count;
+        if(!LayoutModularOrder(count)){
         orderPanel.anchorMin = orderPanel.anchorMax = top ? new Vector2(0.5f, 1) : Vector2.one;
         orderPanel.pivot = top ? new Vector2(0.5f, 1) : Vector2.one;
         orderPanel.anchoredPosition = top ? new Vector2(0, -6) : new Vector2(-12, -6);
@@ -147,8 +151,12 @@ public sealed partial class BattleHud : MonoBehaviour
             rect.anchoredPosition = top ? new Vector2(4 + i * 56, -4) : new Vector2(4, -4 - i * 66);
             rect.sizeDelta = new Vector2(52, 62);
         }
+        }
         orderScroll.horizontalNormalizedPosition = 0; orderScroll.verticalNormalizedPosition = 1;
-        if (targetPanel)
+        if(modularTarget){
+            targetPanel.anchoredPosition=((RectTransform)Targets.Target.transform).anchoredPosition+(top?Vector2.zero:Targets.RightOrderOffset);
+        }
+        else if (targetPanel)
         {
             targetPanel.anchorMin = targetPanel.anchorMax = new Vector2(0.5f, 1);
             targetPanel.pivot = new Vector2(0.5f, 1);
@@ -182,6 +190,7 @@ public sealed partial class BattleHud : MonoBehaviour
     }
     private void BuildTargetDetails()
     {
+        if(BuildModularTarget())return;
         targetPanel = Rect("Hovered or pinned target", root); targetPanel.sizeDelta = new Vector2(280, 60);
         var nameRect = Rect("Target name", targetPanel); nameRect.anchorMin = new Vector2(0, 1); nameRect.anchorMax = Vector2.one;
         nameRect.pivot = new Vector2(0.5f, 1); nameRect.sizeDelta = new Vector2(0, 24); nameRect.anchoredPosition = new Vector2(0, -4);
@@ -234,6 +243,7 @@ public sealed partial class BattleHud : MonoBehaviour
     }
     private void BuildSignature()
     {
+        if(BuildModularQte())return;
         qteLayer = Rect("Signature QTE", root); Stretch(qteLayer);
         var footer = Rect("QTE countdown", qteLayer);
         footer.anchorMin = footer.anchorMax = new Vector2(0.5f, 0);
@@ -285,8 +295,7 @@ public sealed partial class BattleHud : MonoBehaviour
         var inputButton = qte != null ? qte.Expected : QteButton.South;
         var lane = sequence ? QteLane.Bottom : inputButton >= QteButton.StickUp || (controller && inputButton >= QteButton.DpadUp)
             ? QteLane.Left : !controller && inputButton == QteButton.South ? QteLane.Bottom : QteLane.Right;
-        qtePrompt.anchorMin = qtePrompt.anchorMax = QteLayout.Anchor(lane);
-        qtePrompt.anchoredPosition = QteLayout.Offset(lane);
+        PlaceQtePrompt(qtePrompt,lane);
         Color faceColor;
         qteIcon.sprite = ControllerGlyphs.Face(inputButton, controller, out faceColor);
         if (!qteIcon.sprite) qteIcon.sprite = controller ? qteControllerIcon : qteKeyboardIcon;
@@ -297,15 +306,17 @@ public sealed partial class BattleHud : MonoBehaviour
         bool largeStickPrompt = controller && inputButton >= QteButton.StickUp && !sequence;
         qtePrompt.sizeDelta = largeStickPrompt ? new Vector2(108, 96)
             : new Vector2(sequence ? Mathf.Min(root.rect.width - 24, qte.InputCount * 54) : ringPrompt ? 64 : 104, 48);
+        if(Reactions)qtePrompt.sizeDelta=largeStickPrompt?Reactions.StickPromptSize:sequence?new Vector2(Mathf.Min(root.rect.width-24,qte.InputCount*Reactions.SequenceSpacing),Reactions.PromptSize.y):ringPrompt?Reactions.RingPromptSize:Reactions.PromptSize;
         tapRing.gameObject.SetActive(ringPrompt);
         tapRing.Progress = mash ? qte.TapProgress : hold ? qte.HoldProgress : 0;
-        qteIcon.rectTransform.localScale = qte != null && qte.InputHeld ? Vector3.one * 0.88f : Vector3.one;
+        qteIcon.rectTransform.localScale = qte != null && qte.InputHeld ? Vector3.one * (Reactions?Reactions.PressedScale:.88f) : Vector3.one;
         triangleCue.gameObject.SetActive(ringPrompt);
         if (ringPrompt)
         {
             // Fit the circle to the displayed sprite's outer extent (preserveAspect may letterbox it).
             float aspect = qteIcon.sprite ? qteIcon.sprite.rect.width / qteIcon.sprite.rect.height : 1;
-            float width = qtePrompt.sizeDelta.x - 24, height = qtePrompt.sizeDelta.y - 12;
+            Canvas.ForceUpdateCanvases();
+            float width = qteIcon.rectTransform.rect.width, height = qteIcon.rectTransform.rect.height;
             if (width / height > aspect) width = height * aspect; else height = width / aspect;
             tapRing.FitToIcon(Mathf.Max(width, height) * 0.5f);
             triangleCue.Present(hold, tapRing.OuterRadius, qte.Duration - qte.Remaining, !qte.Complete && qte.Result != PressQteResult.Preparing);
@@ -313,11 +324,13 @@ public sealed partial class BattleHud : MonoBehaviour
         for (int i = 0; i < sequenceFrames.Count; i++) sequenceFrames[i].gameObject.SetActive(sequence && i < qte.InputCount);
         if (sequence)
         {
-            float spacing = Mathf.Min(54, qtePrompt.sizeDelta.x / qte.InputCount);
+            float spacing = Mathf.Min(Reactions?Reactions.SequenceSpacing:54, qtePrompt.sizeDelta.x / qte.InputCount);
             for (int i = 0; i < qte.InputCount; i++)
             {
                 if (i == sequenceIcons.Count)
                 {
+                    if(Reactions&&Reactions.SequenceStep){var step=Instantiate(Reactions.SequenceStep,qtePrompt,false);step.name="Sequence input "+i;sequenceFrames.Add(step.Frame);sequenceIcons.Add(step.Icon);}
+                    else {
                     var frame = Rect("Sequence input " + i, qtePrompt);
                     var frameImage = frame.gameObject.AddComponent<Image>(); frameImage.raycastTarget = false;
                     var progress = Rect("Step progress", frame); progress.anchorMin = new Vector2(0, 0); progress.anchorMax = new Vector2(1, 0);
@@ -326,12 +339,13 @@ public sealed partial class BattleHud : MonoBehaviour
                     var inner = Rect("Button icon", frame); Stretch(inner); inner.offsetMin = new Vector2(4, 4); inner.offsetMax = new Vector2(-4, -4);
                     var image = inner.gameObject.AddComponent<Image>(); image.preserveAspect = true; image.raycastTarget = false;
                     sequenceFrames.Add(frameImage); sequenceIcons.Add(image);
+                    }
                 }
                 var border = sequenceFrames[i]; border.gameObject.SetActive(true);
-                border.rectTransform.sizeDelta = new Vector2(Mathf.Min(46, spacing - 2), 46);
+                border.rectTransform.sizeDelta = new Vector2(Mathf.Min(Reactions?((RectTransform)Reactions.SequenceStep.transform).sizeDelta.x:46, spacing - 2), Reactions?((RectTransform)Reactions.SequenceStep.transform).sizeDelta.y:46);
                 border.rectTransform.anchoredPosition = new Vector2((i - (qte.InputCount - 1) * 0.5f) * spacing, 0);
                 border.color = Color.clear;
-                border.transform.Find("Step progress").GetComponent<Image>().color = i < qte.CompletedInputs ? new Color(0.15f, 0.6f, 0.3f) : i == qte.CompletedInputs
+                (Reactions&&Reactions.SequenceStep?border.GetComponent<QteSequenceView>().Progress:border.transform.Find("Step progress").GetComponent<Image>()).color = i < qte.CompletedInputs ? new Color(0.15f, 0.6f, 0.3f) : i == qte.CompletedInputs
                     ? qte.Complete ? new Color(0.7f, 0.12f, 0.12f) : new Color(0.8f, 0.6f, 0.12f) : Dark;
                 sequenceIcons[i].sprite = ControllerGlyphs.Face(qte.InputAt(i), controller, out faceColor);
                 sequenceIcons[i].color = faceColor;
@@ -342,11 +356,10 @@ public sealed partial class BattleHud : MonoBehaviour
         if (dual)
         {
             var secondaryLane = !controller && qte.Secondary == QteButton.South ? QteLane.Bottom : QteLane.Right;
-            dualPrompt.anchorMin = dualPrompt.anchorMax = QteLayout.Anchor(secondaryLane);
-            dualPrompt.anchoredPosition = QteLayout.Offset(secondaryLane);
+            PlaceQtePrompt(dualPrompt,secondaryLane);
             dualIcon.sprite = ControllerGlyphs.Face(qte.Secondary, controller, out faceColor);
             dualIcon.color = faceColor; ControllerGlyphs.StyleQte(dualIcon, qte.Secondary, controller);
-            dualIcon.rectTransform.localScale = qte.SecondaryHeld ? Vector3.one * 0.88f : Vector3.one;
+            dualIcon.rectTransform.localScale = qte.SecondaryHeld ? Vector3.one * (Reactions?Reactions.PressedScale:.88f) : Vector3.one;
         }
         qtePrompt.gameObject.SetActive(qte != null);
         if (qte == null)
@@ -365,13 +378,14 @@ public sealed partial class BattleHud : MonoBehaviour
         qteCountdown.text = qte.Result == PressQteResult.Preparing ? "" : qte.Remaining.ToString("0.00") + "s";
         float half = qte.Fraction * 0.5f;
         qteFill.anchorMin = new Vector2(0.5f - half, 0); qteFill.anchorMax = new Vector2(0.5f + half, 1);
-        qteFill.GetComponent<Image>().color = !qte.Complete ? new Color(1, 0.75f, 0.2f)
-            : qte.Result == PressQteResult.Success ? new Color(0.3f, 1, 0.55f) : new Color(1, 0.3f, 0.25f);
+        qteFill.GetComponent<Image>().color = !qte.Complete ? (Reactions?Reactions.Countdown:new Color(1, 0.75f, 0.2f))
+            : qte.Result == PressQteResult.Success ? (Reactions?Reactions.Success:new Color(0.3f, 1, 0.55f)) : (Reactions?Reactions.Failure:new Color(1, 0.3f, 0.25f));
         qtePrompt.GetComponent<Image>().color = Color.clear;
     }
 
     private void BuildDefense()
     {
+        if(BuildModularDefense())return;
         defensePanel = Rect("Reactive defense", root); defensePanel.anchorMin = defensePanel.anchorMax = new Vector2(0.5f, 0);
         defensePanel.pivot = new Vector2(0.5f, 0); defensePanel.anchoredPosition = new Vector2(0, 12); defensePanel.sizeDelta = new Vector2(340, 94);
         var back = defensePanel.gameObject.AddComponent<Image>(); back.color = new Color(0.02f, 0.03f, 0.04f, 0.82f); back.raycastTarget = false;
@@ -420,20 +434,21 @@ public sealed partial class BattleHud : MonoBehaviour
         parryWindow.anchorMax = new Vector2(hit.ImpactPosition, 1);
         impactLine.anchorMin = new Vector2(hit.ImpactPosition, 0);
         impactLine.anchorMax = new Vector2(hit.ImpactPosition, 1);
-        dodgeWindow.GetComponent<Image>().color = hit.Resolved ? new Color(0.2f, 0.25f, 0.3f) : new Color(0.1f, 0.45f, 0.8f);
-        parryWindow.GetComponent<Image>().color = hit.Resolved ? new Color(0.35f, 0.3f, 0.2f) : new Color(1, 0.72f, 0.15f);
+        dodgeWindow.GetComponent<Image>().color = hit.Resolved ? (Reactions?Reactions.ResolvedDodge:new Color(0.2f, 0.25f, 0.3f)) : (Reactions?Reactions.Dodge:new Color(0.1f, 0.45f, 0.8f));
+        parryWindow.GetComponent<Image>().color = hit.Resolved ? (Reactions?Reactions.ResolvedParry:new Color(0.35f, 0.3f, 0.2f)) : (Reactions?Reactions.Parry:new Color(1, 0.72f, 0.15f));
         // Keep the registered press visible instead of letting the cursor run past it.
         float progress = hit.BarPosition(hit.DisplayTime);
         if (!string.IsNullOrEmpty(hit.AttemptFeedback)) defenseResult.text = hit.AttemptFeedback;
         bool accepted = hit.Result == DefenseResult.Parried || hit.Result == DefenseResult.Dodged;
-        defenseMarker.GetComponent<Image>().color = !hit.Attempted ? Color.white
-            : accepted ? new Color(0.3f, 1, 0.55f) : new Color(1, 0.25f, 0.2f);
+        defenseMarker.GetComponent<Image>().color = !hit.Attempted ? (Reactions?Reactions.Waiting:Color.white)
+            : accepted ? (Reactions?Reactions.Success:new Color(0.3f, 1, 0.55f)) : (Reactions?Reactions.Failure:new Color(1, 0.25f, 0.2f));
         defenseMarker.anchorMin = new Vector2(progress, 0); defenseMarker.anchorMax = new Vector2(progress, 1);
     }
     RectTransform contextUse;
     int contextChoice;
     private void BuildInspection()
     {
+        if(BuildModularInspection())return;
         inspectionLayer = Rect("Inspection modal", root); Stretch(inspectionLayer);
         var shade = inspectionLayer.gameObject.AddComponent<Image>(); shade.color = new Color(0, 0, 0, 0.35f);
         var dismiss = inspectionLayer.gameObject.AddComponent<Button>(); dismiss.targetGraphic = shade; dismiss.onClick.AddListener(CloseInspection);
@@ -550,7 +565,7 @@ public sealed partial class BattleHud : MonoBehaviour
             var unit = battle.Combatants[i];
             card.HealthFill.anchorMax = new Vector2(Mathf.Clamp01(unit.Health / (float)Mathf.Max(1, unit.MaxHealth)), 1);
             UpdateShield(card.Shield, card.ShieldFill, card.ShieldText, unit);
-            FitPortraitNumber(card.Health, card.Rect, .17f); FitPortraitNumber(card.ShieldText, card.Rect, .17f);
+            if(!UI){FitPortraitNumber(card.Health, card.Rect, .17f); FitPortraitNumber(card.ShieldText, card.Rect, .17f);}
             card.Health.text = $"{unit.Health} / {unit.MaxHealth}";
             int hits = battle.AssignedHits(i); card.Hits.text = hits > 0 ? $"x{hits}" : "";
             card.Border.color = slot == controllerPortrait ? new Color(0.1f, 0.85f, 1) : slot == 0 ? new Color(1, 0.75f, 0.25f) : Dark;

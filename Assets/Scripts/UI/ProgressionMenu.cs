@@ -170,7 +170,7 @@ public sealed partial class ProgressionMenu : MonoBehaviour
         shownAbility=null; shownProgressionEntry=null; events.SetSelectedGameObject(null); Clear(body); Clear(detailRoot); buttons.Clear();
         title.text = page == Page.SkillTree ? "GROWTH" : page.ToString().ToUpperInvariant();
         characterLabel.text = DisplayName(Member);
-        characterLabel.gameObject.SetActive(page!=Page.System);shell.Find("<").gameObject.SetActive(page!=Page.System);shell.Find(">").gameObject.SetActive(page!=Page.System); UpdateMenuPresentation(); BuildDetails();
+        UpdateMenuPresentation(); BuildDetails();
         switch (page) { case Page.Shop: ShopPage(); break; case Page.System: SystemPage(); break; case Page.Party: Party(); break; case Page.Attributes: Attributes(); break; case Page.Shortcuts: Shortcuts(); break; case Page.Progression: Progression(); break; case Page.SkillTree: SkillTree(); break; case Page.Inventory: Inventory(); break; case Page.Settings: Settings(); break; case Page.Saves: Saves(); break; case Page.Checkpoint: CheckpointPage(); break; case Page.Equipment: EquipmentPage(); break; case Page.Upgrades: UpgradesPage(); break; case Page.Abilities: AbilitiesPage(); break; }
         if(page==Page.Inventory)RestoreInventorySelection();
         else if(page!=Page.SkillTree || skillCards.Count==0) SelectFirst();

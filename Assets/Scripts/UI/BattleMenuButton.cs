@@ -7,6 +7,8 @@ using UnityEngine.UI;
 
 public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
+    [SerializeField] private bool preserveTemplateStyle;
+    [SerializeField] private Color textColor=new Color(.05f,.06f,.08f),disabledTextColor=new Color(.12f,.12f,.12f);
     [SerializeField] private Color normalColor = Color.white;
     [SerializeField] private Color highlightedColor = new Color(0.55f, 0.55f, 0.55f);
     [SerializeField] private Sprite keyboardIcon;
@@ -102,10 +104,10 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     }
     public void Configure(string text, UnityAction action, bool showIcon = false)
     {
-        Ensure(); triggerShortcut = false; caption = text; label.outlineWidth = 0; label.fontSize = 14; label.enableAutoSizing = false; label.textWrappingMode = TextWrappingModes.NoWrap; label.overflowMode = TextOverflowModes.Ellipsis; label.text = text; button.onClick.RemoveAllListeners(); button.onClick.AddListener(action);
+        Ensure(); triggerShortcut = false; caption = text;if(!preserveTemplateStyle){ label.outlineWidth = 0; label.fontSize = 14; label.enableAutoSizing = false; label.textWrappingMode = TextWrappingModes.NoWrap; label.overflowMode = TextOverflowModes.Ellipsis; label.text = text;}else label.text=text; button.onClick.RemoveAllListeners(); button.onClick.AddListener(action);
         // Let the label shrink inside the row instead of retaining its previous RectTransform width.
         var row = GetComponent<HorizontalLayoutGroup>();
-        if (row)
+        if (row && !preserveTemplateStyle)
         {
             row.childControlWidth = true; row.childForceExpandWidth = false;
             row.padding.right = row.padding.left;
@@ -115,12 +117,12 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
         }
         if (icon)
         {
-            icon.rectTransform.sizeDelta = new Vector2(16.5f, 16.5f);
+            if(!preserveTemplateStyle){icon.rectTransform.sizeDelta = new Vector2(16.5f, 16.5f);
             var iconLayout = icon.GetComponent<LayoutElement>();
             if (!iconLayout) iconLayout = icon.gameObject.AddComponent<LayoutElement>();
             iconLayout.minWidth = iconLayout.preferredWidth = 16.5f; iconLayout.flexibleWidth = 0;
             iconLayout.minHeight = iconLayout.preferredHeight = 16.5f; iconLayout.flexibleHeight = 0;
-            icon.gameObject.SetActive(showIcon);
+            }icon.gameObject.SetActive(showIcon);
         }
         selected = highlighted = false; SetAvailable(true);
         UpdateIcon(source ? source.CurrentScheme : displayedScheme);
@@ -129,7 +131,7 @@ public class BattleMenuButton : MonoBehaviour, IPointerEnterHandler, IPointerExi
     {
         Ensure(); button.interactable = available;
         button.image.color = !available ? new Color(0.3f, 0.3f, 0.3f, 0.8f) : highlighted || selected ? highlightedColor : normalColor;
-        label.color = available ? new Color(0.05f, 0.06f, 0.08f) : new Color(0.12f, 0.12f, 0.12f);
+        label.color = available ? textColor : disabledTextColor;
         if (outline) outline.enabled = selected || (highlighted && available);
         UpdateIcon(source ? source.CurrentScheme : displayedScheme);
     }

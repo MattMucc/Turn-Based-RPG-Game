@@ -207,9 +207,22 @@ public class BattleManager : MonoBehaviour
     }
 
     private void Notify(string text) { notice = text; noticeUntil = Time.unscaledTime + 7; Debug.Log("[Battle] " + text); }
+    private Canvas encounterNoticeCanvas;
+    private EncounterNoticeView encounterNoticeView;
+    private void LateUpdate(){
+        if(!Application.isPlaying)return;
+        bool visible=!InBattle&&Time.unscaledTime<noticeUntil;
+        if(!encounterNoticeView&&visible){var layout=WorldUILayout.Default;if(layout&&layout.EncounterNotice){
+            var root=new GameObject("Encounter notices",typeof(Canvas),typeof(UnityEngine.UI.CanvasScaler));root.transform.SetParent(transform,false);encounterNoticeCanvas=root.GetComponent<Canvas>();encounterNoticeCanvas.renderMode=RenderMode.ScreenSpaceOverlay;encounterNoticeCanvas.sortingOrder=110;
+            var scaler=root.GetComponent<UnityEngine.UI.CanvasScaler>();scaler.uiScaleMode=UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1280,720);
+            encounterNoticeView=Instantiate(layout.EncounterNotice,root.transform,false);foreach(var graphic in encounterNoticeView.GetComponentsInChildren<UnityEngine.UI.Graphic>(true))graphic.raycastTarget=false;
+        }}
+        if(encounterNoticeView){encounterNoticeCanvas.gameObject.SetActive(visible);encounterNoticeView.Message.text=notice;}
+    }
+    private void OnDisable(){if(encounterNoticeCanvas)encounterNoticeCanvas.gameObject.SetActive(false);}
     private void OnGUI()
     {
-        if (!InBattle && Time.unscaledTime < noticeUntil)
+        if (!encounterNoticeView && !InBattle && Time.unscaledTime < noticeUntil)
             GUI.Box(new Rect(20, Screen.height - 80, Mathf.Min(720, Screen.width - 40), 60), notice);
     }
     private void OnDestroy()

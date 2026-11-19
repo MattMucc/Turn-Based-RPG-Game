@@ -47,6 +47,7 @@ public sealed class Merchant : MonoBehaviour
         return true;
     }
     [Min(1)] public float InteractionRange=3;
+    WorldPromptView modularPrompt;
     Canvas promptCanvas;RectTransform prompt;Image glyph;TMP_Text caption;
     void Reset(){GetComponent<BoxCollider>().isTrigger=true;}
     public bool InRange(Transform actor)=>actor&&Vector3.Distance(actor.position,transform.position)<=Mathf.Max(1,InteractionRange);
@@ -61,8 +62,8 @@ public sealed class Merchant : MonoBehaviour
         if(!visible){if(promptCanvas)promptCanvas.gameObject.SetActive(false);return;}
         if(!promptCanvas)BuildPrompt();promptCanvas.gameObject.SetActive(true);
         var camera=Camera.main;if(!camera){promptCanvas.gameObject.SetActive(false);return;}
-        var screen=camera.WorldToScreenPoint(transform.position+Vector3.up*2);if(screen.z<=0){promptCanvas.gameObject.SetActive(false);return;}
-        prompt.position=screen;
+        var screen=camera.WorldToScreenPoint(transform.position+(modularPrompt?modularPrompt.WorldOffset:Vector3.up*2));if(screen.z<=0){promptCanvas.gameObject.SetActive(false);return;}
+        prompt.position=screen+(modularPrompt?(Vector3)modularPrompt.ScreenOffset:Vector3.zero);
         bool controller=GameManager.Instance.Input&&ControllerGlyphs.ShowController(GameManager.Instance.Input);var catalog=ControllerGlyphs.Catalog;
         glyph.sprite=controller&&catalog&&catalog.Buttons!=null&&catalog.Buttons.Length>3?ControllerGlyphs.Resolve(catalog.Buttons[3].Xbox,out _):!controller&&catalog&&catalog.OverworldKeys!=null&&catalog.OverworldKeys.Length>1?catalog.OverworldKeys[1]:null;
         glyph.material=null;glyph.color=Color.white;glyph.enabled=glyph.sprite;if(controller&&glyph.sprite)ControllerGlyphs.StyleFace(glyph);
@@ -71,6 +72,8 @@ public sealed class Merchant : MonoBehaviour
     void BuildPrompt()
     {
         var go=new GameObject("Merchant interaction prompt",typeof(Canvas));go.transform.SetParent(transform,false);promptCanvas=go.GetComponent<Canvas>();promptCanvas.renderMode=RenderMode.ScreenSpaceOverlay;promptCanvas.sortingOrder=120;
+        var layout=WorldUILayout.Default;var template=layout?layout.Merchant:null;if(template){modularPrompt=Instantiate(template,go.transform,false);prompt=(RectTransform)modularPrompt.transform;glyph=modularPrompt.Icon;caption=modularPrompt.Caption;foreach(var graphic in modularPrompt.GetComponentsInChildren<Graphic>(true))graphic.raycastTarget=false;return;}
+
         var panel=new GameObject("Prompt",typeof(RectTransform),typeof(Image));panel.transform.SetParent(go.transform,false);prompt=panel.GetComponent<RectTransform>();prompt.sizeDelta=new Vector2(220,38);var background=panel.GetComponent<Image>();background.color=new Color(.025f,.05f,.08f,.85f);background.raycastTarget=false;
         var icon=new GameObject("Interact icon",typeof(RectTransform),typeof(Image));icon.transform.SetParent(panel.transform,false);var ir=icon.GetComponent<RectTransform>();ir.sizeDelta=new Vector2(28,28);ir.anchoredPosition=new Vector2(-88,0);glyph=icon.GetComponent<Image>();glyph.preserveAspect=true;glyph.raycastTarget=false;
         var text=new GameObject("Merchant name",typeof(RectTransform));text.transform.SetParent(panel.transform,false);var tr=text.GetComponent<RectTransform>();tr.sizeDelta=new Vector2(170,32);tr.anchoredPosition=new Vector2(20,0);caption=text.AddComponent<TextMeshProUGUI>();caption.font=TMP_Settings.defaultFontAsset;caption.fontSize=15;caption.alignment=TextAlignmentOptions.MidlineLeft;caption.raycastTarget=false;

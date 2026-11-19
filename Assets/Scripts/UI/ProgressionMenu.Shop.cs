@@ -21,15 +21,15 @@ public sealed partial class ProgressionMenu
     void ShopPage()
     {
         HideItemTooltip();if(!merchant){Detail("Shop","Merchant unavailable.");return;}
-        Manager.BindEquipment();float w=body.rect.width;
-        Label(Rect("Merchant",body,0,0,w,32),merchant.DisplayName+" · "+Manager.Equipment.Coins+" coins",20);
+        Manager.BindEquipment();BeginMerchantLayout(false);float w=body.rect.width;
+        MerchantLabel(Rect("Merchant",body,0,0,w,32),merchant.DisplayName+" · "+Manager.Equipment.Coins+" coins",20);
         foreach(bool sell in new[]{false,true}){
-            var b=Button(body,sell?"Sell":"Buy",sell?w/2+4:0,40,w/2-4,()=>{shopSelling=sell;shopKey=null;shopPending=false;shopExpanded.Clear();Rebuild();});
-            b.interactable=!shopPending;if(sell==shopSelling)b.image.color=new Color(.16f,.36f,.44f);
+            var b=MerchantButton(body,sell?"Sell":"Buy",sell?w/2+4:0,40,w/2-4,()=>{shopSelling=sell;shopKey=null;shopPending=false;shopExpanded.Clear();Rebuild();});
+            b.interactable=!shopPending;if(sell==shopSelling)b.image.color=(modularMerchant?activeMerchantLayout.SelectedColor:new Color(.16f,.36f,.44f));
         }
         string[] filters={"All","Weapons","Armor","Accessories","Items"};float tw=(w-16)/5;
-        for(int i=0;i<filters.Length;i++){int f=i;var b=Button(body,filters[i],i*(tw+4),86,tw,()=>{shopFilter=f;shopKey=null;shopExpanded.Clear();Rebuild();},null,32);b.interactable=!shopPending;
-            var label=b.GetComponentInChildren<TMP_Text>();label.enableAutoSizing=true;label.fontSizeMin=9;label.fontSizeMax=14;if(i==shopFilter)b.image.color=new Color(.16f,.36f,.44f);}
+        for(int i=0;i<filters.Length;i++){int f=i;var b=MerchantButton(body,filters[i],i*(tw+4),86,tw,()=>{shopFilter=f;shopKey=null;shopExpanded.Clear();Rebuild();},null,32);b.interactable=!shopPending;
+            var label=b.GetComponentInChildren<TMP_Text>();if(!modularMerchant){label.enableAutoSizing=true;label.fontSizeMin=9;label.fontSizeMax=14;}if(i==shopFilter)b.image.color=(modularMerchant?activeMerchantLayout.SelectedColor:new Color(.16f,.36f,.44f));}
         var entries=new List<ShopEntry>();
         for(int i=0;i<merchant.Offers.Count;i++){
             var offer=merchant.Offers[i];if(offer==null||(!offer.Equipment&&offer.Item==null))continue;
@@ -40,23 +40,24 @@ public sealed partial class ProgressionMenu
         }
         var selected=entries.Find(e=>e.Key==shopKey)??entries.FirstOrDefault();shopKey=selected?.Key;
         int columns=Mathf.Max(2,Mathf.FloorToInt(w/96));float size=Mathf.Min(88,(w-12)/columns-8);
-        var grid=List(body,"Shop inventory grid",0,128,w,body.rect.height-198,Mathf.Ceil(entries.Count/(float)columns)*(size+30)+8);
+        var grid=MerchantList(body,"Shop inventory grid",0,128,w,body.rect.height-198,Mathf.Ceil(entries.Count/(float)columns)*(size+30)+8);
         for(int i=0;i<entries.Count;i++){
             var e=entries[i];float x=4+i%columns*(size+8),y=4+i/columns*(size+30);
-            var b=Button(grid,e.Offer.Name,x,y,size,()=>{shopKey=e.Key;shopExpanded.Clear();Rebuild();},null,size);b.interactable=!shopPending;b.GetComponentInChildren<TMP_Text>().gameObject.SetActive(false);
+            var b=MerchantButton(grid,e.Offer.Name,x,y,size,()=>{shopKey=e.Key;shopExpanded.Clear();Rebuild();},null,size);b.interactable=!shopPending;
             var proxy=e.Offer.Equipment?new BattleActionOption{Name=e.Offer.Name,Image=e.Offer.Equipment.Image}:e.Offer.Item;
-            DrawInventoryIcon(b.transform,proxy,8,8,size-16);
+            MerchantIcon(b,proxy,size);
             proxy.Description=e.Offer.Equipment?e.Offer.Equipment.Description:e.Offer.Item.Description;
             var pointer=b.gameObject.AddComponent<PlayerInventoryPointer>();
             pointer.Hover=()=>{if(!shopPending)ShowItemTooltip(proxy,b.transform,proxy.Description??"");};pointer.Exit=HideItemTooltip;
-            if(e==selected)b.image.color=new Color(.16f,.36f,.44f);
+            if(e==selected)b.image.color=(modularMerchant?activeMerchantLayout.SelectedColor:new Color(.16f,.36f,.44f));
             string caption=(shopSelling?e.Offer.SellPrice:e.Offer.BuyPrice)+" coins";
             if(e.Copy!=null&&Manager.EquipmentOwner(e.Copy.InstanceId))caption="Equipped";
-            Label(Rect("Price",grid,x,y+size,size,26),caption,11).alignment=TextAlignmentOptions.Center;
+            MerchantLabel(Rect("Price",grid,x,y+size,size,26),caption,11).alignment=TextAlignmentOptions.Center;
         }
-        if(entries.Count==0)Label(Rect("Empty shop",grid,12,12,w-24,50),"No items in this category.",16);
-        Button(body,"Leave",0,body.rect.height-48,110,Close).interactable=!shopPending;
-        Label(Rect("Trade notice",body,120,body.rect.height-58,w-120,56),shopNotice??"",14);
+        if(entries.Count==0)MerchantLabel(Rect("Empty shop",grid,12,12,w-24,50),"No items in this category.",16);
+        MerchantButton(body,"Leave",0,body.rect.height-48,110,Close).interactable=!shopPending;
+        MerchantLabel(Rect("Trade notice",body,120,body.rect.height-58,w-120,56),shopNotice??"",14);
+        FinishMerchantLayout(entries.Count,shopPending);
         if(selected!=null)ShopDetails(selected);else Detail("Shop","No items available.");
     }
     void ShopDetails(ShopEntry entry)
@@ -81,7 +82,7 @@ public sealed partial class ProgressionMenu
                 y=ProgressionText(content,"Weapon mastery","Mastery level "+WeaponMastery.Level(copy)+" · XP "+copy.MasteryExperience+" / "+WeaponMastery.MaximumExperience(definition),y,w,15);
                 void Attack(BattleActionOption action){
                     if(action==null)return;
-                    float at=y;Button(content,(shopExpanded.Contains(action)?"▾ ":"▸ ")+action.Name,12,at,w,()=>{if(!shopExpanded.Add(action))shopExpanded.Remove(action);Rebuild();},null,34);y+=40;
+                    float at=y;MerchantAttackButton(content,(shopExpanded.Contains(action)?"▾ ":"▸ ")+action.Name,at,w,()=>{if(!shopExpanded.Add(action))shopExpanded.Remove(action);Rebuild();});y+=40;
                     if(shopExpanded.Contains(action)){y=ProgressionText(content,"Attack description",action.TooltipFor(source),y,w,15);y=DrawAttackPattern(content,action,y,w,24);}
                 }
                 y=ProgressionText(content,"Base attacks","Level 1 · Starting Attacks",y+8,w,16);
@@ -100,10 +101,10 @@ public sealed partial class ProgressionMenu
         if(equipped)y=ProgressionText(content,"Equipped restriction","Equipped by "+DisplayName(Manager.EquipmentOwner(entry.Copy.InstanceId))+" · Cannot sell",y,w,14);
         content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(content.parent.GetComponent<RectTransform>().rect.height,y+12));
         ComposeDetails(content,DetailPanelKind.Shop);
-        Button(detailRoot,shopPending?"Confirm "+(shopSelling?"sale":"purchase"):"Review "+(shopSelling?"sale":"purchase"),12,detailRoot.rect.height-94,detailRoot.rect.width-24,()=>{
+        MerchantButton(detailRoot,shopPending?"Confirm "+(shopSelling?"sale":"purchase"):"Review "+(shopSelling?"sale":"purchase"),12,detailRoot.rect.height-94,detailRoot.rect.width-24,()=>{
             if(!shopPending){shopPrice=price;shopPending=true;Rebuild();return;}
             merchant.Trade(Manager,offer,entry.Copy,shopSelling,shopPrice,out shopNotice);shopPending=false;Rebuild();
         }).interactable=!equipped&&merchant.CanServe(Manager)&&(shopSelling||Manager.Equipment.Coins>=price);
-        if(shopPending)Button(detailRoot,"Cancel trade",12,detailRoot.rect.height-48,detailRoot.rect.width-24,()=>{shopPending=false;Rebuild();});
+        if(shopPending)MerchantButton(detailRoot,"Cancel trade",12,detailRoot.rect.height-48,detailRoot.rect.width-24,()=>{shopPending=false;Rebuild();});
     }
 }

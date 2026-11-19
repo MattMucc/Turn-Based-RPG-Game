@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd4c427211c963c48bd8db601321b08c, type: 3}
+  m_Name: Abilities
+  m_EditorClassIdentifier: Assembly-CSharp::AbilitiesPageLayout
+  Workspace: {fileID: 6061426110597189148, guid: 6cc3ae1f7fc095d4abeeb0558364e6f1, type: 3}
+  CategoryButton: {fileID: 3176696630213284741, guid: fdff6fc187b066f42816576d8c204972, type: 3}
+  FamilyButton: {fileID: 6764453779368641755, guid: 6b04f2320e1672d499de26ec5b14b890, type: 3}
+  AbilityRow: {fileID: 1328587958104831630, guid: 088096208b0652f4f98af971ba6d4af0, type: 3}
+  FavoriteSlot: {fileID: 6664391367942464820, guid: 0d1e3542ce31ef343a37dced23cceeec, type: 3}
+  SelectedColor: {r: 0.16, g: 0.36, b: 0.44, a: 1}
+  Categories: 00000000010000000300000002000000

@@ -11,7 +11,10 @@ public sealed class BattleOverheadDisplay : MonoBehaviour
     {
         public RectTransform Root, Fill, Shield;
         public TMP_Text Name, Health;
+        public OverheadCharacterView View;
     }
+    [SerializeField] OverheadUILayout layout;
+    OverheadUILayout UI=>layout?layout:Resources.Load<OverheadUILayout>("UI/Overheads/Overheads");
     readonly List<Label> labels=new();
     InSceneGridBattle battle;
     TMP_FontAsset font;
@@ -25,6 +28,12 @@ public sealed class BattleOverheadDisplay : MonoBehaviour
     }
     Label Create()
     {
+        if(UI && UI.Character){
+            var view=Instantiate(UI.Character,transform,false);var rect=(RectTransform)view.transform;rect.name="Combatant overhead";
+            var labelCanvas=view.GetComponent<Canvas>();if(!labelCanvas)labelCanvas=view.gameObject.AddComponent<Canvas>();labelCanvas.renderMode=RenderMode.WorldSpace;labelCanvas.sortingOrder=5;
+            rect.localScale=Vector3.one*Mathf.Min(GridCameraController.OverheadWidth/Mathf.Max(1,rect.rect.width),GridCameraController.OverheadHeight/Mathf.Max(1,rect.rect.height));
+            view.Initialize(font);return new Label{Root=rect,View=view};
+        }
         var r=Rect("Combatant overhead",transform,Vector2.zero,new Vector2(200,80));
         var canvas=r.gameObject.AddComponent<Canvas>();canvas.renderMode=RenderMode.WorldSpace;canvas.sortingOrder=5;
         r.localScale=Vector3.one*(GridCameraController.OverheadWidth/200);
@@ -56,6 +65,7 @@ public sealed class BattleOverheadDisplay : MonoBehaviour
             label.Root.position=new Vector3(bounds.center.x,bounds.max.y+GridCameraController.OverheadClearance+GridCameraController.OverheadHeight*.5f,bounds.center.z);
             label.Root.rotation=battle.BattleCamera.transform.rotation;
             if(battle.BattleCamera.WorldToViewportPoint(label.Root.position).z<=0){label.Root.gameObject.SetActive(false);continue;}
+            if(label.View){label.View.Present(battle.DisplayName(i),info?info.Level:0,unit);continue;}
             label.Name.text=battle.DisplayName(i)+"  ·  Lv "+(info && info.Level>0?info.Level.ToString():"?");
             label.Health.text=$"{unit.Health} / {unit.MaxHealth}";
             label.Fill.anchorMax=new Vector2(Mathf.Clamp01(unit.Health/(float)Mathf.Max(1,unit.MaxHealth)),1);
