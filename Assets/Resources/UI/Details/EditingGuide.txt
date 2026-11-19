@@ -1,0 +1,53 @@
+EDITABLE DETAILS PANELS
+
+Start here in Unity's Project window:
+Assets/Resources/UI/Details
+
+Abilities.asset, Shop.asset, Blacksmith.asset
+- Select the page's asset.
+- Expand Sections. Drag list entries to change their order.
+- Toggle Visible to show/hide an entire section.
+- Assign another section prefab to change its appearance.
+- Spacing and Padding arrange the panel automatically.
+- A section with no applicable data disappears without leaving an empty gap.
+- Use each Binding once. Custom can repeat and displays Custom Text.
+- Missing sections are omitted. Keep Price/Materials visible if you want players to see costs.
+- These layouts affect only the scrollable details area. Transaction buttons remain fixed.
+
+Reusable prefabs
+- Title.prefab: heading style.
+- Text.prefab: ordinary description/stat rows.
+- Compact.prefab: availability/mastery text.
+- Attack.prefab: ability descriptions and generated attack lists/patterns.
+Double-click a prefab to open Prefab Mode.
+- Edit its Text template's font, size, color, alignment and wrapping.
+- Edit DetailsSectionView Row Spacing, Padding and Artwork Size.
+- Add decorative children/backgrounds if desired. Keep Content and Text Template assigned.
+- The text template's sample wording is not gameplay data; runtime supplies live wording.
+- Generated text height and position are automatic. Manual text RectTransform positions are not used.
+- Patterns are generated from existing action data and scaled to fit. Their cells aren't manually authored in these UI prefabs.
+- Buttons and pattern tiles still use the existing shared renderers; this first pass does not expose their individual styling through these section prefabs.
+
+Page-specific variants
+Duplicate a prefab, change its style, and assign it to a section in just one layout.
+Duplicate a layout to experiment. ProgressionMenu has optional layout override fields; the default assets above are used when those fields are empty.
+Changes appear the next time the panel is rebuilt/reopened. No gameplay data is copied into layout assets.
+
+Content editing
+Change Attacks/Skills/Spells in their existing data/Inspector editors.
+Names, descriptions, costs, calculated values, mastery rewards and patterns update from that source.
+New weapon Attacks/milestones appear automatically in Shops; don't add a UI section per Attack.
+Upgrade costs and comparisons remain bound to the selected equipment copy.
+
+Layout recipe
+To show mastery below an Attack on Abilities:
+1. Select Abilities.asset.
+2. Drag Mastery below Attacks in Sections.
+3. Reopen the Abilities page.
+To change only Shop text:
+1. Duplicate Text.prefab.
+2. Edit the duplicate's Text template in Prefab Mode.
+3. Assign it to the desired sections in Shop.asset.
+
+Tools > Game > UI > Create missing details templates restores missing default assets.
+It does not overwrite existing edits.

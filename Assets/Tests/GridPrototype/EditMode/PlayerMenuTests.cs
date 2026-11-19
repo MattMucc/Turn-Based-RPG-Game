@@ -235,6 +235,25 @@ public class PlayerMenuTests
         Assert.Greater(tile.anchoredPosition.x,frame.GetComponentsInChildren<Transform>().Single(t=>t.name=="User marker").parent.GetComponent<RectTransform>().anchoredPosition.x);
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("self-hit is possible")));
     }
+    [Test] public void ModularAbilityLayoutReordersHidesAndUsesLivePatterns()
+    {
+        var layout=Object.Instantiate((ScriptableObject)Resources.Load("UI/Details/Abilities"));equipmentAssets.Add(layout);
+        var sections=(System.Collections.IList)layout.GetType().GetField("Sections").GetValue(layout);
+        var attacks=sections.Cast<object>().Single(v=>v.GetType().GetField("Binding").GetValue(v).ToString()=="Attacks");
+        sections.Remove(attacks);sections.Insert(0,attacks);
+        var availability=sections.Cast<object>().Single(v=>v.GetType().GetField("Binding").GetValue(v).ToString()=="Availability");
+        availability.GetType().GetField("Visible").SetValue(availability,false);
+        menuType.GetField("abilitiesDetailsLayout",Hidden).SetValue(menu,layout);
+        Open();Page("Abilities");
+        var content=menu.GetComponentsInChildren<Transform>().Single(t=>t.name=="Ability details").Find("Content");
+        var blocks=content.Cast<Transform>().Where(t=>t.name.StartsWith("Section ")).ToArray();
+        Assert.AreEqual("Section Attacks",blocks[0].name);
+        Assert.IsFalse(blocks.Any(t=>t.name=="Section Availability"));
+        Assert.IsTrue(blocks[0].GetComponentsInChildren<Transform>().Any(t=>t.name.StartsWith("Pattern ")));
+        float previousBottom=0;
+        foreach(var block in blocks){var r=(RectTransform)block;Assert.GreaterOrEqual(-r.anchoredPosition.y,previousBottom);previousBottom=-r.anchoredPosition.y+r.rect.height;}
+        Assert.GreaterOrEqual(((RectTransform)content).rect.height,previousBottom);
+    }
     [Test] public void ShopPreviewsMilestonesAndTradesOnlyAfterConfirmation()
     {
         var inventory=(PartyEquipment)managerType.GetField("Equipment").GetValue(manager);

@@ -99,6 +99,7 @@ public sealed partial class ProgressionMenu
         bool equipped=entry.Copy!=null&&Manager.EquipmentOwner(entry.Copy.InstanceId);
         if(equipped)y=ProgressionText(content,"Equipped restriction","Equipped by "+DisplayName(Manager.EquipmentOwner(entry.Copy.InstanceId))+" · Cannot sell",y,w,14);
         content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(content.parent.GetComponent<RectTransform>().rect.height,y+12));
+        ComposeDetails(content,DetailPanelKind.Shop);
         Button(detailRoot,shopPending?"Confirm "+(shopSelling?"sale":"purchase"):"Review "+(shopSelling?"sale":"purchase"),12,detailRoot.rect.height-94,detailRoot.rect.width-24,()=>{
             if(!shopPending){shopPrice=price;shopPending=true;Rebuild();return;}
             merchant.Trade(Manager,offer,entry.Copy,shopSelling,shopPrice,out shopNotice);shopPending=false;Rebuild();

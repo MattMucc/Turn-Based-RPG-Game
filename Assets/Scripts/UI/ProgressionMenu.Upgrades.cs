@@ -84,17 +84,27 @@ public sealed partial class ProgressionMenu
         var owner=Manager.EquipmentOwner(copy.InstanceId);
         bool possible=EquipmentUpgrades.Requirements(Manager.Equipment,copy,copy.UpgradeLevel,out var costs,out var reason);
         bool next=copy.UpgradeLevel>=0&&copy.UpgradeLevel<copy.Definition.Upgrades.Count;
-        string text=copy.Definition.Description+$"\nUpgrade cap: +{copy.Definition.Upgrades.Count}"+$"\n\nUpgrade +{copy.UpgradeLevel}"+(next?$" → +{copy.UpgradeLevel+1}":" · Maximum")+"\n"+(owner?"Equipped by "+DisplayName(owner):"Unequipped");
-        if(next){
-            text+=$"\n\nFEE: {copy.Definition.Upgrades[copy.UpgradeLevel].Fee} coins / {Manager.Equipment.Coins} owned";
-            text+="\n\nMATERIALS · required / owned";
-            foreach(var cost in costs){var material=Manager.Equipment.Materials.Find(m=>m!=null&&m.Id==cost.Key);text+=$"\n{material?.Name??cost.Key}: {cost.Value} / {material?.Quantity??0}";}
-            text+="\n\nEQUIPMENT STATS · current → upgraded";
-            foreach(CharacterStat stat in Enum.GetValues(typeof(CharacterStat)))text+=$"\n{AttributePreview.Name(stat)}: {EquipmentUpgrades.Bonus(copy,stat)} → {EquipmentUpgrades.Bonus(copy,stat,copy.UpgradeLevel+1)}";
+        // Keep transaction controls fixed; only rebuild the scrollable presentation.
+        foreach(Transform child in detailRoot.Cast<Transform>().ToArray())if(!child.GetComponent<UnityEngine.UI.Button>()){
+            child.gameObject.SetActive(false);if(Application.isPlaying)Destroy(child.gameObject);else DestroyImmediate(child.gameObject);
         }
-        if(!possible)text+="\n\n"+reason;
-        Detail(copy.Definition.DisplayName,text,copy.Definition.Image);
-        var viewport=(RectTransform)detailContent.parent;viewport.sizeDelta=new Vector2(viewport.sizeDelta.x,Mathf.Max(80,detailRoot.rect.height+viewport.anchoredPosition.y-110));
-        detailContent.sizeDelta=new Vector2(detailContent.sizeDelta.x,Mathf.Max(viewport.sizeDelta.y,detailText.rectTransform.sizeDelta.y+20));
+        var content=List(detailRoot,"Forge details",0,0,detailRoot.rect.width,detailRoot.rect.height-110,300);
+        float y=8,w=content.rect.width-24;
+        void Row(DetailSection kind,string value,int size=16){y=ProgressionText(content,kind.ToString(),value,y,w,size)+6;}
+        Row(DetailSection.Name,copy.Definition.DisplayName,23);
+        if(copy.Definition.Image){var image=Rect("Artwork",content,12,y,112,112).gameObject.AddComponent<UnityEngine.UI.RawImage>();image.texture=copy.Definition.Image;image.raycastTarget=false;y+=124;}
+        Row(DetailSection.Description,copy.Definition.Description??"");
+        Row(DetailSection.Upgrade,$"Upgrade {copy.UpgradeLevel} / {copy.Definition.Upgrades.Count}"+(next?$" → {copy.UpgradeLevel+1}":" · Maximum"));
+        Row(DetailSection.Availability,owner?"Equipped by "+DisplayName(owner):"Unequipped",14);
+        if(next){
+            Row(DetailSection.Price,$"FEE: {copy.Definition.Upgrades[copy.UpgradeLevel].Fee} coins / {Manager.Equipment.Coins} owned");
+            Row(DetailSection.Materials,"MATERIALS · required / owned");
+            foreach(var cost in costs){var material=Manager.Equipment.Materials.Find(m=>m!=null&&m.Id==cost.Key);Row(DetailSection.Materials,$"{material?.Name??cost.Key}: {cost.Value} / {material?.Quantity??0}",14);}
+            Row(DetailSection.Stats,"EQUIPMENT STATS · current → upgraded");
+            foreach(CharacterStat stat in Enum.GetValues(typeof(CharacterStat)))Row(DetailSection.Stats,$"{AttributePreview.Name(stat)}: {EquipmentUpgrades.Bonus(copy,stat)} → {EquipmentUpgrades.Bonus(copy,stat,copy.UpgradeLevel+1)}",14);
+        }
+        if(!possible)Row(DetailSection.Notice,reason);
+        content.sizeDelta=new Vector2(content.sizeDelta.x,Mathf.Max(((RectTransform)content.parent).rect.height,y+12));
+        ComposeDetails(content,DetailPanelKind.Blacksmith);
     }
 }

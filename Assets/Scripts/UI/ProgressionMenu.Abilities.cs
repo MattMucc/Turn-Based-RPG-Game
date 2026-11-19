@@ -140,5 +140,6 @@ public sealed partial class ProgressionMenu
             y = ProgressionText(content, "Spell milestone", entry.Spell.CreateAction(tier).Name + $" · {tier.RequiredExperience} XP" +
                 (entry.Learned.Experience >= tier.RequiredExperience ? " · Learned" : " · Locked"), y + 6, width, 14);
         content.sizeDelta = new Vector2(content.sizeDelta.x, Mathf.Max(((RectTransform)content.parent).rect.height, y + 12));
+        ComposeDetails(content,DetailPanelKind.Abilities);
     }
 }

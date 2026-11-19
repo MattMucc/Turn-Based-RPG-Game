@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3e857d07a8fad1478cda372f047eb5a, type: 3}
+  m_Name: Blacksmith
+  m_EditorClassIdentifier: Assembly-CSharp::DetailsPanelLayout
+  Spacing: 10
+  Padding:
+    m_Left: 12
+    m_Right: 12
+    m_Top: 12
+    m_Bottom: 12
+  Sections:
+  - Binding: 0
+    Visible: 1
+    Prefab: {fileID: 1274786367690177158, guid: 9b703a9e4e201724f9e5bed1444b9261, type: 3}
+    CustomText: 
+  - Binding: 1
+    Visible: 1
+    Prefab: {fileID: 1429606479750424855, guid: a78db34796fb38f498a5550090a667c6, type: 3}
+    CustomText: 
+  - Binding: 2
+    Visible: 1
+    Prefab: {fileID: 1429606479750424855, guid: a78db34796fb38f498a5550090a667c6, type: 3}
+    CustomText: 
+  - Binding: 9
+    Visible: 1
+    Prefab: {fileID: 1429606479750424855, guid: a78db34796fb38f498a5550090a667c6, type: 3}
+    CustomText: 
+  - Binding: 3
+    Visible: 1
+    Prefab: {fileID: 4485890326001361597, guid: 54dea9fc5dfe2294ca8b87eab40043fe, type: 3}
+    CustomText: 
+  - Binding: 6
+    Visible: 1
+    Prefab: {fileID: 1429606479750424855, guid: a78db34796fb38f498a5550090a667c6, type: 3}
+    CustomText: 
+  - Binding: 8
+    Visible: 1
+    Prefab: {fileID: 1429606479750424855, guid: a78db34796fb38f498a5550090a667c6, type: 3}
+    CustomText: 
+  - Binding: 7
+    Visible: 1
+    Prefab: {fileID: 1429606479750424855, guid: a78db34796fb38f498a5550090a667c6, type: 3}
+    CustomText: 
+  - Binding: 10
+    Visible: 1
+    Prefab: {fileID: 1429606479750424855, guid: a78db34796fb38f498a5550090a667c6, type: 3}
+    CustomText: 
