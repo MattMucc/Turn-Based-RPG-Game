@@ -51,3 +51,18 @@ To change only Shop text:
 
 Tools > Game > UI > Create missing details templates restores missing default assets.
 It does not overwrite existing edits.
+
+LIVE EDIT MODE PREVIEW
+Select a layout asset and click Open live preview in its Inspector.
+Alternatively: Tools > Game > UI > Details panel preview.
+Dock the Details preview window beside the Inspector or Prefab Mode view.
+- Follow layout selection switches to another selected layout; selecting a prefab keeps the current layout.
+- Live updates watches layout edits, asset changes, Undo/Redo and unsaved Prefab Mode changes.
+- Pick Example equipment to use its artwork and select one of its starting/mastery Attacks.
+- Without equipment, built-in example content is shown.
+- Width and height simulate different panel sizes. Scroll with the slider or mouse wheel over the image.
+- Values such as coins, stats and upgrade costs are examples, not your current party state.
+- Layout/templates and pattern generation share the game's renderers; preview isn't a clickable merchant session.
+- Custom text, hidden/reordered sections, typography, decoration and spacing update without Play Mode.
+- The preview owns an isolated temporary scene, cleans up when closed, and doesn't modify/save gameplay scenes.
+- Preview pauses during Play Mode.

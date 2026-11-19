@@ -235,6 +235,28 @@ public class PlayerMenuTests
         Assert.Greater(tile.anchoredPosition.x,frame.GetComponentsInChildren<Transform>().Single(t=>t.name=="User marker").parent.GetComponent<RectTransform>().anchoredPosition.x);
         Assert.IsTrue(menu.GetComponentsInChildren<TMP_Text>().Any(t=>t.text.Contains("self-hit is possible")));
     }
+    [Test] public void DetailsEditModePreviewRendersAndCleansUpWithoutChangingScene()
+    {
+        var type=Type.GetType("DetailsPanelPreviewWindow, Assembly-CSharp-Editor",true);
+        var window=ScriptableObject.CreateInstance(type);
+        var scene=UnityEngine.SceneManagement.SceneManager.GetActiveScene();bool dirty=scene.isDirty;
+        Texture2D image=null;GameObject root=null;
+        var layout=Object.Instantiate((ScriptableObject)Resources.Load("UI/Details/Abilities"));equipmentAssets.Add(layout);
+        try{
+            type.GetField("layout",Hidden).SetValue(window,layout);
+            type.GetMethod("BuildPreview").Invoke(window,null);
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+            Assert.AreNotEqual(scene,root.scene);
+            image=(Texture2D)type.GetMethod("CapturePreview").Invoke(window,null);
+            Assert.Greater(image.GetPixels32().Count(c=>c.r>140||c.g>140||c.b>140),100,"Preview must render UI, not just a blank background.");
+            var before=(string)type.GetMethod("Signature",Hidden).Invoke(window,null);
+            layout.GetType().GetField("Spacing").SetValue(layout,24f);
+            Assert.AreNotEqual(before,type.GetMethod("Signature",Hidden).Invoke(window,null));
+            type.GetMethod("BuildPreview").Invoke(window,null);Assert.IsTrue(root==null,"Rebuilding should clean up the previous preview.");
+            root=(GameObject)type.GetField("canvasRoot",Hidden).GetValue(window);
+        }finally{if(image)Object.DestroyImmediate(image);Object.DestroyImmediate(window);}
+        Assert.IsTrue(root==null);Assert.AreEqual(scene,UnityEngine.SceneManagement.SceneManager.GetActiveScene());Assert.AreEqual(dirty,scene.isDirty);
+    }
     [Test] public void ModularAbilityLayoutReordersHidesAndUsesLivePatterns()
     {
         var layout=Object.Instantiate((ScriptableObject)Resources.Load("UI/Details/Abilities"));equipmentAssets.Add(layout);

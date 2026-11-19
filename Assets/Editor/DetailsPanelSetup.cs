@@ -52,6 +52,7 @@ public sealed class DetailsPanelLayoutEditor : Editor
     public override void OnInspectorGUI()
     {
         EditorGUILayout.HelpBox("Reorder Sections by dragging their handles. Toggle Visible to hide a section. Assign a section prefab to change its appearance. Empty sections collapse automatically. Attack patterns use the action's existing combat data.",MessageType.Info);
+        if(GUILayout.Button("Open live preview"))DetailsPanelPreviewWindow.Open((DetailsPanelLayout)target);
         DrawDefaultInspector();
         EditorGUILayout.HelpBox("Double-click a section prefab to edit its text template, artwork size, padding, row spacing or decorative children. Duplicate a prefab or layout for page-specific styling. Custom sections display Custom Text.",MessageType.None);
     }
